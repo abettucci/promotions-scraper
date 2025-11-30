@@ -1,0 +1,166 @@
+promo-scraper/
+│
+├── 📄 README.md                    # Documentación principal del proyecto
+├── ⚡ QUICKSTART.md                # Guía de inicio rápido (3 pasos)
+├── 📖 USAGE.md                     # Guía detallada de uso y configuración
+│
+├── 🐍 ARCHIVOS PRINCIPALES
+│   ├── scraper.py                  # Script principal - orquesta todo el scraping
+│   ├── config.py                   # Configuración centralizada
+│   ├── database.py                 # Gestión de SQLite
+│   ├── terms_parser.py             # Parser de términos y condiciones
+│   └── dashboard.py                # Dashboard web con Streamlit
+│
+├── 🕷️  SCRAPERS (scrapers/)
+│   ├── __init__.py
+│   ├── base_scraper.py             # Clase base con funcionalidades comunes
+│   ├── carrefour_scraper.py        # Scraper específico para Carrefour
+│   └── generic_scraper.py          # Scraper genérico (funciona para mayoría)
+│
+├── 🔧 SCRIPTS DE UTILIDAD
+│   ├── setup.sh                    # Script de instalación automática
+│   └── run.sh                      # Helper para ejecutar el scraper
+│
+├── 📦 DEPENDENCIAS
+│   ├── requirements.txt            # Dependencias Python
+│   ├── .env.example                # Template de variables de entorno
+│   └── .gitignore                  # Archivos a ignorar en Git
+│
+├── 🤖 AUTOMATIZACIÓN
+│   └── .github/
+│       └── workflows/
+│           └── scraper.yml         # GitHub Actions (scraping en la nube)
+│
+└── 💾 DATOS (creado automáticamente)
+    └── data/
+        └── promotions.db           # Base de datos SQLite
+
+---
+
+📊 BASE DE DATOS (SQLite)
+
+promotions.db
+├── supermarkets               # Tabla de supermercados
+│   ├── id, name, url
+│   ├── last_scraped
+│   └── scrape_count
+│
+├── promotions                 # Tabla de promociones
+│   ├── id, supermarket_id
+│   ├── title, discount
+│   ├── bank, wallet, card_type
+│   ├── valid_from, valid_until
+│   ├── url, image_url
+│   └── is_active
+│
+├── terms_conditions           # Tabla de T&C parseados
+│   ├── id, promotion_id
+│   ├── raw_text
+│   ├── exclusions (JSON)
+│   ├── requirements (JSON)
+│   ├── max_discount, min_purchase
+│   └── valid_days, payment_methods
+│
+└── scrape_history             # Historial de ejecuciones
+    ├── id, supermarket_id
+    ├── status, promotions_found
+    └── error_message, scraped_at
+
+---
+
+🛠️  TECNOLOGÍAS UTILIZADAS
+
+Anti-detección:
+  • Playwright + Playwright-Stealth
+  • User-Agent rotation
+  • Random delays
+  • Geolocation spoofing
+
+Backend:
+  • Python 3.8+
+  • SQLite (base de datos)
+  • AsyncIO (scraping asíncrono)
+
+Frontend:
+  • Streamlit (dashboard web)
+  • Plotly (gráficos interactivos)
+  • Pandas (análisis de datos)
+
+Automatización:
+  • Cron (Linux/Mac)
+  • Task Scheduler (Windows)
+  • GitHub Actions (nube gratis)
+
+---
+
+📈 FLUJO DE EJECUCIÓN
+
+1. scraper.py
+   ↓
+2. Setup browser (Playwright + Stealth)
+   ↓
+3. Para cada supermercado:
+   • Cargar scraper apropiado (específico o genérico)
+   • Navegar al sitio con anti-detección
+   • Extraer promociones (selectores CSS dinámicos)
+   • Parsear términos y condiciones
+   • Guardar en base de datos
+   ↓
+4. Desactivar promociones viejas
+   ↓
+5. Generar reporte de estadísticas
+
+---
+
+🎯 CARACTERÍSTICAS CLAVE
+
+✅ 100% Gratis - No requiere servicios pagos
+✅ Anti-detección robusto - Evita bloqueos de bots
+✅ Scrapers genéricos - Funcionan en mayoría de sitios
+✅ Extracción inteligente - Detecta bancos, descuentos, T&C
+✅ Base de datos - Historial completo de promociones
+✅ Dashboard hermoso - Visualización interactiva
+✅ Automatización - Cron, GitHub Actions
+✅ Extensible - Fácil agregar más supermercados
+
+---
+
+📝 SUPERMERCADOS INCLUIDOS
+
+✅ Carrefour          https://www.carrefour.com.ar/promociones
+✅ Coto Digital       https://www.cotodigital3.com.ar/sitios/cdigi/promociones
+✅ Disco              https://www.disco.com.ar/promociones-bancarias
+✅ Jumbo              https://www.jumbo.com.ar/promociones
+✅ Día                https://diaonline.supermercadosdia.com.ar/promociones
+✅ Walmart            https://www.walmart.com.ar/promociones
+✅ Changomás          https://www.changomas.com.ar/promociones
+
+💡 Agregar más es fácil: solo configurar en config.py
+
+---
+
+🚀 COSTO TOTAL: $0/mes
+
+• Playwright-Stealth: Gratis
+• Python + SQLite: Gratis
+• Streamlit: Gratis
+• GitHub Actions: Gratis (2000 min/mes)
+• Hosting local: Gratis
+
+Opcional (si necesitas escalar):
+• Proxies: $3/mes (Webshare.io)
+• ScraperAPI: $0 (5k req/mes gratis)
+
+---
+
+🎓 NIVEL: Principiante a Intermedio
+
+Setup: ⭐⭐ (muy fácil)
+Uso: ⭐ (facilísimo)
+Mantenimiento: ⭐⭐ (bajo)
+Extensibilidad: ⭐⭐⭐ (muy extensible)
+
+---
+
+Creado con ❤️ para Argentina 🇦🇷
+

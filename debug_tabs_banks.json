@@ -1,0 +1,75 @@
+{
+  "before": [
+    "$before_header.full"
+  ],
+  "around": [
+    "$around_storeWrapper",
+    "$around_challenge"
+  ],
+  "after": [
+    "$after_footer",
+    "$after_pixels"
+  ],
+  "blockId": "carrefourar.theme@82.x:store.custom#tabs-banks-descuentos",
+  "blocks": [
+    {
+      "blockId": "carrefourar.theme@82.x:responsive-layout.desktop#dynamicTabs",
+      "extensionPointId": "responsive-layout.desktop#dynamicTabs",
+      "children": false,
+      "blockRole": "block"
+    },
+    {
+      "blockId": "carrefourar.theme@82.x:responsive-layout.phone#dynamicTabs",
+      "extensionPointId": "responsive-layout.phone#dynamicTabs",
+      "children": false,
+      "blockRole": "block"
+    },
+    {
+      "blockId": "carrefourar.theme@82.x:responsive-layout.tablet#dynamicTabs",
+      "extensionPointId": "responsive-layout.tablet#dynamicTabs",
+      "children": false,
+      "blockRole": "block"
+    }
+  ],
+  "component": "vtex.render-runtime@8.136.1/LayoutContainer",
+  "composition": "children",
+  "hasContentSchema": false,
+  "hydration": "always",
+  "implements": [
+    "vtex.store@2.x:store.custom",
+    "vtex.store@2.x:store"
+  ],
+  "preview": {
+    "type": "transparent",
+    "height": {
+      "desktop": {},
+      "mobile": {
+        "defaultValue": 600
+      }
+    },
+    "width": {
+      "desktop": {},
+      "mobile": {}
+    }
+  },
+  "props": {
+    "elements": [
+      "responsive-layout.desktop#dynamicTabs",
+      "responsive-layout.phone#dynamicTabs",
+      "responsive-layout.tablet#dynamicTabs"
+    ]
+  },
+  "render": "server",
+  "title": "Promociones Bancarias",
+  "track": [],
+  "content": {
+    "elements": [
+      "responsive-layout.desktop#dynamicTabs",
+      "responsive-layout.phone#dynamicTabs",
+      "responsive-layout.tablet#dynamicTabs"
+    ]
+  },
+  "contentIds": [
+    ""
+  ]
+}
