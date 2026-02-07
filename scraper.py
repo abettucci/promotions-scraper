@@ -12,20 +12,48 @@ import random
 import config
 from database import Database
 from terms_parser import TermsParser
+
+# Scrapers específicos
 from scrapers.carrefour_scraper import CarrefourScraper
 from scrapers.generic_scraper import GenericScraper
+from scrapers.dia_scraper import DiaScraper
+from scrapers.coto_scraper import CotoScraper
+from scrapers.masonline_scraper import MasOnlineScraper
+from scrapers.cencosud_scraper import CencosudScraper
+
+# AI Extractor (opcional)
+try:
+    from scrapers.ai_extractor import AIExtractor
+    AI_AVAILABLE = True
+except ImportError:
+    AI_AVAILABLE = False
 
 class PromoScraper:
-    def __init__(self, verbose: bool = False):
+    def __init__(self, verbose: bool = False, use_ai: bool = False):
         self.db = Database()
         self.terms_parser = TermsParser()
         self.verbose = verbose
+        self.use_ai = use_ai
+        self.ai_extractor = None
         self.stats = {
             'total_promotions': 0,
             'successful_scrapes': 0,
             'failed_scrapes': 0,
             'start_time': datetime.now()
         }
+        
+        # Inicializar AI Extractor si se solicita
+        if use_ai:
+            if not AI_AVAILABLE:
+                raise ImportError(
+                    "El módulo de IA no está disponible. "
+                    "Instala anthropic: pip install anthropic"
+                )
+            try:
+                self.ai_extractor = AIExtractor()
+                self.log("🤖 Modo IA activado - usando Claude Vision para extracción")
+            except Exception as e:
+                raise RuntimeError(f"Error inicializando AI Extractor: {e}")
     
     def log(self, message: str, level: str = 'INFO'):
         """Log con timestamp"""
@@ -67,7 +95,7 @@ class PromoScraper:
     
     def get_scraper(self, supermarket_key: str, supermarket_data: dict):
         """Retorna el scraper apropiado para cada supermercado"""
-        # Scrapers específicos
+        # Scrapers específicos que usan page compartido (heredan de BaseScraper)
         if supermarket_key == 'carrefour':
             return CarrefourScraper()
         
@@ -77,10 +105,27 @@ class PromoScraper:
             url=supermarket_data['url']
         )
     
+    def get_standalone_scraper(self, supermarket_key: str):
+        """
+        Retorna scrapers que manejan su propio browser (standalone).
+        Estos scrapers no reciben page como parámetro.
+        """
+        standalone_scrapers = {
+            'dia': DiaScraper,
+            'coto': CotoScraper,
+            'masonline': MasOnlineScraper,
+            'cencosud': CencosudScraper,
+        }
+        
+        if supermarket_key in standalone_scrapers:
+            return standalone_scrapers[supermarket_key]()
+        return None
+    
     async def scrape_supermarket(self, page, supermarket_key: str, supermarket_data: dict):
         """Scrape un supermercado específico"""
         try:
-            self.log(f"📍 Iniciando scrape: {supermarket_data['name']}")
+            mode_indicator = "🤖" if self.use_ai else "📍"
+            self.log(f"{mode_indicator} Iniciando scrape: {supermarket_data['name']}")
             
             # Obtener o crear ID del supermercado en DB
             supermarket_id = self.db.insert_supermarket(
@@ -88,11 +133,32 @@ class PromoScraper:
                 supermarket_data['url']
             )
             
-            # Obtener scraper apropiado
-            scraper = self.get_scraper(supermarket_key, supermarket_data)
+            promotions = []
             
-            # Ejecutar scraping
-            promotions = await scraper.scrape(page)
+            # Modo IA: usar Claude Vision para extracción
+            if self.use_ai and self.ai_extractor:
+                # Navegar a la página
+                url = supermarket_data['url']
+                self.log(f"   🌐 Navegando a {url}")
+                
+                try:
+                    await page.goto(url, wait_until='networkidle', timeout=60000)
+                    await asyncio.sleep(3)  # Esperar carga de JS
+                    
+                    # Extraer con IA
+                    promotions = await self.ai_extractor.extract_from_screenshot(
+                        page,
+                        supermarket_data['name'],
+                        url
+                    )
+                except Exception as e:
+                    self.log(f"   ⚠️ Error navegando: {e}", 'WARNING')
+                    # Intentar con scraper tradicional como fallback
+                    self.log(f"   🔄 Intentando con scraper tradicional...")
+                    promotions = await self._scrape_traditional(page, supermarket_key, supermarket_data)
+            else:
+                # Modo tradicional
+                promotions = await self._scrape_traditional(page, supermarket_key, supermarket_data)
             
             if not promotions:
                 self.log(f"⚠️  {supermarket_data['name']}: No se encontraron promociones", 'WARNING')
@@ -111,7 +177,7 @@ class PromoScraper:
                 promotion_id = self.db.insert_promotion(supermarket_id, promo)
                 
                 if promotion_id:
-                    current_titles.append(promo['title'])
+                    current_titles.append(promo.get('title', ''))
                     
                     # Parsear y guardar términos y condiciones
                     if promo.get('terms_raw'):
@@ -125,10 +191,12 @@ class PromoScraper:
             self.db.update_supermarket_scraped(supermarket_id)
             
             # Registrar historial
+            extraction_method = 'ai_vision' if self.use_ai else 'traditional'
             self.db.insert_scrape_history(
                 supermarket_id,
                 'success',
-                len(promotions)
+                len(promotions),
+                f'Method: {extraction_method}'
             )
             
             # Actualizar stats
@@ -161,6 +229,20 @@ class PromoScraper:
             )
             
             self.stats['failed_scrapes'] += 1
+    
+    async def _scrape_traditional(self, page, supermarket_key: str, supermarket_data: dict):
+        """Ejecuta scraping tradicional (CSS selectors + regex)"""
+        # Verificar si hay un scraper standalone para este supermercado
+        standalone_scraper = self.get_standalone_scraper(supermarket_key)
+        
+        if standalone_scraper:
+            # Los scrapers standalone manejan su propio browser
+            self.log(f"   🔧 Usando scraper standalone para {supermarket_data['name']}")
+            return await standalone_scraper.scrape()
+        else:
+            # Usar scraper que recibe page
+            scraper = self.get_scraper(supermarket_key, supermarket_data)
+            return await scraper.scrape(page)
     
     async def run(self, supermarket_filter: str = None):
         """Ejecuta el scraping de todos los supermercados"""
@@ -208,6 +290,8 @@ class PromoScraper:
         self.log("=" * 60)
         self.log("📊 RESUMEN DE EJECUCIÓN")
         self.log("=" * 60)
+        mode = "🤖 IA (Claude Vision)" if self.use_ai else "🔧 Tradicional (CSS + Regex)"
+        self.log(f"📋 Modo: {mode}")
         self.log(f"✅ Scrapes exitosos: {self.stats['successful_scrapes']}")
         self.log(f"❌ Scrapes fallidos: {self.stats['failed_scrapes']}")
         self.log(f"🎯 Total promociones: {self.stats['total_promotions']}")
@@ -232,7 +316,7 @@ def main():
     )
     parser.add_argument(
         '--supermarket', '-s',
-        help='Scrapear solo un supermercado específico (carrefour, coto, disco, etc.)',
+        help='Scrapear solo un supermercado específico (carrefour, coto, dia, etc.)',
         type=str
     )
     parser.add_argument(
@@ -243,6 +327,11 @@ def main():
     parser.add_argument(
         '--list', '-l',
         help='Listar supermercados disponibles',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--ai',
+        help='Usar IA (Claude Vision) para extraer promociones en lugar de selectores CSS',
         action='store_true'
     )
     
@@ -256,12 +345,29 @@ def main():
             status = "✅" if data.get('enabled', True) else "❌"
             print(f"  {status} {key:15} - {data['name']}")
         print("=" * 50)
-        print("\nUso: python scraper.py --supermarket <nombre>")
-        print("Ejemplo: python scraper.py --supermarket carrefour\n")
+        print("\nUso:")
+        print("  python scraper.py --supermarket <nombre>     # Scraping tradicional")
+        print("  python scraper.py --ai --supermarket <nombre> # Scraping con IA")
+        print("\nEjemplos:")
+        print("  python scraper.py                            # Todos los habilitados")
+        print("  python scraper.py --supermarket carrefour    # Solo Carrefour")
+        print("  python scraper.py --ai                       # Todos con IA")
+        print("  python scraper.py --ai -s dia                # Solo Día con IA\n")
         return
     
+    # Verificar disponibilidad de IA si se solicita
+    if args.ai and not AI_AVAILABLE:
+        print("\n❌ Error: El modo IA requiere el paquete 'anthropic'")
+        print("   Instala con: pip install anthropic")
+        print("   Y configura: export ANTHROPIC_API_KEY='tu-api-key'\n")
+        sys.exit(1)
+    
     # Ejecutar scraper
-    scraper = PromoScraper(verbose=args.verbose)
+    try:
+        scraper = PromoScraper(verbose=args.verbose, use_ai=args.ai)
+    except Exception as e:
+        print(f"\n❌ Error inicializando scraper: {e}")
+        sys.exit(1)
     
     try:
         asyncio.run(scraper.run(supermarket_filter=args.supermarket))

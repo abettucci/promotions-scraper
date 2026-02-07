@@ -1,11 +1,26 @@
+# Browser automation
 playwright==1.40.0
 playwright-stealth==1.0.6
+setuptools>=65.0.0
+
+# HTML parsing
 beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# Environment & config
 python-dotenv==1.0.0
+
+# Dashboard
 streamlit==1.29.0
 pandas==2.1.4
 plotly==5.18.0
+
+# HTTP requests
 requests==2.31.0
-lxml==4.9.3
+
+# Database
 sqlalchemy==2.0.23
+
+# AI extraction (opcional - requerido para --ai mode)
+anthropic>=0.18.0
 

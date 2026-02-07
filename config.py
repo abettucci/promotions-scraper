@@ -3,6 +3,10 @@ Configuración del scraper de promociones
 """
 import os
 from pathlib import Path
+from dotenv import load_dotenv
+
+# Cargar variables de entorno desde .env
+load_dotenv()
 
 # Directorios
 BASE_DIR = Path(__file__).parent
@@ -44,42 +48,44 @@ GEOLOCATION = {
 }
 
 # Supermercados
+# Nota: Los scrapers standalone (dia, coto, masonline, cencosud) usan sus propias URLs internas
 SUPERMARKETS = {
     'carrefour': {
         'name': 'Carrefour',
-        'url': ' https://www.carrefour.com.ar/descuentos-bancarios', # https://www.carrefour.com.ar/promociones
+        'url': 'https://www.carrefour.com.ar/descuentos-bancarios',
         'enabled': True
-    }
-    # 'coto': {
-    #     'name': 'Coto Digital',
-    #     'url': 'https://www.coto.com.ar/descuentos/index.asp',
-    #     'enabled': True
-    # },
+    },
+    'dia': {
+        'name': 'Supermercados Día',
+        'url': 'https://diaonline.supermercadosdia.com.ar/medios-de-pago-y-promociones',
+        'enabled': True
+    },
+    'coto': {
+        'name': 'Coto Digital',
+        'url': 'https://www.cotodigital.com.ar/sitios/cdigi/terminos-descuentos',
+        'enabled': True
+    },
+    'cencosud': {
+        'name': 'Jumbo (Cencosud)',
+        'url': 'https://www.jumbo.com.ar/descuentos-del-dia',
+        'enabled': True
+    },
+    'masonline': {
+        'name': 'Más Online (ChangoMás)',
+        'url': 'https://www.masonline.com.ar/promociones-bancarias',
+        'enabled': True
+    },
+    # Deshabilitados por ahora (sin scraper específico)
     # 'disco': {
     #     'name': 'Disco',
     #     'url': 'https://www.disco.com.ar/promociones-bancarias',
-    #     'enabled': True
+    #     'enabled': False
     # },
-    # 'jumbo': {
-    #     'name': 'Jumbo',
-    #     'url': 'https://www.jumbo.com.ar/promociones',
-    #     'enabled': True
+    # 'vea': {
+    #     'name': 'Vea',
+    #     'url': 'https://www.vea.com.ar/promociones-bancarias',
+    #     'enabled': False
     # },
-    # 'dia': {
-    #     'name': 'Día',
-    #     'url': 'https://diaonline.supermercadosdia.com.ar/promociones',
-    #     'enabled': True
-    # },
-    # 'walmart': {
-    #     'name': 'Walmart',
-    #     'url': 'https://www.walmart.com.ar/promociones',
-    #     'enabled': True
-    # },
-    # 'changomas': {
-    #     'name': 'Changomás',
-    #     'url': 'https://www.changomas.com.ar/promociones',
-    #     'enabled': True
-    # }
 }
 
 # Palabras clave para detectar bancos y billeteras
@@ -112,4 +118,20 @@ LOG_FORMAT = '%(asctime)s - %(name)s - %(levelname)s - %(message)s'
 # Intentos de retry
 MAX_RETRIES = 3
 RETRY_DELAY = 5  # segundos
+
+# ============================================
+# CONFIGURACIÓN DE IA (Claude Vision)
+# ============================================
+# API Key de Anthropic (requerida para modo --ai)
+ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
+
+# Modelo de Claude a usar para extracción
+# Opciones: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022, claude-3-haiku-20240307
+AI_MODEL = os.getenv("AI_MODEL", "claude-sonnet-4-20250514")
+
+# Máximo de tokens en la respuesta
+AI_MAX_TOKENS = int(os.getenv("AI_MAX_TOKENS", "4096"))
+
+# Número máximo de screenshots por página (para páginas largas)
+AI_MAX_SCREENSHOTS = int(os.getenv("AI_MAX_SCREENSHOTS", "5"))
 

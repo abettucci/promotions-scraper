@@ -276,9 +276,28 @@ class Database:
         promotions = []
         for row in cursor.fetchall():
             promo = dict(row)
-            # Parse JSON fields
-            promo['exclusions'] = json.loads(promo.get('exclusions', '[]'))
-            promo['requirements'] = json.loads(promo.get('requirements', '[]'))
+            # Parse JSON fields - manejar None y strings vacíos
+            exclusions = promo.get('exclusions')
+            requirements = promo.get('requirements')
+            
+            # Parsear exclusions
+            if exclusions and isinstance(exclusions, str) and exclusions.strip():
+                try:
+                    promo['exclusions'] = json.loads(exclusions)
+                except json.JSONDecodeError:
+                    promo['exclusions'] = []
+            else:
+                promo['exclusions'] = []
+            
+            # Parsear requirements
+            if requirements and isinstance(requirements, str) and requirements.strip():
+                try:
+                    promo['requirements'] = json.loads(requirements)
+                except json.JSONDecodeError:
+                    promo['requirements'] = []
+            else:
+                promo['requirements'] = []
+            
             promotions.append(promo)
         
         conn.close()
