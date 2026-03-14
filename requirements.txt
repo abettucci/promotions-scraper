@@ -1,7 +1,10 @@
 # Browser automation
 playwright==1.40.0
 playwright-stealth==1.0.6
-setuptools>=65.0.0
+setuptools>=65.0.0  # Requerido por playwright-stealth (pkg_resources)
+
+# Adaptive scraping (Scrapling)
+scrapling[fetchers]>=0.4.0
 
 # HTML parsing
 beautifulsoup4==4.12.2
@@ -20,6 +23,10 @@ requests==2.31.0
 
 # Database
 sqlalchemy==2.0.23
+
+# API
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
 
 # AI extraction (opcional - requerido para --ai mode)
 anthropic>=0.18.0

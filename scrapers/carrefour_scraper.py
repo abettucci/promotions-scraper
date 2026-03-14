@@ -1,5 +1,14 @@
 """
 Scraper específico para Carrefour - Descuentos Bancarios
+
+Soporta 3 modos de scraping:
+1. Playwright (default) - Browser automation con playwright-stealth
+2. Simple (requests) - HTTP requests sin browser, más rápido
+3. Scrapling - Adaptive scraping con bypass de anti-bot integrado
+
+Configurar via env vars:
+- USE_SIMPLE_SCRAPER=true -> Usa requests
+- USE_SCRAPLING=true -> Usa Scrapling (recomendado para sitios que cambian)
 """
 from typing import List, Dict
 from playwright.async_api import Page
@@ -8,18 +17,27 @@ import re
 import os
 
 class CarrefourScraper(BaseScraper):
-    def __init__(self, use_simple_scraper=None):
+    def __init__(self, use_simple_scraper=None, use_scrapling=None):
         super().__init__(
             name='Carrefour',
             url='https://www.carrefour.com.ar/descuentos-bancarios'
         )
-        # Auto-detectar si usar scraper simple (env var o parámetro)
+        # Auto-detectar modo de scraping (env var o parámetro)
         if use_simple_scraper is None:
             use_simple_scraper = os.environ.get('USE_SIMPLE_SCRAPER', 'false').lower() == 'true'
         self.use_simple_scraper = use_simple_scraper
+        
+        if use_scrapling is None:
+            use_scrapling = os.environ.get('USE_SCRAPLING', 'false').lower() == 'true'
+        self.use_scrapling = use_scrapling
     
     async def scrape(self, page: Page) -> List[Dict]:
         """Scraper para Carrefour - Descuentos Bancarios"""
+        
+        # Prioridad: Scrapling > Simple > Playwright
+        if self.use_scrapling:
+            print(f"🔍 Scraping {self.name} con Scrapling (adaptive)...")
+            return await self._scrape_scrapling()
         
         # Si se configuró para usar scraper simple, usarlo directamente
         if self.use_simple_scraper:
@@ -513,4 +531,40 @@ class CarrefourScraper(BaseScraper):
             import traceback
             traceback.print_exc()
             return []
+    
+    async def _scrape_scrapling(self) -> List[Dict]:
+        """
+        Método con Scrapling: adaptive scraping con bypass de anti-bot.
+        Ventajas:
+        - Encuentra elementos aunque cambien los selectores (adaptive)
+        - Bypass integrado de Cloudflare y otros anti-bot
+        - API unificada para requests y browser automation
+        """
+        try:
+            from .carrefour_scrapling import CarrefourScraplingScraper
+            
+            headless = os.environ.get('HEADLESS', 'true').lower() == 'true'
+            use_adaptive = os.environ.get('SCRAPLING_ADAPTIVE', 'true').lower() == 'true'
+            
+            scrapling_scraper = CarrefourScraplingScraper(
+                use_adaptive=use_adaptive,
+                headless=headless
+            )
+            
+            # Scrapling tiene método async disponible
+            promotions = await scrapling_scraper.scrape_async()
+            return promotions
+            
+        except ImportError as e:
+            print(f"   ⚠️ Scrapling no disponible: {e}")
+            print(f"   🔄 Instalá con: pip install 'scrapling[fetchers]' && scrapling install")
+            print(f"   🔄 Fallback a método simple...")
+            return await self._scrape_simple()
+            
+        except Exception as e:
+            print(f"   ❌ Error en Scrapling: {e}")
+            import traceback
+            traceback.print_exc()
+            print(f"   🔄 Fallback a método simple...")
+            return await self._scrape_simple()
 

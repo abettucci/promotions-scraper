@@ -4,7 +4,14 @@ Scraper principal - Orquesta el scraping de todos los supermercados
 import asyncio
 import argparse
 import sys
+import os
 from datetime import datetime
+
+# Asegurar que el directorio del script esté en el path
+script_dir = os.path.dirname(os.path.abspath(__file__))
+if script_dir not in sys.path:
+    sys.path.insert(0, script_dir)
+
 from playwright.async_api import async_playwright
 from playwright_stealth import stealth_async
 import random
