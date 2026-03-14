@@ -1,0 +1,69 @@
+export interface Promotion {
+  id: number
+  title: string
+  discount: string | null
+  bank: string | null
+  wallet: string | null
+  card_type: string | null
+  payment_method: string | null
+  store_types: string | null
+  valid_days: string | null
+  valid_from: string | null
+  valid_until: string | null
+  image_url: string | null
+  tope: string | null
+  acumulable: boolean | null
+  is_active: boolean
+  scraped_at: string
+  supermarket_name: string
+  exclusions: string[]
+  requirements: string[]
+  max_discount: string | null
+  min_purchase: string | null
+}
+
+export interface PromotionsResponse {
+  total: number
+  page: number
+  page_size: number
+  pages: number
+  data: Promotion[]
+}
+
+export interface TodayResponse {
+  day: string
+  total: number
+  data: Promotion[]
+}
+
+export interface Bank {
+  name: string
+  count: number
+}
+
+export interface Supermarket {
+  id: number
+  name: string
+  url: string
+  last_scraped: string | null
+  scrape_count: number
+  active_promotions: number
+}
+
+export interface Stats {
+  total_promotions: number
+  total_banks: number
+  total_supermarkets: number
+  last_updated: string | null
+  top_banks: { name: string; count: number }[]
+  by_supermarket: { name: string; count: number }[]
+}
+
+export interface FilterState {
+  supermarket: string
+  bank: string
+  day: string
+  search: string
+  discount_type: string
+  page: number
+}
