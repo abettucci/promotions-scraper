@@ -3,12 +3,13 @@ playwright==1.40.0
 playwright-stealth==1.0.6
 setuptools>=65.0.0  # Requerido por playwright-stealth (pkg_resources)
 
-# Adaptive scraping (Scrapling)
+# Adaptive scraping (Scrapling) - requiere lxml>=6.0.2
 scrapling[fetchers]>=0.4.0
 
 # HTML parsing
-beautifulsoup4==4.12.2
-lxml==4.9.3
+# NOTA: Scrapling requiere lxml>=6.0.2, así que no fijamos versión
+beautifulsoup4>=4.12.0
+lxml>=6.0.2
 
 # Environment & config
 python-dotenv==1.0.0

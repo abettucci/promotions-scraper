@@ -1,0 +1,19 @@
+# Requirements para el backend API (Railway)
+# NO incluye Scrapling ni Playwright - el scraper corre en GitHub Actions
+
+# HTML parsing (para términos y condiciones)
+beautifulsoup4==4.12.2
+lxml==4.9.3
+
+# Environment & config
+python-dotenv==1.0.0
+
+# Database
+sqlalchemy==2.0.23
+
+# API
+fastapi==0.115.0
+uvicorn[standard]==0.30.6
+
+# HTTP requests (para health checks, etc.)
+requests==2.31.0

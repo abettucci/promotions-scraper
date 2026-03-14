@@ -8,12 +8,12 @@ RUN apt-get update && apt-get install -y \
     gcc \
     && rm -rf /var/lib/apt/lists/*
 
-# Copiar requirements primero (para cache de Docker)
-COPY requirements.txt .
-
-# Instalar dependencias Python (sin Scrapling para el backend API)
+# Copiar requirements del API (sin Scrapling/Playwright)
 # El scraper corre en GitHub Actions, no en Railway
-RUN pip install --no-cache-dir -r requirements.txt
+COPY requirements-api.txt .
+
+# Instalar dependencias Python
+RUN pip install --no-cache-dir -r requirements-api.txt
 
 # Copiar el resto del código
 COPY . .
