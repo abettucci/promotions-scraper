@@ -65,7 +65,8 @@ def row_to_dict(row: sqlite3.Row) -> dict:
         val = d.get(field)
         if val and isinstance(val, str) and val.strip():
             try:
-                d[field] = json.loads(val)
+                parsed = json.loads(val)
+                d[field] = parsed if isinstance(parsed, list) else []
             except json.JSONDecodeError:
                 d[field] = []
         else:

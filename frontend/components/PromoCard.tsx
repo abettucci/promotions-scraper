@@ -32,13 +32,30 @@ function supermarketColor(name: string) {
 
 export function PromoCard({ promo }: Props) {
   const [expanded, setExpanded] = useState(false)
+
+  // Ensure these are always arrays to prevent .map() crash if API returns non-array
+  const exclusions = Array.isArray(promo.exclusions) ? promo.exclusions : []
+  const requirements = Array.isArray(promo.requirements) ? promo.requirements : []
+
   const hasDetails =
-    (promo.exclusions?.length > 0) ||
-    (promo.requirements?.length > 0) ||
+    exclusions.length > 0 ||
+    requirements.length > 0 ||
     promo.tope ||
-    promo.min_purchase
+    promo.min_purchase ||
+    promo.valid_from ||
+    promo.valid_until ||
+    promo.acumulable !== null && promo.acumulable !== undefined
 
   const entity = promo.bank || promo.wallet
+
+  const formatDate = (d: string | null) => {
+    if (!d) return null
+    try {
+      return new Date(d + "T00:00:00").toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
+    } catch {
+      return d
+    }
+  }
 
   return (
     <Card className="relative overflow-hidden hover:shadow-md transition-shadow duration-200 border-slate-200">
@@ -73,16 +90,23 @@ export function PromoCard({ promo }: Props) {
         {(promo.card_type || promo.payment_method) && (
           <div className="flex flex-wrap gap-1">
             {promo.card_type && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 max-w-full truncate">
                 {promo.card_type}
               </Badge>
             )}
             {promo.payment_method && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 max-w-[200px] truncate" title={promo.payment_method}>
                 {promo.payment_method}
               </Badge>
             )}
           </div>
+        )}
+
+        {/* Store types (online / presencial) */}
+        {promo.store_types && (
+          <p className="text-[11px] text-slate-500 truncate">
+            <span className="font-medium">Modalidad:</span> {promo.store_types}
+          </p>
         )}
 
         {/* Days */}
@@ -121,21 +145,31 @@ export function PromoCard({ promo }: Props) {
                 {promo.min_purchase && (
                   <p><span className="font-semibold">Compra mínima:</span> {promo.min_purchase}</p>
                 )}
-                {promo.requirements && promo.requirements.length > 0 && (
+                {(promo.valid_from || promo.valid_until) && (
+                  <p>
+                    <span className="font-semibold">Vigencia:</span>{" "}
+                    {promo.valid_from && promo.valid_until
+                      ? `${formatDate(promo.valid_from)} — ${formatDate(promo.valid_until)}`
+                      : promo.valid_from
+                      ? `Desde ${formatDate(promo.valid_from)}`
+                      : `Hasta ${formatDate(promo.valid_until)}`}
+                  </p>
+                )}
+                {requirements.length > 0 && (
                   <div>
                     <p className="font-semibold mb-0.5">Requisitos:</p>
                     <ul className="list-disc list-inside space-y-0.5">
-                      {promo.requirements.map((r, i) => (
+                      {requirements.map((r, i) => (
                         <li key={i}>{r}</li>
                       ))}
                     </ul>
                   </div>
                 )}
-                {promo.exclusions && promo.exclusions.length > 0 && (
+                {exclusions.length > 0 && (
                   <div>
                     <p className="font-semibold mb-0.5">Exclusiones:</p>
                     <ul className="list-disc list-inside space-y-0.5">
-                      {promo.exclusions.map((e, i) => (
+                      {exclusions.map((e, i) => (
                         <li key={i}>{e}</li>
                       ))}
                     </ul>
