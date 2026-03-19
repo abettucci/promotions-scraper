@@ -1,5 +1,5 @@
 # Browser automation
-playwright==1.40.0
+playwright==1.56.0
 playwright-stealth==1.0.6
 setuptools>=65.0.0  # Requerido por playwright-stealth (pkg_resources)
 
