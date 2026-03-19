@@ -102,40 +102,11 @@ class CarrefourScraplingScraper:
         """
         Scrape asíncrono de promociones de Carrefour usando Scrapling.
         Útil para integración con el sistema existente que usa async.
+        Corre el fetch sync en un thread para evitar conflictos con el event loop.
         """
-        try:
-            from scrapling.fetchers import StealthyFetcher
-        except ImportError:
-            raise CarrefourScraplingError(
-                "Scrapling no está instalado. Ejecuta: pip install 'scrapling[fetchers]' && scrapling install"
-            )
-        
-        try:
-            print(f"🔍 Scraping {self.name} con Scrapling (async)...")
-            print(f"   🌐 URL: {self.url}")
-            print(f"   🎯 Modo adaptive: {self.use_adaptive}")
-            
-            StealthyFetcher.adaptive = self.use_adaptive
-            
-            page = StealthyFetcher.fetch(
-                self.url,
-                headless=self.headless,
-                network_idle=True,
-                timeout=30000,
-            )
-            
-            print(f"   ✅ Página cargada correctamente")
-            
-            promotions = self._extract_promotions(page)
-            
-            print(f"✅ {self.name}: {len(promotions)} promociones encontradas")
-            return promotions
-            
-        except Exception as e:
-            print(f"❌ Error en {self.name} (Scrapling async): {e}")
-            import traceback
-            traceback.print_exc()
-            return []
+        import asyncio
+        print(f"🔍 Scraping {self.name} con Scrapling (async)...")
+        return await asyncio.to_thread(self.scrape)
 
     def _extract_promotions(self, page) -> List[Dict]:
         """
