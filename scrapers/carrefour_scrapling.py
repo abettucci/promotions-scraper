@@ -154,14 +154,16 @@ class CarrefourScraplingScraper:
                 except Exception as e:
                     print(f"   ⚠️ Error procesando elemento {idx+1}: {e}")
         
-        seen_titles = set()
+        seen = set()
         unique_promos = []
         for promo in promotions:
-            key = (promo.get('title', ''), promo.get('discount', ''))
-            if key not in seen_titles:
-                seen_titles.add(key)
+            # Deduplicate by entity + discount + valid_days, not title (which varies by regex context)
+            entity = (promo.get('bank') or promo.get('wallet') or '').lower()
+            key = (entity, promo.get('discount', ''), promo.get('valid_days', ''))
+            if key not in seen:
+                seen.add(key)
                 unique_promos.append(promo)
-        
+
         return unique_promos
 
     def _is_promo_element(self, text: str) -> bool:

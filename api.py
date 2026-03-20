@@ -68,7 +68,9 @@ def row_to_dict(row: sqlite3.Row) -> dict:
                 parsed = json.loads(val)
                 d[field] = parsed if isinstance(parsed, list) else []
             except json.JSONDecodeError:
-                d[field] = []
+                # Scrapers store as pipe-separated string: "item1 | item2"
+                items = [s.strip() for s in val.split("|") if s.strip()]
+                d[field] = items if items else []
         else:
             d[field] = []
     return d
@@ -151,7 +153,8 @@ def get_promotions(
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             p.is_active, p.scraped_at,
             s.name AS supermarket_name,
-            t.exclusions, t.requirements, t.max_discount, t.min_purchase
+            p.exclusions, p.requirements,
+            t.max_discount, p.min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         LEFT JOIN terms_conditions t ON p.id = t.promotion_id
@@ -192,7 +195,8 @@ def get_promotions_today():
             p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             s.name AS supermarket_name,
-            t.exclusions, t.requirements, t.max_discount, t.min_purchase
+            p.exclusions, p.requirements,
+            t.max_discount, p.min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         LEFT JOIN terms_conditions t ON p.id = t.promotion_id

@@ -6,9 +6,10 @@ import { Badge } from "@/components/ui/badge"
 import { BankBadge } from "./BankBadge"
 import { DiscountBadge } from "./DiscountBadge"
 import { DaysBadge } from "./DaysBadge"
-import { ChevronDown, ChevronUp, Store } from "lucide-react"
+import { ChevronDown, ChevronUp } from "lucide-react"
 import type { Promotion } from "@/lib/types"
 import { clsx } from "clsx"
+import { SupermarketLogo } from "./SupermarketLogo"
 
 interface Props {
   promo: Promotion
@@ -37,10 +38,20 @@ export function PromoCard({ promo }: Props) {
   const exclusions = Array.isArray(promo.exclusions) ? promo.exclusions : []
   const requirements = Array.isArray(promo.requirements) ? promo.requirements : []
 
+  // Only show tope if it contains actual digits (filter out "$." or just symbols)
+  const meaningfulTope = promo.tope && /\d/.test(promo.tope) ? promo.tope : null
+
+  // Truncate long payment_method — Badge has whitespace-nowrap so JS truncation is safest
+  const paymentMethodShort = promo.payment_method
+    ? promo.payment_method.length > 40
+      ? promo.payment_method.slice(0, 40) + "…"
+      : promo.payment_method
+    : null
+
   const hasDetails =
     exclusions.length > 0 ||
     requirements.length > 0 ||
-    promo.tope ||
+    meaningfulTope ||
     promo.min_purchase ||
     promo.valid_from ||
     promo.valid_until ||
@@ -65,14 +76,9 @@ export function PromoCard({ promo }: Props) {
       />
 
       <CardContent className="pl-4 pr-4 pt-3 pb-3 space-y-2">
-        {/* Header row: supermarket + discount */}
+        {/* Header row: supermarket logo + discount */}
         <div className="flex items-start justify-between gap-2">
-          <div className="flex items-center gap-1.5 min-w-0">
-            <Store className="w-3.5 h-3.5 text-slate-400 shrink-0" />
-            <span className="text-[11px] text-slate-500 font-medium truncate">
-              {promo.supermarket_name}
-            </span>
-          </div>
+          <SupermarketLogo name={promo.supermarket_name} showLabel={true} />
           {promo.discount && <DiscountBadge discount={promo.discount} className="shrink-0" />}
         </div>
 
@@ -87,16 +93,16 @@ export function PromoCard({ promo }: Props) {
         )}
 
         {/* Card type + payment method */}
-        {(promo.card_type || promo.payment_method) && (
+        {(promo.card_type || paymentMethodShort) && (
           <div className="flex flex-wrap gap-1">
             {promo.card_type && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 max-w-full truncate">
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5">
                 {promo.card_type}
               </Badge>
             )}
-            {promo.payment_method && (
-              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 max-w-[200px] truncate" title={promo.payment_method}>
-                {promo.payment_method}
+            {paymentMethodShort && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5" title={promo.payment_method ?? ""}>
+                {paymentMethodShort}
               </Badge>
             )}
           </div>
@@ -113,9 +119,9 @@ export function PromoCard({ promo }: Props) {
         <DaysBadge validDays={promo.valid_days} />
 
         {/* Tope */}
-        {promo.tope && !expanded && (
+        {meaningfulTope && !expanded && (
           <p className="text-[11px] text-slate-500">
-            <span className="font-medium">Tope:</span> {promo.tope}
+            <span className="font-medium">Tope:</span> {meaningfulTope}
           </p>
         )}
 
@@ -139,8 +145,8 @@ export function PromoCard({ promo }: Props) {
 
             {expanded && (
               <div className="mt-2 space-y-2 text-[11px] text-slate-600 border-t pt-2">
-                {promo.tope && (
-                  <p><span className="font-semibold">Tope:</span> {promo.tope}</p>
+                {meaningfulTope && (
+                  <p><span className="font-semibold">Tope:</span> {meaningfulTope}</p>
                 )}
                 {promo.min_purchase && (
                   <p><span className="font-semibold">Compra mínima:</span> {promo.min_purchase}</p>

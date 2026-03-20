@@ -95,9 +95,16 @@ class Database:
             )
         """)
         
+        # Add min_purchase column if it doesn't exist (safe migration)
+        try:
+            cursor.execute("ALTER TABLE promotions ADD COLUMN min_purchase TEXT")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+
         conn.commit()
         conn.close()
-        
+
         print(f"✅ Base de datos inicializada: {self.db_path}")
     
     def insert_supermarket(self, name: str, url: str) -> int:
@@ -141,12 +148,16 @@ class Database:
         cursor = conn.cursor()
         
         try:
+            # Normalize field aliases across scrapers
+            store_types = promo_data.get('store_types') or promo_data.get('aplica_en', '')
+            min_purchase = promo_data.get('min_purchase') or promo_data.get('monto_minimo', '')
+
             cursor.execute("""
-                INSERT INTO promotions 
-                (supermarket_id, title, discount, bank, wallet, card_type, 
-                 payment_method, store_types, valid_days, valid_from, valid_until, 
-                 url, image_url, terms_raw, exclusions, requirements, tope, acumulable)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                INSERT INTO promotions
+                (supermarket_id, title, discount, bank, wallet, card_type,
+                 payment_method, store_types, valid_days, valid_from, valid_until,
+                 url, image_url, terms_raw, exclusions, requirements, tope, acumulable, min_purchase)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(supermarket_id, title, bank) DO UPDATE SET
                     discount = excluded.discount,
                     payment_method = excluded.payment_method,
@@ -159,6 +170,7 @@ class Database:
                     requirements = excluded.requirements,
                     tope = excluded.tope,
                     acumulable = excluded.acumulable,
+                    min_purchase = excluded.min_purchase,
                     is_active = 1,
                     scraped_at = CURRENT_TIMESTAMP
             """, (
@@ -169,7 +181,7 @@ class Database:
                 promo_data.get('wallet', ''),
                 promo_data.get('card_type', ''),
                 promo_data.get('payment_method', ''),
-                promo_data.get('store_types', ''),
+                store_types,
                 promo_data.get('valid_days', ''),
                 promo_data.get('valid_from'),
                 promo_data.get('valid_until'),
@@ -179,7 +191,8 @@ class Database:
                 promo_data.get('exclusions', ''),
                 promo_data.get('requirements', ''),
                 promo_data.get('tope', ''),
-                promo_data.get('acumulable')
+                promo_data.get('acumulable'),
+                min_purchase,
             ))
             
             promotion_id = cursor.lastrowid
