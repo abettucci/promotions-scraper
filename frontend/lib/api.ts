@@ -1,9 +1,8 @@
 import type { PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, Promotion } from "./types"
 
-const BASE_URL = process.env.NEXT_PUBLIC_API_URL ?? "http://localhost:8000"
-
 async function fetchJSON<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
-  const url = new URL(BASE_URL + path)
+  const base = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+  const url = new URL(path, base)
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
       if (v !== undefined && v !== null && v !== "") {
