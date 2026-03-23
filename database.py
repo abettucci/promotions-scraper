@@ -152,6 +152,9 @@ class Database:
             store_types = promo_data.get('store_types') or promo_data.get('aplica_en', '')
             min_purchase = promo_data.get('min_purchase') or promo_data.get('monto_minimo', '')
 
+            # Truncate title so near-identical long titles hit the UNIQUE constraint
+            title = (promo_data.get('title', '') or '')[:200]
+
             cursor.execute("""
                 INSERT INTO promotions
                 (supermarket_id, title, discount, bank, wallet, card_type,
@@ -175,7 +178,7 @@ class Database:
                     scraped_at = CURRENT_TIMESTAMP
             """, (
                 supermarket_id,
-                promo_data.get('title', ''),
+                title,
                 promo_data.get('discount', ''),
                 promo_data.get('bank', ''),
                 promo_data.get('wallet', ''),
@@ -200,9 +203,9 @@ class Database:
             # Si lastrowid es 0, significa que fue un UPDATE (ON CONFLICT)
             if not promotion_id:
                 result = cursor.execute("""
-                    SELECT id FROM promotions 
+                    SELECT id FROM promotions
                     WHERE supermarket_id = ? AND title = ? AND bank = ?
-                """, (supermarket_id, promo_data.get('title', ''), promo_data.get('bank', ''))).fetchone()
+                """, (supermarket_id, title, promo_data.get('bank', ''))).fetchone()
                 
                 if result:
                     promotion_id = result[0]
@@ -338,6 +341,14 @@ class Database:
         
         return stats
     
+    def deactivate_all_for_supermarket(self, supermarket_id: int):
+        """Desactiva todas las promociones de un supermercado antes de re-insertar"""
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute("UPDATE promotions SET is_active = 0 WHERE supermarket_id = ?", (supermarket_id,))
+        conn.commit()
+        conn.close()
+
     def deactivate_old_promotions(self, supermarket_id: int, current_titles: List[str]):
         """Desactiva promociones que ya no están en el sitio"""
         conn = self.get_connection()

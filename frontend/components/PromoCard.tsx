@@ -62,9 +62,11 @@ export function PromoCard({ promo }: Props) {
   const formatDate = (d: string | null) => {
     if (!d) return null
     try {
-      return new Date(d + "T00:00:00").toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
+      const date = new Date(d + "T00:00:00")
+      if (isNaN(date.getTime())) return null
+      return date.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
     } catch {
-      return d
+      return null
     }
   }
 
@@ -151,16 +153,15 @@ export function PromoCard({ promo }: Props) {
                 {promo.min_purchase && (
                   <p><span className="font-semibold">Compra mínima:</span> {promo.min_purchase}</p>
                 )}
-                {(promo.valid_from || promo.valid_until) && (
-                  <p>
-                    <span className="font-semibold">Vigencia:</span>{" "}
-                    {promo.valid_from && promo.valid_until
-                      ? `${formatDate(promo.valid_from)} — ${formatDate(promo.valid_until)}`
-                      : promo.valid_from
-                      ? `Desde ${formatDate(promo.valid_from)}`
-                      : `Hasta ${formatDate(promo.valid_until)}`}
-                  </p>
-                )}
+                {(() => {
+                  const from = formatDate(promo.valid_from)
+                  const until = formatDate(promo.valid_until)
+                  if (!from && !until) return null
+                  const text = from && until
+                    ? `${from} — ${until}`
+                    : from ? `Desde ${from}` : `Hasta ${until}`
+                  return <p><span className="font-semibold">Vigencia:</span>{" "}{text}</p>
+                })()}
                 {requirements.length > 0 && (
                   <div>
                     <p className="font-semibold mb-0.5">Requisitos:</p>

@@ -177,6 +177,9 @@ class PromoScraper:
                 )
                 return
             
+            # Deactivate all existing promos before re-inserting so old duplicates are cleared
+            self.db.deactivate_all_for_supermarket(supermarket_id)
+
             # Guardar promociones en DB
             current_titles = []
             for promo in promotions:

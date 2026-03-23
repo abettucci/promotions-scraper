@@ -157,9 +157,10 @@ class CarrefourScraplingScraper:
         seen = set()
         unique_promos = []
         for promo in promotions:
-            # Deduplicate by entity + discount + valid_days, not title (which varies by regex context)
             entity = (promo.get('bank') or promo.get('wallet') or '').lower()
-            key = (entity, promo.get('discount', ''), promo.get('valid_days', ''))
+            # Use title prefix to catch near-identical promos from different context windows
+            title_prefix = promo.get('title', '')[:80].lower().strip()
+            key = (entity, promo.get('discount', ''), title_prefix)
             if key not in seen:
                 seen.add(key)
                 unique_promos.append(promo)

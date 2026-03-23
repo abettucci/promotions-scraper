@@ -68,8 +68,11 @@ def row_to_dict(row: sqlite3.Row) -> dict:
                 parsed = json.loads(val)
                 d[field] = parsed if isinstance(parsed, list) else []
             except json.JSONDecodeError:
-                # Scrapers store as pipe-separated string: "item1 | item2"
-                items = [s.strip() for s in val.split("|") if s.strip()]
+                # Try pipe separator first, then semicolon (Carrefour scraper)
+                if "|" in val:
+                    items = [s.strip() for s in val.split("|") if s.strip()]
+                else:
+                    items = [s.strip() for s in val.split(";") if s.strip()]
                 d[field] = items if items else []
         else:
             d[field] = []
