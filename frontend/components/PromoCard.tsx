@@ -48,27 +48,39 @@ export function PromoCard({ promo }: Props) {
       : promo.payment_method
     : null
 
-  const hasDetails =
-    exclusions.length > 0 ||
-    requirements.length > 0 ||
-    meaningfulTope ||
-    promo.min_purchase ||
-    promo.valid_from ||
-    promo.valid_until ||
-    promo.acumulable !== null && promo.acumulable !== undefined
-
   const entity = promo.bank || promo.wallet
 
-  const formatDate = (d: string | null) => {
+  const formatDate = (d: string | null | undefined) => {
     if (!d) return null
     try {
-      const date = new Date(d + "T00:00:00")
-      if (isNaN(date.getTime())) return null
-      return date.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
+      // Try ISO format YYYY-MM-DD
+      let date = new Date(d + "T00:00:00")
+      if (!isNaN(date.getTime())) {
+        return date.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
+      }
+      // Try DD/MM/YYYY or DD/MM/YY
+      const parts = d.match(/^(\d{1,2})\/(\d{1,2})\/(\d{2,4})$/)
+      if (parts) {
+        let year = parseInt(parts[3])
+        if (year < 100) year += 2000
+        date = new Date(year, parseInt(parts[2]) - 1, parseInt(parts[1]))
+        if (!isNaN(date.getTime())) {
+          return date.toLocaleDateString("es-AR", { day: "2-digit", month: "short", year: "numeric" })
+        }
+      }
+      return null
     } catch {
       return null
     }
   }
+
+  const hasDetails =
+    exclusions.length > 0 ||
+    requirements.length > 0 ||
+    !!meaningfulTope ||
+    !!promo.min_purchase ||
+    !!formatDate(promo.valid_from) ||
+    !!formatDate(promo.valid_until)
 
   return (
     <Card className="relative overflow-hidden hover:shadow-md transition-shadow duration-200 border-slate-200">

@@ -10,7 +10,7 @@ async function fetchJSON<T>(path: string, params?: Record<string, string | numbe
       }
     })
   }
-  const res = await fetch(url.toString(), { next: { revalidate: 300 } })
+  const res = await fetch(url.toString(), { cache: "no-store" })
   if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`)
   return res.json() as Promise<T>
 }

@@ -157,10 +157,12 @@ class CarrefourScraplingScraper:
         seen = set()
         unique_promos = []
         for promo in promotions:
-            entity = (promo.get('bank') or promo.get('wallet') or '').lower()
-            # Use title prefix to catch near-identical promos from different context windows
-            title_prefix = promo.get('title', '')[:80].lower().strip()
-            key = (entity, promo.get('discount', ''), title_prefix)
+            entity = (promo.get('bank') or promo.get('wallet') or '').strip()
+            # Drop generic "Promoción Carrefour" entries with no identified bank/wallet — they're noise
+            if not entity and promo.get('title', '').lower().startswith('promoción carrefour'):
+                continue
+            # One promo per (entity, discount) — prevents same bank+discount from appearing N times
+            key = (entity.lower(), promo.get('discount', ''))
             if key not in seen:
                 seen.add(key)
                 unique_promos.append(promo)

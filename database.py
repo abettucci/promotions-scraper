@@ -179,10 +179,11 @@ class Database:
             """, (
                 supermarket_id,
                 title,
-                promo_data.get('discount', ''),
-                promo_data.get('bank', ''),
-                promo_data.get('wallet', ''),
-                promo_data.get('card_type', ''),
+                promo_data.get('discount', '') or '',
+                # Coerce None → '' so UNIQUE(supermarket_id, title, bank) works (SQLite NULL != NULL)
+                promo_data.get('bank') or '',
+                promo_data.get('wallet') or '',
+                promo_data.get('card_type') or '',
                 promo_data.get('payment_method', ''),
                 store_types,
                 promo_data.get('valid_days', ''),
