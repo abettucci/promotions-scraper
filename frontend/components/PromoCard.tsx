@@ -93,7 +93,7 @@ export function PromoCard({ promo }: Props) {
         {/* Header row: supermarket logo + discount */}
         <div className="flex items-start justify-between gap-2">
           <SupermarketLogo name={promo.supermarket_name} showLabel={true} />
-          {promo.discount && <DiscountBadge discount={promo.discount} className="shrink-0" />}
+          {promo.discount && <DiscountBadge discount={promo.discount} className="max-w-[90px]" />}
         </div>
 
         {/* Title */}
@@ -101,10 +101,11 @@ export function PromoCard({ promo }: Props) {
           {promo.title}
         </p>
 
-        {/* Bank / Wallet */}
-        {entity && (
-          <BankBadge name={entity} size="sm" showLabel={true} />
-        )}
+        {/* Bank / Wallet + Days on the same row */}
+        <div className="flex items-center gap-2 flex-wrap">
+          {entity && <BankBadge name={entity} size="sm" showLabel={true} />}
+          <DaysBadge validDays={promo.valid_days} />
+        </div>
 
         {/* Card type + payment method */}
         {(promo.card_type || paymentMethodShort) && (
@@ -128,9 +129,6 @@ export function PromoCard({ promo }: Props) {
             <span className="font-medium">Modalidad:</span> {promo.store_types}
           </p>
         )}
-
-        {/* Days */}
-        <DaysBadge validDays={promo.valid_days} />
 
         {/* Tope */}
         {meaningfulTope && !expanded && (

@@ -31,7 +31,7 @@ export function DiscountBadge({ discount, className }: Props) {
   return (
     <span
       className={clsx(
-        "inline-flex items-center px-2 py-0.5 rounded-full border text-[11px] font-semibold tracking-wide uppercase",
+        "inline-block text-center px-2 py-0.5 rounded-full border text-[11px] font-semibold tracking-wide uppercase leading-tight",
         STYLES[type],
         className
       )}
