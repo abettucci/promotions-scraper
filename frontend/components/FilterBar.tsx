@@ -46,7 +46,7 @@ export function FilterBar({ filters, banks, supermarkets, onChange, onReset, tot
     filters.supermarket || filters.bank || filters.day || filters.search || filters.discount_type
 
   const [localSearch, setLocalSearch] = useState(filters.search)
-  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
   useEffect(() => {
     setLocalSearch(filters.search)
