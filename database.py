@@ -69,7 +69,7 @@ class Database:
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS terms_conditions (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
-                promotion_id INTEGER NOT NULL,
+                promotion_id INTEGER NOT NULL UNIQUE,
                 raw_text TEXT,
                 exclusions TEXT,  -- JSON array
                 requirements TEXT,  -- JSON array
@@ -81,6 +81,15 @@ class Database:
                 FOREIGN KEY (promotion_id) REFERENCES promotions(id)
             )
         """)
+
+        # Clean up duplicate terms_conditions rows from previous runs
+        cursor.execute("""
+            DELETE FROM terms_conditions
+            WHERE id NOT IN (
+                SELECT MIN(id) FROM terms_conditions GROUP BY promotion_id
+            )
+        """)
+        conn.commit()
         
         # Tabla de historial de scraping
         cursor.execute("""
@@ -101,6 +110,16 @@ class Database:
             conn.commit()
         except Exception:
             pass  # Column already exists
+
+        # Ensure one terms_conditions row per promotion (for existing DBs)
+        try:
+            cursor.execute(
+                "CREATE UNIQUE INDEX IF NOT EXISTS idx_tc_promotion_id "
+                "ON terms_conditions(promotion_id)"
+            )
+            conn.commit()
+        except Exception:
+            pass
 
         conn.commit()
         conn.close()
@@ -223,12 +242,16 @@ class Database:
             conn.close()
     
     def insert_terms(self, promotion_id: int, terms_data: Dict):
-        """Inserta términos y condiciones"""
+        """Inserta términos y condiciones (one row per promotion)"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
+        cursor.execute(
+            "DELETE FROM terms_conditions WHERE promotion_id = ?",
+            (promotion_id,),
+        )
         cursor.execute("""
-            INSERT OR REPLACE INTO terms_conditions
+            INSERT INTO terms_conditions
             (promotion_id, raw_text, exclusions, requirements, 
              max_discount, min_purchase, valid_days, payment_methods)
             VALUES (?, ?, ?, ?, ?, ?, ?, ?)
@@ -242,7 +265,7 @@ class Database:
             json.dumps(terms_data.get('valid_days', [])),
             json.dumps(terms_data.get('payment_methods', []))
         ))
-        
+
         conn.commit()
         conn.close()
     

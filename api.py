@@ -144,7 +144,6 @@ def get_promotions(
         SELECT COUNT(*)
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
-        LEFT JOIN terms_conditions t ON p.id = t.promotion_id
         WHERE {where_clause}
     """
     total = cursor.execute(count_query, params).fetchone()[0]
@@ -157,10 +156,11 @@ def get_promotions(
             p.is_active, p.scraped_at,
             s.name AS supermarket_name,
             p.exclusions, p.requirements,
-            t.max_discount, p.min_purchase
+            (SELECT t.max_discount FROM terms_conditions t
+             WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
+            p.min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
-        LEFT JOIN terms_conditions t ON p.id = t.promotion_id
         WHERE {where_clause}
         ORDER BY p.scraped_at DESC
         LIMIT ? OFFSET ?
@@ -199,10 +199,11 @@ def get_promotions_today():
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             s.name AS supermarket_name,
             p.exclusions, p.requirements,
-            t.max_discount, p.min_purchase
+            (SELECT t.max_discount FROM terms_conditions t
+             WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
+            p.min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
-        LEFT JOIN terms_conditions t ON p.id = t.promotion_id
         WHERE p.is_active = 1
           AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ?)
         ORDER BY p.scraped_at DESC
@@ -222,14 +223,20 @@ def get_promotion(promotion_id: int):
 
     row = cursor.execute("""
         SELECT
-            p.*,
+            p.id, p.supermarket_id, p.title, p.discount, p.bank, p.wallet,
+            p.card_type, p.payment_method, p.store_types, p.valid_days,
+            p.valid_from, p.valid_until, p.url, p.image_url, p.terms_raw,
+            p.tope, p.acumulable, p.is_active, p.scraped_at, p.min_purchase,
             s.name AS supermarket_name,
-            t.raw_text, t.exclusions, t.requirements,
-            t.max_discount, t.min_purchase, t.valid_days AS tc_valid_days,
-            t.payment_methods
+            (SELECT t.raw_text FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS raw_text,
+            (SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS exclusions,
+            (SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS requirements,
+            (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
+            (SELECT t.min_purchase FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS tc_min_purchase,
+            (SELECT t.valid_days FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS tc_valid_days,
+            (SELECT t.payment_methods FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS payment_methods
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
-        LEFT JOIN terms_conditions t ON p.id = t.promotion_id
         WHERE p.id = ?
     """, (promotion_id,)).fetchone()
     conn.close()
