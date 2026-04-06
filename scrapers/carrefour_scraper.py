@@ -149,38 +149,38 @@ class CarrefourScraper(BaseScraper):
                 # Extraer información de promociones usando JavaScript
                 promo_data = await page.evaluate("""() => {
                     const promos = [];
-                    
+
                     try {
                         // Buscar elementos que contengan texto de promoción
                         const allElements = document.querySelectorAll('div, section, article');
                         const promoElements = [];
-                        
+
                         allElements.forEach(el => {
                             try {
                                 const text = el.textContent || '';
-                                const hasDiscount = /\\d+%/.test(text);
-                                const hasBankInfo = /banco|tarjeta|cuenta|pago/i.test(text);
-                                const hasStoreInfo = /carrefour|market|express|maxi/i.test(text);
-                                
-                                // Si tiene descuento y info bancaria/tienda, es probablemente una promoción
-                                if (hasDiscount && (hasBankInfo || hasStoreInfo) && text.length > 50 && text.length < 10000) {
-                                    // Evitar duplicados
-                                    const isDuplicate = promoElements.some(existing => {
-                                        return existing.contains(el) || el.contains(existing);
-                                    });
-                                    
-                                    if (!isDuplicate) {
-                                        promoElements.push(el);
-                                    }
+                                const hasDiscount = /\\d+\\s*%/.test(text);
+                                // Require explicit bank/wallet info — "carrefour" alone is NOT enough
+                                // since every element on carrefour.com.ar contains the word "carrefour"
+                                const hasBankInfo = /banco|santander|galicia|bbva|macro|icbc|hsbc|credicoop|supervielle|patagonia|naci[oó]n|provincia|frances|itau|comafi|mercado pago|cuenta dni|personal pay|naranja|ual[aá]|modo/i.test(text);
+
+                                // Require both discount AND bank info; keep only reasonably-sized containers
+                                if (hasDiscount && hasBankInfo && text.length > 50 && text.length < 5000) {
+                                    promoElements.push(el);
                                 }
                             } catch (e) {
                                 // Ignorar errores en elementos individuales
                             }
                         });
-                        
-                        console.log('Found promotion elements:', promoElements.length);
-                        
-                        promoElements.forEach((el) => {
+
+                        // Keep only LEAF promo nodes — elements that don't contain any other promo element.
+                        // This prevents the same promo appearing as both a parent container and its children.
+                        const leafPromos = promoElements.filter(el =>
+                            !promoElements.some(other => other !== el && el.contains(other))
+                        );
+
+                        console.log('Found promotion elements:', leafPromos.length);
+
+                        leafPromos.forEach((el) => {
                             try {
                                 const fullText = el.textContent || '';
                                 
@@ -298,7 +298,7 @@ class CarrefourScraper(BaseScraper):
                     print(f"   ❌ Error en método alternativo: {e2}")
             
             print(f"   📊 Extraídos {len(promo_data)} elementos de promoción")
-            
+
             # Procesar cada promoción
             for idx, promo in enumerate(promo_data):
                 try:
@@ -307,7 +307,21 @@ class CarrefourScraper(BaseScraper):
                         promotions.append(processed)
                 except Exception as e:
                     print(f"   ⚠️ Error procesando promoción {idx+1}: {e}")
-            
+
+            # Final dedup: one promo per (bank/wallet, discount) — safety net for any
+            # remaining duplicates that slipped through the JS or HTML extraction
+            seen = set()
+            unique_promotions = []
+            for p in promotions:
+                entity = (p.get('bank') or p.get('wallet') or '').lower().strip()
+                discount = (p.get('discount') or '').strip()
+                key = (entity, discount)
+                if key not in seen:
+                    seen.add(key)
+                    unique_promotions.append(p)
+            promotions = unique_promotions
+            print(f"   🧹 Después de dedup: {len(promotions)} promociones únicas")
+
         except Exception as e:
             print(f"   ⚠️ Error extrayendo promociones: {e}")
             import traceback
@@ -318,9 +332,14 @@ class CarrefourScraper(BaseScraper):
     def _parse_html_content(self, html_content: str) -> List[Dict]:
         """Método alternativo: parsear HTML directamente con regex"""
         promos = []
-        
+
         try:
-            # Buscar bloques de texto que contengan promociones
+            # Strip <script> and <style> blocks FIRST — Carrefour is a Next.js app and embeds all
+            # page data in <script id="__NEXT_DATA__"> and JS bundles. Without stripping these,
+            # the same "X% de descuento" text appears 10-20 times in the raw HTML.
+            html_content = re.sub(r'<script[^>]*>[\s\S]*?</script>', ' ', html_content, flags=re.IGNORECASE)
+            html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', ' ', html_content, flags=re.IGNORECASE)
+
             # Buscar porcentajes de descuento
             discount_pattern = r'(\d+)\s*%\s*de\s*descuento'
             matches = re.finditer(discount_pattern, html_content, re.IGNORECASE)

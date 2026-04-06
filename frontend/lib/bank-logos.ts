@@ -7,6 +7,7 @@ export interface BankMeta {
   initials: string
   label: string       // Display name
   type: "bank" | "wallet" | "fintech" | "card"
+  logoUrl?: string    // Optional path to official logo image (in /public/logos/)
 }
 
 const BANK_META: Record<string, BankMeta> = {
@@ -27,12 +28,12 @@ const BANK_META: Record<string, BankMeta> = {
   piano: { color: "#2C3E50", textColor: "#fff", initials: "PI", label: "Piano", type: "bank" },
   bind: { color: "#3498DB", textColor: "#fff", initials: "BI", label: "BIND", type: "bank" },
   // Wallets / Fintechs
-  "mercado pago": { color: "#009EE3", textColor: "#fff", initials: "MP", label: "Mercado Pago", type: "wallet" },
-  mercadopago: { color: "#009EE3", textColor: "#fff", initials: "MP", label: "Mercado Pago", type: "wallet" },
+  "mercado pago": { color: "#009EE3", textColor: "#fff", initials: "MP", label: "Mercado Pago", type: "wallet", logoUrl: "/logos/mercadopago.png" },
+  mercadopago: { color: "#009EE3", textColor: "#fff", initials: "MP", label: "Mercado Pago", type: "wallet", logoUrl: "/logos/mercadopago.png" },
   "uala": { color: "#9B51E0", textColor: "#fff", initials: "UA", label: "Ualá", type: "wallet" },
   "naranja x": { color: "#FF4713", textColor: "#fff", initials: "NX", label: "Naranja X", type: "fintech" },
   naranjax: { color: "#FF4713", textColor: "#fff", initials: "NX", label: "Naranja X", type: "fintech" },
-  modo: { color: "#3700B3", textColor: "#fff", initials: "MO", label: "MODO", type: "wallet" },
+  modo: { color: "#3700B3", textColor: "#fff", initials: "MO", label: "MODO", type: "wallet", logoUrl: "/logos/modo.png" },
   "personal pay": { color: "#00BCD4", textColor: "#fff", initials: "PP", label: "Personal Pay", type: "wallet" },
   "cuenta dni": { color: "#1565C0", textColor: "#fff", initials: "DN", label: "Cuenta DNI", type: "wallet" },
   "claro pay": { color: "#E60000", textColor: "#fff", initials: "CP", label: "Claro Pay", type: "wallet" },
