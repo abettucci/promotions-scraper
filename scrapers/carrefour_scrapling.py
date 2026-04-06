@@ -247,13 +247,17 @@ class CarrefourScraplingScraper:
     def _extract_from_full_text(self, page) -> List[Dict]:
         """Extracción fallback usando el texto completo de la página"""
         promotions = []
-        
+
         try:
             html_content = str(page.html_content)
-            
+
+            # Strip <script> and <style> blocks FIRST to avoid JSON/embedded data flooding
+            html_content = re.sub(r'<script[^>]*>[\s\S]*?</script>', ' ', html_content, flags=re.IGNORECASE)
+            html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', ' ', html_content, flags=re.IGNORECASE)
+
             text = re.sub(r'<[^>]+>', ' ', html_content)
             text = re.sub(r'\s+', ' ', text).strip()
-            
+
             discount_pattern = r'(\d+)\s*%\s*(?:de\s*)?descuento'
             matches = list(re.finditer(discount_pattern, text, re.IGNORECASE))
             
