@@ -2,7 +2,13 @@
 Scraper de Carrefour usando Scrapling - Adaptive Web Scraping
 Usa StealthyFetcher para bypass de anti-bot y adaptive scraping para
 resistir cambios en la estructura del sitio.
+
+Strategy:
+1. Try extracting structured promo data from VTEX __RUNTIME__ JSON first
+2. Fall back to targeted CSS selectors with parent-child dedup
+3. Last resort: full-text regex extraction (with <template> tags stripped)
 """
+import json
 import re
 import os
 from typing import List, Dict, Optional
@@ -14,11 +20,11 @@ class CarrefourScraplingError(Exception):
 
 
 class CarrefourScraplingScraper:
-    def __init__(self, use_adaptive: bool = True, headless: bool = True):
+    def __init__(self, use_adaptive: bool = False, headless: bool = True):
         """
         Args:
-            use_adaptive: Si True, usa adaptive scraping para encontrar elementos
-                         aunque cambien los selectores
+            use_adaptive: Adaptive mode is OFF by default for Carrefour because
+                         the VTEX page has too many similar generic elements.
             headless: Si True, ejecuta el browser sin interfaz gráfica
         """
         self.name = 'Carrefour'
@@ -70,8 +76,6 @@ class CarrefourScraplingScraper:
             print(f"   🌐 URL: {self.url}")
             print(f"   🎯 Modo adaptive: {self.use_adaptive}")
             
-            StealthyFetcher.adaptive = self.use_adaptive
-            
             page = StealthyFetcher.fetch(
                 self.url,
                 headless=self.headless,
@@ -108,66 +112,207 @@ class CarrefourScraplingScraper:
         print(f"🔍 Scraping {self.name} con Scrapling (async)...")
         return await asyncio.to_thread(self.scrape)
 
+    # ------------------------------------------------------------------
+    # Extraction pipeline
+    # ------------------------------------------------------------------
+
     def _extract_promotions(self, page) -> List[Dict]:
         """
-        Extrae promociones de la página usando selectores adaptativos.
-        Si el sitio cambia estructura, Scrapling intentará encontrar
-        elementos similares automáticamente.
+        Three-stage extraction pipeline:
+        1. VTEX __RUNTIME__ JSON  (structured, most reliable)
+        2. Targeted CSS selectors (with parent-child dedup)
+        3. Full-text regex        (last resort)
+        """
+        # --- Stage 1: VTEX structured JSON ---
+        promotions = self._extract_from_vtex_json(page)
+        if promotions:
+            print(f"   📊 {len(promotions)} promos extraídas desde __RUNTIME__ JSON")
+            return self._deduplicate(promotions)
+
+        # --- Stage 2: CSS selectors ---
+        promotions = self._extract_from_css(page)
+        if promotions:
+            print(f"   📊 {len(promotions)} promos extraídas desde CSS selectors")
+            return self._deduplicate(promotions)
+
+        # --- Stage 3: full-text fallback ---
+        print(f"   🔄 Intentando extracción por texto completo...")
+        promotions = self._extract_from_full_text(page)
+        print(f"   📊 {len(promotions)} promos extraídas desde texto completo")
+        return self._deduplicate(promotions)
+
+    def _deduplicate(self, promotions: List[Dict]) -> List[Dict]:
+        """
+        Dedup using (bank|wallet, discount, valid_days) as composite key.
+        Drops promos without any identified entity unless they have a
+        meaningful title.
+        """
+        seen = set()
+        unique = []
+        for promo in promotions:
+            entity = (promo.get('bank') or promo.get('wallet') or '').strip()
+            if not entity and promo.get('title', '').lower().startswith('promoción carrefour'):
+                continue
+            key = (
+                entity.lower(),
+                promo.get('discount', ''),
+                (promo.get('valid_days') or '').lower(),
+            )
+            if key not in seen:
+                seen.add(key)
+                unique.append(promo)
+        return unique
+
+    # ------------------------------------------------------------------
+    # Stage 1 – VTEX __RUNTIME__ JSON
+    # ------------------------------------------------------------------
+
+    def _extract_from_vtex_json(self, page) -> List[Dict]:
+        """
+        VTEX/Next.js pages embed all data in <template data-varname="__RUNTIME__">
+        or <script id="__NEXT_DATA__"> tags. Extract promo data directly from
+        the structured JSON instead of parsing rendered DOM.
         """
         promotions = []
-        
+        html = str(page.html_content)
+
+        json_blobs = []
+
+        # __NEXT_DATA__ (Next.js standard)
+        next_matches = re.finditer(
+            r'<script\s+id="__NEXT_DATA__"[^>]*>(.*?)</script>',
+            html, re.DOTALL | re.IGNORECASE,
+        )
+        for m in next_matches:
+            try:
+                json_blobs.append(json.loads(m.group(1)))
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        # VTEX __RUNTIME__ inside <template> tags
+        runtime_matches = re.finditer(
+            r'<template\s+[^>]*data-varname="__RUNTIME__"[^>]*>\s*<script[^>]*>(.*?)</script>\s*</template>',
+            html, re.DOTALL | re.IGNORECASE,
+        )
+        for m in runtime_matches:
+            try:
+                json_blobs.append(json.loads(m.group(1)))
+            except (json.JSONDecodeError, ValueError):
+                pass
+
+        if not json_blobs:
+            print(f"   ℹ️ No se encontró __NEXT_DATA__ ni __RUNTIME__ JSON")
+            return []
+
+        print(f"   🔍 Encontrados {len(json_blobs)} blobs JSON embebidos")
+
+        promo_texts = set()
+        self._walk_json_for_promos(json_blobs, promo_texts)
+
+        print(f"   🔍 {len(promo_texts)} fragmentos de promo en JSON")
+
+        for text in promo_texts:
+            promo = self._promo_from_text(text)
+            if promo:
+                promotions.append(promo)
+
+        return promotions
+
+    def _walk_json_for_promos(self, obj, results: set, depth: int = 0):
+        """Recursively walk JSON looking for string values that look like promos."""
+        if depth > 20:
+            return
+        if isinstance(obj, str):
+            if len(obj) > 40 and re.search(r'\d+\s*%', obj) and self._is_promo_text(obj):
+                results.add(obj[:3000])
+        elif isinstance(obj, dict):
+            for v in obj.values():
+                self._walk_json_for_promos(v, results, depth + 1)
+        elif isinstance(obj, list):
+            for item in obj:
+                self._walk_json_for_promos(item, results, depth + 1)
+
+    def _is_promo_text(self, text: str) -> bool:
+        text_lower = text.lower()
+        has_bank = any(b in text_lower for b in self._banks)
+        has_wallet = any(w in text_lower for w in self._wallets)
+        has_keyword = any(k in text_lower for k in ['descuento', 'promoción', 'oferta'])
+        return has_bank or has_wallet or has_keyword
+
+    # ------------------------------------------------------------------
+    # Stage 2 – CSS selectors with parent-child dedup
+    # ------------------------------------------------------------------
+
+    def _extract_from_css(self, page) -> List[Dict]:
+        """
+        Use specific CSS selectors (avoiding overly broad ones like
+        div[class*="card"] or plain 'article' that match hundreds of
+        VTEX framework elements).
+        """
         promo_selectors = [
             'div[class*="promo"]',
             'div[class*="descuento"]',
-            'div[class*="card"]',
-            'article',
+            'div[class*="BanksPromotions"]',
+            'div[class*="dynamicTabs"]',
             'section[class*="promo"]',
+            'section[class*="descuento"]',
         ]
-        
+
         promo_elements = []
+        seen_texts = set()
+
         for selector in promo_selectors:
             try:
-                if self.use_adaptive:
-                    elements = page.css(selector, adaptive=True)
-                else:
-                    elements = page.css(selector)
-                
-                if elements:
-                    for el in elements:
-                        text = el.text or ''
-                        if self._is_promo_element(text):
-                            promo_elements.append(el)
+                elements = page.css(selector)
+                if not elements:
+                    continue
+
+                for el in elements:
+                    text = el.text or ''
+                    if not self._is_promo_element(text):
+                        continue
+
+                    text_hash = hash(text.strip()[:500])
+                    if text_hash in seen_texts:
+                        continue
+                    seen_texts.add(text_hash)
+
+                    is_child_of_existing = False
+                    is_parent_of_existing = False
+                    kept = []
+                    for existing_el, existing_text in promo_elements:
+                        et = existing_text.strip()[:500]
+                        ct = text.strip()[:500]
+                        if ct in et:
+                            is_child_of_existing = True
+                            break
+                        if et in ct:
+                            is_parent_of_existing = True
+                            continue
+                        kept.append((existing_el, existing_text))
+
+                    if is_child_of_existing:
+                        continue
+
+                    if is_parent_of_existing:
+                        promo_elements = kept
+
+                    promo_elements.append((el, text))
             except Exception:
                 continue
-        
-        print(f"   📊 Encontrados {len(promo_elements)} elementos de promoción")
-        
-        if not promo_elements:
-            print(f"   🔄 Intentando extracción por texto...")
-            promotions = self._extract_from_full_text(page)
-        else:
-            for idx, element in enumerate(promo_elements):
-                try:
-                    promo = self._parse_promo_element(element)
-                    if promo:
-                        promotions.append(promo)
-                except Exception as e:
-                    print(f"   ⚠️ Error procesando elemento {idx+1}: {e}")
-        
-        seen = set()
-        unique_promos = []
-        for promo in promotions:
-            entity = (promo.get('bank') or promo.get('wallet') or '').strip()
-            # Drop generic "Promoción Carrefour" entries with no identified bank/wallet — they're noise
-            if not entity and promo.get('title', '').lower().startswith('promoción carrefour'):
-                continue
-            # One promo per (entity, discount) — prevents same bank+discount from appearing N times
-            key = (entity.lower(), promo.get('discount', ''))
-            if key not in seen:
-                seen.add(key)
-                unique_promos.append(promo)
 
-        return unique_promos
+        print(f"   📊 Encontrados {len(promo_elements)} elementos de promoción (post-dedup)")
+
+        promotions = []
+        for el, _ in promo_elements:
+            try:
+                promo = self._parse_promo_element(el)
+                if promo:
+                    promotions.append(promo)
+            except Exception as e:
+                print(f"   ⚠️ Error procesando elemento: {e}")
+
+        return promotions
 
     def _is_promo_element(self, text: str) -> bool:
         """Determina si un texto corresponde a una promoción"""
@@ -244,16 +389,22 @@ class CarrefourScraplingScraper:
             print(f"   ⚠️ Error parseando elemento: {e}")
             return None
 
+    # ------------------------------------------------------------------
+    # Stage 3 – full-text regex fallback
+    # ------------------------------------------------------------------
+
     def _extract_from_full_text(self, page) -> List[Dict]:
-        """Extracción fallback usando el texto completo de la página"""
+        """Extracción fallback usando el texto completo de la página."""
         promotions = []
 
         try:
             html_content = str(page.html_content)
 
-            # Strip <script> and <style> blocks FIRST to avoid JSON/embedded data flooding
+            # Strip ALL embedded data sources that cause duplicate matches
             html_content = re.sub(r'<script[^>]*>[\s\S]*?</script>', ' ', html_content, flags=re.IGNORECASE)
             html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', ' ', html_content, flags=re.IGNORECASE)
+            html_content = re.sub(r'<template[^>]*>[\s\S]*?</template>', ' ', html_content, flags=re.IGNORECASE)
+            html_content = re.sub(r'<noscript[^>]*>[\s\S]*?</noscript>', ' ', html_content, flags=re.IGNORECASE)
 
             text = re.sub(r'<[^>]+>', ' ', html_content)
             text = re.sub(r'\s+', ' ', text).strip()
@@ -268,45 +419,58 @@ class CarrefourScraplingScraper:
                 end = min(len(text), match.end() + 3000)
                 context = text[start:end]
                 
-                discount = match.group(1) + '%'
-                
-                title_match = re.search(r'(\d+%\s*(?:de\s*)?descuento[^.!?\n]{10,150})', context, re.IGNORECASE)
-                title = title_match.group(1).strip() if title_match else f"Promoción {discount}"
-                
-                bank = self._extract_bank(context)
-                wallet = self._extract_wallet(context)
-                store_types = self._extract_store_types(context)
-                terms = self._extract_terms(context)
-                valid_days = self._extract_valid_days(context)
-                dates = self._extract_dates(context)
-                payment_method = self._extract_payment_method(context)
-                exclusions = self._extract_exclusions(context)
-                requirements = self._extract_requirements(context)
-                
-                promo = {
-                    'title': self._clean_text(title),
-                    'discount': discount,
-                    'bank': bank,
-                    'wallet': wallet,
-                    'card_type': None,
-                    'payment_method': payment_method,
-                    'store_types': ', '.join(store_types) if store_types else None,
-                    'valid_days': valid_days,
-                    'url': self.url,
-                    'image_url': '',
-                    'terms_raw': self._clean_text(terms),
-                    'exclusions': '; '.join(exclusions[:10]) if exclusions else None,
-                    'requirements': '; '.join(requirements[:5]) if requirements else None,
-                    'valid_from': dates.get('valid_from'),
-                    'valid_until': dates.get('valid_until'),
-                }
-                
-                promotions.append(promo)
+                promo = self._promo_from_text(context)
+                if promo:
+                    promotions.append(promo)
                 
         except Exception as e:
             print(f"   ❌ Error en extracción por texto: {e}")
         
         return promotions
+
+    # ------------------------------------------------------------------
+    # Shared text -> promo builder
+    # ------------------------------------------------------------------
+
+    def _promo_from_text(self, context: str) -> Optional[Dict]:
+        """Build a promo dict from a raw text fragment."""
+        discount = self._extract_discount(context)
+        if not discount:
+            return None
+
+        bank = self._extract_bank(context)
+        wallet = self._extract_wallet(context)
+        if not bank and not wallet:
+            return None
+
+        title_match = re.search(r'(\d+%\s*(?:de\s*)?descuento[^.!?\n]{10,150})', context, re.IGNORECASE)
+        title = title_match.group(1).strip() if title_match else f"Promoción {discount}"
+
+        store_types = self._extract_store_types(context)
+        terms = self._extract_terms(context)
+        valid_days = self._extract_valid_days(context)
+        dates = self._extract_dates(context)
+        payment_method = self._extract_payment_method(context)
+        exclusions = self._extract_exclusions(context)
+        requirements = self._extract_requirements(context)
+
+        return {
+            'title': self._clean_text(title),
+            'discount': discount,
+            'bank': bank,
+            'wallet': wallet,
+            'card_type': None,
+            'payment_method': payment_method,
+            'store_types': ', '.join(store_types) if store_types else None,
+            'valid_days': valid_days,
+            'url': self.url,
+            'image_url': '',
+            'terms_raw': self._clean_text(terms),
+            'exclusions': '; '.join(exclusions[:10]) if exclusions else None,
+            'requirements': '; '.join(requirements[:5]) if requirements else None,
+            'valid_from': dates.get('valid_from'),
+            'valid_until': dates.get('valid_until'),
+        }
 
     def _extract_discount(self, text: str) -> str:
         """Extrae porcentaje de descuento"""

@@ -11,7 +11,7 @@ on:
 
 env:
   # Scrapling deshabilitado para Carrefour — genera demasiados duplicados por _NEXT_DATA_ JSON
-  USE_SCRAPLING: 'false'
+  USE_SCRAPLING: 'true'
   SCRAPLING_ADAPTIVE: 'false'
   HEADLESS: 'true'
 

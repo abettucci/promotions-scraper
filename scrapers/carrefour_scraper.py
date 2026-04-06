@@ -563,7 +563,7 @@ class CarrefourScraper(BaseScraper):
             from .carrefour_scrapling import CarrefourScraplingScraper
             
             headless = os.environ.get('HEADLESS', 'true').lower() == 'true'
-            use_adaptive = os.environ.get('SCRAPLING_ADAPTIVE', 'true').lower() == 'true'
+            use_adaptive = os.environ.get('SCRAPLING_ADAPTIVE', 'false').lower() == 'true'
             
             scrapling_scraper = CarrefourScraplingScraper(
                 use_adaptive=use_adaptive,
