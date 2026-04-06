@@ -1,5 +1,6 @@
 "use client"
 
+import { useState, useEffect, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -19,6 +20,7 @@ interface Props {
   onChange: (filters: Partial<FilterState>) => void
   onReset: () => void
   totalResults: number
+  loading?: boolean
 }
 
 const DAYS = [
@@ -39,9 +41,24 @@ const DISCOUNT_TYPES = [
 
 const ALL_VALUE = "__all__"
 
-export function FilterBar({ filters, banks, supermarkets, onChange, onReset, totalResults }: Props) {
+export function FilterBar({ filters, banks, supermarkets, onChange, onReset, totalResults, loading }: Props) {
   const hasActiveFilters =
     filters.supermarket || filters.bank || filters.day || filters.search || filters.discount_type
+
+  const [localSearch, setLocalSearch] = useState(filters.search)
+  const debounceRef = useRef<ReturnType<typeof setTimeout>>()
+
+  useEffect(() => {
+    setLocalSearch(filters.search)
+  }, [filters.search])
+
+  const handleSearchChange = (value: string) => {
+    setLocalSearch(value)
+    clearTimeout(debounceRef.current)
+    debounceRef.current = setTimeout(() => {
+      onChange({ search: value, page: 1 })
+    }, 350)
+  }
 
   return (
     <div className="space-y-3">
@@ -50,8 +67,8 @@ export function FilterBar({ filters, banks, supermarkets, onChange, onReset, tot
         <Search className="absolute left-3 top-1/2 -translate-y-1/2 w-4 h-4 text-slate-400 pointer-events-none" />
         <Input
           placeholder="Buscar promoción, banco, condición..."
-          value={filters.search}
-          onChange={(e) => onChange({ search: e.target.value, page: 1 })}
+          value={localSearch}
+          onChange={(e) => handleSearchChange(e.target.value)}
           className="pl-9 bg-white border-slate-200 focus-visible:ring-slate-300"
         />
       </div>
@@ -145,7 +162,7 @@ export function FilterBar({ filters, banks, supermarkets, onChange, onReset, tot
       </div>
 
       {/* Results count */}
-      <p className="text-xs text-slate-500">
+      <p className={`text-xs transition-opacity ${loading ? "text-slate-300" : "text-slate-500"}`}>
         {totalResults.toLocaleString("es-AR")} promociones encontradas
       </p>
     </div>

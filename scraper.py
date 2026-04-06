@@ -177,6 +177,11 @@ class PromoScraper:
                 )
                 return
             
+            raw_count = len(promotions)
+            promotions = self._deduplicate_promotions(promotions)
+            if raw_count != len(promotions):
+                self.log(f"   🧹 Dedup: {raw_count} → {len(promotions)} promociones únicas")
+
             # Deactivate all existing promos before re-inserting so old duplicates are cleared
             self.db.deactivate_all_for_supermarket(supermarket_id)
 
@@ -240,6 +245,29 @@ class PromoScraper:
             
             self.stats['failed_scrapes'] += 1
     
+    @staticmethod
+    def _deduplicate_promotions(promotions: list) -> list:
+        """
+        Universal dedup applied before DB insert, regardless of scraper path.
+        Key: (bank_or_wallet, discount, valid_days_normalized).
+        Drops promos with no bank AND no wallet (unidentifiable noise).
+        Prefers entries with more data (longer terms_raw).
+        """
+        seen: dict = {}
+        for promo in promotions:
+            bank = (promo.get('bank') or '').strip().lower()
+            wallet = (promo.get('wallet') or '').strip().lower()
+            entity = bank or wallet
+            if not entity:
+                continue
+            discount = (promo.get('discount') or '').strip().lower()
+            days = (promo.get('valid_days') or '').strip().lower()[:40]
+            key = (entity, discount, days)
+            existing = seen.get(key)
+            if existing is None or len(promo.get('terms_raw') or '') > len(existing.get('terms_raw') or ''):
+                seen[key] = promo
+        return list(seen.values())
+
     async def _scrape_traditional(self, page, supermarket_key: str, supermarket_data: dict):
         """Ejecuta scraping tradicional (CSS selectors + regex)"""
         # Verificar si hay un scraper standalone para este supermercado

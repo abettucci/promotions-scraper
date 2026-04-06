@@ -100,8 +100,8 @@ def get_promotions(
     params: list = []
 
     if supermarket:
-        conditions.append("LOWER(s.name) LIKE ?")
-        params.append(f"%{supermarket.lower()}%")
+        conditions.append("LOWER(s.name) = ?")
+        params.append(supermarket.lower())
 
     if bank:
         conditions.append("(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ?)")

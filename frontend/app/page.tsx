@@ -26,6 +26,9 @@ export default function Home() {
   const updateFilters = useCallback((partial: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...partial }))
     setTodayOnly(false)
+    if (partial.page || partial.supermarket || partial.bank || partial.day || partial.discount_type) {
+      window.scrollTo({ top: 0, behavior: "smooth" })
+    }
   }, [])
 
   const resetFilters = useCallback(() => {
@@ -48,7 +51,7 @@ export default function Home() {
     queryFn: api.getSupermarkets,
   })
 
-  const { data: promos, isLoading: promosLoading, error } = useQuery({
+  const { data: promos, isLoading: promosLoading, isFetching, error } = useQuery({
     queryKey: ["promotions", filters, todayOnly],
     queryFn: () =>
       todayOnly
@@ -68,7 +71,6 @@ export default function Home() {
             page: filters.page,
             page_size: 24,
           }),
-    placeholderData: (prev) => prev,
   })
 
   const todayLabel = new Date().toLocaleDateString("es-AR", { weekday: "long" })
@@ -113,6 +115,7 @@ export default function Home() {
               onChange={updateFilters}
               onReset={resetFilters}
               totalResults={promos?.total ?? 0}
+              loading={isFetching}
             />
           </div>
         )}
@@ -153,7 +156,7 @@ export default function Home() {
         {/* Grid */}
         <PromoGrid
           promotions={promos?.data ?? []}
-          loading={promosLoading}
+          loading={promosLoading || isFetching}
           page={promos?.page ?? 1}
           pages={promos?.pages ?? 1}
           total={promos?.total ?? 0}

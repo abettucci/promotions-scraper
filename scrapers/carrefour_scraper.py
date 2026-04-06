@@ -334,51 +334,50 @@ class CarrefourScraper(BaseScraper):
         promos = []
 
         try:
-            # Strip <script> and <style> blocks FIRST — Carrefour is a Next.js app and embeds all
-            # page data in <script id="__NEXT_DATA__"> and JS bundles. Without stripping these,
-            # the same "X% de descuento" text appears 10-20 times in the raw HTML.
-            html_content = re.sub(r'<script[^>]*>[\s\S]*?</script>', ' ', html_content, flags=re.IGNORECASE)
-            html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', ' ', html_content, flags=re.IGNORECASE)
+            # Strip ALL embedded data that causes duplicate matches on VTEX/Next.js pages
+            cleaned = re.sub(r'<script[^>]*>[\s\S]*?</script>', ' ', html_content, flags=re.IGNORECASE)
+            cleaned = re.sub(r'<template[^>]*>[\s\S]*?</template>', ' ', cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r'<style[^>]*>[\s\S]*?</style>', ' ', cleaned, flags=re.IGNORECASE)
+            cleaned = re.sub(r'<noscript[^>]*>[\s\S]*?</noscript>', ' ', cleaned, flags=re.IGNORECASE)
 
-            # Buscar porcentajes de descuento
+            text = re.sub(r'<[^>]+>', ' ', cleaned)
+            text = re.sub(r'\s+', ' ', text).strip()
+
             discount_pattern = r'(\d+)\s*%\s*de\s*descuento'
-            matches = re.finditer(discount_pattern, html_content, re.IGNORECASE)
+            matches = list(re.finditer(discount_pattern, text, re.IGNORECASE))
             
             for match in matches:
-                # Extraer contexto alrededor del match
                 start = max(0, match.start() - 1000)
-                end = min(len(html_content), match.end() + 3000)
-                context = html_content[start:end]
-                
-                # Limpiar HTML tags
-                text = re.sub(r'<[^>]+>', ' ', context)
-                text = re.sub(r'\s+', ' ', text).strip()
+                end = min(len(text), match.end() + 3000)
+                context = text[start:end]
                 
                 discount = match.group(1) + '%'
+
+                bank = self.extract_bank(context)
+                wallet = self.extract_wallet(context)
+                if not bank and not wallet:
+                    continue
                 
-                # Buscar título
-                title_match = re.search(r'(\d+%\s*de\s*descuento[^<>{}\n]{10,150})', text, re.IGNORECASE)
+                title_match = re.search(r'(\d+%\s*de\s*descuento[^.!?\n]{10,150})', context, re.IGNORECASE)
                 title = title_match.group(1).strip() if title_match else f"Promoción {discount}"
                 
-                # Buscar T&C
-                terms_match = re.search(r'(PROMOCIÓN[A-ZÁÉÍÓÚÑ\s\d.,;:/()$%-]{200,})', text, re.IGNORECASE)
+                terms_match = re.search(r'(PROMOCIÓN[A-ZÁÉÍÓÚÑ\s\d.,;:/()$%-]{200,})', context, re.IGNORECASE)
                 terms = terms_match.group(1) if terms_match else ''
                 
-                # Buscar tipos de tienda
                 store_types = []
-                if re.search(r'carrefour\s*market', text, re.IGNORECASE):
+                if re.search(r'carrefour\s*market', context, re.IGNORECASE):
                     store_types.append('Carrefour Market')
-                if re.search(r'carrefour\s*express', text, re.IGNORECASE):
+                if re.search(r'carrefour\s*express', context, re.IGNORECASE):
                     store_types.append('Carrefour Express')
-                if re.search(r'carrefour\s*maxi', text, re.IGNORECASE):
+                if re.search(r'carrefour\s*maxi', context, re.IGNORECASE):
                     store_types.append('Carrefour Maxi')
-                if re.search(r'hipermercado', text, re.IGNORECASE):
+                if re.search(r'hipermercado', context, re.IGNORECASE):
                     store_types.append('Hipermercado Carrefour')
                 
                 promos.append({
                     'title': title,
                     'discount': discount,
-                    'fullText': text,
+                    'fullText': context,
                     'terms': terms,
                     'imageUrls': [],
                     'storeTypes': store_types,
