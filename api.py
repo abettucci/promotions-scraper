@@ -66,14 +66,15 @@ def row_to_dict(row: sqlite3.Row) -> dict:
         if val and isinstance(val, str) and val.strip():
             try:
                 parsed = json.loads(val)
-                d[field] = parsed if isinstance(parsed, list) else []
-            except json.JSONDecodeError:
-                # Try pipe separator first, then semicolon (Carrefour scraper)
-                if "|" in val:
-                    items = [s.strip() for s in val.split("|") if s.strip()]
+                if isinstance(parsed, list):
+                    d[field] = parsed
+                elif isinstance(parsed, str) and parsed.strip():
+                    d[field] = [parsed.strip()]
                 else:
-                    items = [s.strip() for s in val.split(";") if s.strip()]
-                d[field] = items if items else []
+                    d[field] = []
+            except json.JSONDecodeError:
+                # Plain text — present as a single readable block
+                d[field] = [val.strip()]
         else:
             d[field] = []
     return d
@@ -155,7 +156,14 @@ def get_promotions(
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             p.is_active, p.scraped_at,
             s.name AS supermarket_name,
-            p.exclusions, p.requirements,
+            COALESCE(
+                (SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
+                p.exclusions
+            ) AS exclusions,
+            COALESCE(
+                (SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
+                p.requirements
+            ) AS requirements,
             (SELECT t.max_discount FROM terms_conditions t
              WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
             p.min_purchase
@@ -198,7 +206,14 @@ def get_promotions_today():
             p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             s.name AS supermarket_name,
-            p.exclusions, p.requirements,
+            COALESCE(
+                (SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
+                p.exclusions
+            ) AS exclusions,
+            COALESCE(
+                (SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
+                p.requirements
+            ) AS requirements,
             (SELECT t.max_discount FROM terms_conditions t
              WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
             p.min_purchase

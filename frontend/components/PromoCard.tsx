@@ -107,6 +107,21 @@ export function PromoCard({ promo }: Props) {
           <DaysBadge validDays={promo.valid_days} />
         </div>
 
+        {/* Validity dates */}
+        {(() => {
+          const from = formatDate(promo.valid_from)
+          const until = formatDate(promo.valid_until)
+          if (!from && !until) return null
+          const label = from && until
+            ? `${from} — ${until}`
+            : from ? `Desde ${from}` : `Hasta ${until}`
+          return (
+            <p className="text-[11px] text-slate-500">
+              <span className="font-medium">Vigencia:</span> {label}
+            </p>
+          )
+        })()}
+
         {/* Card type + payment method */}
         {(promo.card_type || paymentMethodShort) && (
           <div className="flex flex-wrap gap-1">

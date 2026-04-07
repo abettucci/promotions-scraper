@@ -156,7 +156,6 @@ class CarrefourScraplingScraper:
             key = (
                 entity.lower(),
                 promo.get('discount', ''),
-                (promo.get('valid_days') or '').lower(),
             )
             if key not in seen:
                 seen.add(key)
@@ -223,7 +222,8 @@ class CarrefourScraplingScraper:
         if depth > 20:
             return
         if isinstance(obj, str):
-            if len(obj) > 40 and re.search(r'\d+\s*%', obj) and self._is_promo_text(obj):
+            has_offer = bool(re.search(r'\d+\s*%|cuotas?\s*sin\s*inter', obj, re.IGNORECASE))
+            if len(obj) > 40 and has_offer and self._is_promo_text(obj):
                 results.add(obj[:3000])
         elif isinstance(obj, dict):
             for v in obj.values():
@@ -409,50 +409,71 @@ class CarrefourScraplingScraper:
             text = re.sub(r'<[^>]+>', ' ', html_content)
             text = re.sub(r'\s+', ' ', text).strip()
 
-            discount_pattern = r'(\d+)\s*%\s*(?:de\s*)?descuento'
-            matches = list(re.finditer(discount_pattern, text, re.IGNORECASE))
-            
-            print(f"   🔍 Encontrados {len(matches)} patrones de descuento en texto")
-            
-            for match in matches:
+            # Match both percentage discounts AND cuotas sin interés
+            patterns = [
+                (r'(\d+)\s*%\s*(?:de\s*)?descuento', 'percent'),
+                (r'(?:hasta\s+)?(\d+)\s*cuotas?\s*sin\s*inter[eé]s', 'cuotas'),
+            ]
+
+            all_matches = []
+            for pattern, kind in patterns:
+                for m in re.finditer(pattern, text, re.IGNORECASE):
+                    all_matches.append((m.start(), m, kind))
+
+            all_matches.sort(key=lambda x: x[0])
+            print(f"   🔍 Encontrados {len(all_matches)} patrones de descuento/cuotas en texto")
+
+            for _, match, kind in all_matches:
                 start = max(0, match.start() - 1500)
                 end = min(len(text), match.end() + 3000)
                 context = text[start:end]
-                
-                promo = self._promo_from_text(context)
+
+                promo = self._promo_from_text(context, kind=kind)
                 if promo:
                     promotions.append(promo)
-                
+
         except Exception as e:
             print(f"   ❌ Error en extracción por texto: {e}")
-        
+
         return promotions
 
     # ------------------------------------------------------------------
     # Shared text -> promo builder
     # ------------------------------------------------------------------
 
-    def _promo_from_text(self, context: str) -> Optional[Dict]:
+    def _promo_from_text(self, context: str, kind: str = 'percent') -> Optional[Dict]:
         """Build a promo dict from a raw text fragment."""
-        discount = self._extract_discount(context)
-        if not discount:
-            return None
-
         bank = self._extract_bank(context)
         wallet = self._extract_wallet(context)
         if not bank and not wallet:
             return None
 
-        title_match = re.search(r'(\d+%\s*(?:de\s*)?descuento[^.!?\n]{10,150})', context, re.IGNORECASE)
-        title = title_match.group(1).strip() if title_match else f"Promoción {discount}"
+        if kind == 'cuotas':
+            cuotas_match = re.search(
+                r'(?:hasta\s+)?(\d+)\s*cuotas?\s*sin\s*inter[eé]s([^.!?\n]{0,120})',
+                context, re.IGNORECASE,
+            )
+            if not cuotas_match:
+                return None
+            discount = f"{cuotas_match.group(1)} cuotas sin interés"
+            title_tail = cuotas_match.group(2).strip()
+            title = f"{discount} {title_tail}".strip() if title_tail else discount
+        else:
+            discount = self._extract_discount(context)
+            if not discount:
+                return None
+            title_match = re.search(r'(\d+%\s*(?:de\s*)?descuento[^.!?\n]{10,150})', context, re.IGNORECASE)
+            title = title_match.group(1).strip() if title_match else f"{discount} de descuento"
+
+        entity = bank or wallet
+        if entity and entity.lower() not in title.lower():
+            title = f"{title} con {entity}"
 
         store_types = self._extract_store_types(context)
         terms = self._extract_terms(context)
         valid_days = self._extract_valid_days(context)
         dates = self._extract_dates(context)
         payment_method = self._extract_payment_method(context)
-        exclusions = self._extract_exclusions(context)
-        requirements = self._extract_requirements(context)
 
         return {
             'title': self._clean_text(title),
@@ -466,21 +487,25 @@ class CarrefourScraplingScraper:
             'url': self.url,
             'image_url': '',
             'terms_raw': self._clean_text(terms),
-            'exclusions': '; '.join(exclusions[:10]) if exclusions else None,
-            'requirements': '; '.join(requirements[:5]) if requirements else None,
+            'exclusions': None,
+            'requirements': None,
             'valid_from': dates.get('valid_from'),
             'valid_until': dates.get('valid_until'),
         }
 
     def _extract_discount(self, text: str) -> str:
-        """Extrae porcentaje de descuento"""
+        """Extrae porcentaje de descuento o cuotas sin interés"""
         if not text:
             return ""
-        
+
+        cuotas_match = re.search(r'(?:hasta\s+)?(\d+)\s*cuotas?\s*sin\s*inter[eé]s', text, re.IGNORECASE)
+        if cuotas_match:
+            return f"{cuotas_match.group(1)} cuotas sin interés"
+
         percent_match = re.search(r'(\d+)\s*%', text)
         if percent_match:
             return f"{percent_match.group(1)}%"
-        
+
         return ""
 
     def _extract_bank(self, text: str) -> Optional[str]:
@@ -550,29 +575,55 @@ class CarrefourScraplingScraper:
     def _extract_dates(self, text: str) -> Dict[str, Optional[str]]:
         """Extrae fechas de validez"""
         dates = {'valid_from': None, 'valid_until': None}
-        
+
         if not text:
             return dates
-        
-        date_match = re.search(
-            r'(?:desde|del)\s+(\d{1,2})\s+(?:al|hasta)\s+(\d{1,2})\s+(?:de\s+)?(enero|febrero|marzo|abril|mayo|junio|julio|agosto|septiembre|octubre|noviembre|diciembre)(?:\s+de\s+)?(\d{4})?',
-            text, re.IGNORECASE
+
+        month_map = {
+            'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+            'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+            'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12',
+        }
+
+        # DD/MM/YYYY format (e.g. "HASTA EL 30/04/2026")
+        m = re.search(r'hasta\s+(?:el\s+)?(\d{1,2})[/\-](\d{1,2})[/\-](\d{4})', text, re.IGNORECASE)
+        if m:
+            dates['valid_until'] = f"{m.group(3)}-{m.group(2).zfill(2)}-{m.group(1).zfill(2)}"
+            return dates
+
+        # "desde DD al DD de MES de YYYY"
+        m = re.search(
+            r'(?:desde|del)\s+(?:el\s+)?(\d{1,2})\s+(?:al|hasta)\s+(?:el\s+)?(\d{1,2})\s+(?:de\s+)?('
+            + '|'.join(month_map) + r')(?:\s+de\s+)?(\d{4})?',
+            text, re.IGNORECASE,
         )
-        
-        if date_match:
-            month_map = {
-                'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
-                'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
-                'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12'
-            }
-            day_from = date_match.group(1).zfill(2)
-            day_until = date_match.group(2).zfill(2)
-            month = month_map.get(date_match.group(3).lower(), '01')
-            year = date_match.group(4) or '2026'
-            
-            dates['valid_from'] = f"{year}-{month}-{day_from}"
-            dates['valid_until'] = f"{year}-{month}-{day_until}"
-        
+        if m:
+            month = month_map.get(m.group(3).lower(), '01')
+            year = m.group(4) or '2026'
+            dates['valid_from'] = f"{year}-{month}-{m.group(1).zfill(2)}"
+            dates['valid_until'] = f"{year}-{month}-{m.group(2).zfill(2)}"
+            return dates
+
+        # "hasta el DD de MES de YYYY"
+        m = re.search(
+            r'hasta\s+(?:el\s+)?(\d{1,2})\s+de\s+(' + '|'.join(month_map) + r')(?:\s+de\s+)?(\d{4})?',
+            text, re.IGNORECASE,
+        )
+        if m:
+            month = month_map.get(m.group(2).lower(), '01')
+            year = m.group(3) or '2026'
+            dates['valid_until'] = f"{year}-{month}-{m.group(1).zfill(2)}"
+            return dates
+
+        # "de MES de YYYY" (whole month)
+        m = re.search(r'de\s+(' + '|'.join(month_map) + r')\s+(?:de\s+)?(\d{4})', text, re.IGNORECASE)
+        if m:
+            month = month_map.get(m.group(1).lower(), '01')
+            year = m.group(2)
+            dates['valid_from'] = f"{year}-{month}-01"
+            last = 30 if int(month) in (4, 6, 9, 11) else 28 if int(month) == 2 else 31
+            dates['valid_until'] = f"{year}-{month}-{last:02d}"
+
         return dates
 
     def _extract_payment_method(self, text: str) -> Optional[str]:
