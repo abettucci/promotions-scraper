@@ -249,7 +249,7 @@ class PromoScraper:
     def _deduplicate_promotions(promotions: list) -> list:
         """
         Universal dedup applied before DB insert, regardless of scraper path.
-        Key: (bank_or_wallet, discount, valid_days_normalized).
+        Key: (entity, discount, valid_days, has_online).
         Drops promos with no bank AND no wallet (unidentifiable noise).
         Prefers entries with more data (longer terms_raw).
         """
@@ -262,7 +262,9 @@ class PromoScraper:
                 continue
             discount = (promo.get('discount') or '').strip().lower()
             days = (promo.get('valid_days') or '').strip().lower()[:40]
-            key = (entity, discount, days)
+            stores = (promo.get('store_types') or '').lower()
+            has_online = 'carrefour.com' in stores or '.com' in stores or 'online' in stores
+            key = (entity, discount, days, has_online)
             existing = seen.get(key)
             if existing is None or len(promo.get('terms_raw') or '') > len(existing.get('terms_raw') or ''):
                 seen[key] = promo

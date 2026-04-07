@@ -11,6 +11,7 @@ Strategy:
 import json
 import re
 import os
+import unicodedata
 from typing import List, Dict, Optional
 
 
@@ -143,24 +144,27 @@ class CarrefourScraplingScraper:
 
     def _deduplicate(self, promotions: List[Dict]) -> List[Dict]:
         """
-        Dedup using (bank|wallet, discount, valid_days) as composite key.
-        Drops promos without any identified entity unless they have a
-        meaningful title.
+        Dedup using (entity, discount, valid_days, has_online) as composite
+        key so that distinct promos for the same bank (e.g. in-store vs
+        online) are preserved.
         """
-        seen = set()
-        unique = []
+        seen: dict = {}
         for promo in promotions:
             entity = (promo.get('bank') or promo.get('wallet') or '').strip()
             if not entity and promo.get('title', '').lower().startswith('promoción carrefour'):
                 continue
+            stores = (promo.get('store_types') or '').lower()
+            has_online = 'carrefour.com' in stores or 'online' in stores
             key = (
                 entity.lower(),
                 promo.get('discount', ''),
+                (promo.get('valid_days') or '').lower()[:40],
+                has_online,
             )
-            if key not in seen:
-                seen.add(key)
-                unique.append(promo)
-        return unique
+            existing = seen.get(key)
+            if existing is None or len(promo.get('terms_raw') or '') > len(existing.get('terms_raw') or ''):
+                seen[key] = promo
+        return list(seen.values())
 
     # ------------------------------------------------------------------
     # Stage 1 – VTEX __RUNTIME__ JSON
@@ -390,45 +394,60 @@ class CarrefourScraplingScraper:
             return None
 
     # ------------------------------------------------------------------
-    # Stage 3 – full-text regex fallback
+    # Stage 3 – legal-block extraction (splits on PROMOCIÓN VÁLIDA)
     # ------------------------------------------------------------------
 
+    def _strip_html_to_text(self, page) -> str:
+        """Strip scripts/templates/styles from page HTML, return clean text."""
+        html_content = str(page.html_content)
+        html_content = re.sub(r'<script[^>]*>[\s\S]*?</script>', ' ', html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', ' ', html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<template[^>]*>[\s\S]*?</template>', ' ', html_content, flags=re.IGNORECASE)
+        html_content = re.sub(r'<noscript[^>]*>[\s\S]*?</noscript>', ' ', html_content, flags=re.IGNORECASE)
+        text = re.sub(r'<[^>]+>', ' ', html_content)
+        return re.sub(r'\s+', ' ', text).strip()
+
     def _extract_from_full_text(self, page) -> List[Dict]:
-        """Extracción fallback usando el texto completo de la página."""
+        """
+        Split the page text at PROMOCIÓN VÁLIDA boundaries.
+        Each legal block corresponds to exactly one promotion, avoiding
+        the cross-contamination caused by overlapping context windows.
+        """
         promotions = []
 
         try:
-            html_content = str(page.html_content)
+            text = self._strip_html_to_text(page)
 
-            # Strip ALL embedded data sources that cause duplicate matches
-            html_content = re.sub(r'<script[^>]*>[\s\S]*?</script>', ' ', html_content, flags=re.IGNORECASE)
-            html_content = re.sub(r'<style[^>]*>[\s\S]*?</style>', ' ', html_content, flags=re.IGNORECASE)
-            html_content = re.sub(r'<template[^>]*>[\s\S]*?</template>', ' ', html_content, flags=re.IGNORECASE)
-            html_content = re.sub(r'<noscript[^>]*>[\s\S]*?</noscript>', ' ', html_content, flags=re.IGNORECASE)
+            legal_pattern = re.compile(r'\*?\s*PROMOCI[OÓ]N\s+V[AÁ]LIDA', re.IGNORECASE)
+            legal_starts = [m.start() for m in legal_pattern.finditer(text)]
 
-            text = re.sub(r'<[^>]+>', ' ', html_content)
-            text = re.sub(r'\s+', ' ', text).strip()
+            if not legal_starts:
+                print(f"   ⚠️ No PROMOCIÓN VÁLIDA blocks found, trying discount-pattern fallback")
+                return self._extract_from_full_text_legacy(text)
 
-            # Match both percentage discounts AND cuotas sin interés
-            patterns = [
-                (r'(\d+)\s*%\s*(?:de\s*)?descuento', 'percent'),
-                (r'(?:hasta\s+)?(\d+)\s*cuotas?\s*sin\s*inter[eé]s', 'cuotas'),
-            ]
+            print(f"   🔍 Found {len(legal_starts)} PROMOCIÓN VÁLIDA blocks")
 
-            all_matches = []
-            for pattern, kind in patterns:
-                for m in re.finditer(pattern, text, re.IGNORECASE):
-                    all_matches.append((m.start(), m, kind))
+            for i, start in enumerate(legal_starts):
+                raw_end = legal_starts[i + 1] if i + 1 < len(legal_starts) else min(start + 5000, len(text))
+                block = text[start:raw_end]
 
-            all_matches.sort(key=lambda x: x[0])
-            print(f"   🔍 Encontrados {len(all_matches)} patrones de descuento/cuotas en texto")
+                # Legal text ends at the next card header ("Ver legal" button,
+                # "Comprando en:", "Todos los", etc.) — NOT at the next PROMOCIÓN VÁLIDA
+                boundary = re.search(
+                    r'(?:Ver\s+legal|Comprando\s+en|Todos\s+los\s+\w)',
+                    block[150:],
+                )
+                if boundary:
+                    legal_text = block[:150 + boundary.start()].strip()
+                else:
+                    legal_text = block[:2500].strip()
 
-            for _, match, kind in all_matches:
-                start = max(0, match.start() - 1500)
-                end = min(len(text), match.end() + 3000)
-                context = text[start:end]
+                card_start = max(0, start - 600)
+                if i > 0:
+                    card_start = max(card_start, legal_starts[i - 1] + 200)
+                card_text = text[card_start:start].strip()
 
-                promo = self._promo_from_text(context, kind=kind)
+                promo = self._promo_from_legal_block(legal_text, card_text)
                 if promo:
                     promotions.append(promo)
 
@@ -437,12 +456,77 @@ class CarrefourScraplingScraper:
 
         return promotions
 
+    def _extract_from_full_text_legacy(self, text: str) -> List[Dict]:
+        """Fallback when no PROMOCIÓN VÁLIDA blocks exist: small context windows."""
+        promotions = []
+        patterns = [
+            (r'(\d+)\s*%\s*(?:de\s*)?(?:descuento|ahorro)', 'percent'),
+            (r'(?:hasta\s+)?(\d+)\s*cuotas?\s*sin\s*inter[eé]s', 'cuotas'),
+        ]
+
+        all_matches = []
+        for pattern, kind in patterns:
+            for m in re.finditer(pattern, text, re.IGNORECASE):
+                all_matches.append((m.start(), m, kind))
+        all_matches.sort(key=lambda x: x[0])
+
+        for _, match, kind in all_matches:
+            start = max(0, match.start() - 300)
+            end = min(len(text), match.end() + 600)
+            context = text[start:end]
+            promo = self._promo_from_text(context, kind=kind)
+            if promo:
+                promotions.append(promo)
+
+        return promotions
+
     # ------------------------------------------------------------------
-    # Shared text -> promo builder
+    # Promo builders
     # ------------------------------------------------------------------
 
+    def _promo_from_legal_block(self, legal_text: str, card_text: str) -> Optional[Dict]:
+        """Build a promo from one PROMOCIÓN VÁLIDA block and its preceding card text."""
+        bank = self._extract_bank(legal_text) or self._extract_bank(card_text)
+        wallet = self._extract_wallet(legal_text) or self._extract_wallet(card_text)
+        if not bank and not wallet:
+            return None
+
+        discount = self._extract_discount_from_legal(legal_text)
+        if not discount:
+            discount = self._extract_discount(legal_text) or self._extract_discount(card_text)
+        if not discount:
+            return None
+
+        title = self._build_title_from_card(card_text, discount, bank, wallet)
+
+        dates = self._extract_dates(legal_text)
+        if not dates.get('valid_from') and not dates.get('valid_until'):
+            dates = self._extract_dates(card_text)
+
+        store_types = self._extract_store_types(legal_text) or self._extract_store_types(card_text)
+        valid_days = self._extract_valid_days(legal_text) or self._extract_valid_days(card_text)
+        payment_method = self._extract_payment_method(legal_text)
+
+        return {
+            'title': self._clean_text(title),
+            'discount': discount,
+            'bank': bank,
+            'wallet': wallet,
+            'card_type': None,
+            'payment_method': payment_method,
+            'store_types': ', '.join(store_types) if store_types else None,
+            'valid_days': valid_days,
+            'url': self.url,
+            'image_url': '',
+            'terms_raw': self._clean_text(legal_text[:3000]),
+            'exclusions': None,
+            'requirements': None,
+            'valid_from': dates.get('valid_from'),
+            'valid_until': dates.get('valid_until'),
+        }
+
     def _promo_from_text(self, context: str, kind: str = 'percent') -> Optional[Dict]:
-        """Build a promo dict from a raw text fragment."""
+        """Build a promo dict from a raw text fragment (legacy fallback)."""
         bank = self._extract_bank(context)
         wallet = self._extract_wallet(context)
         if not bank and not wallet:
@@ -493,6 +577,47 @@ class CarrefourScraplingScraper:
             'valid_until': dates.get('valid_until'),
         }
 
+    def _build_title_from_card(self, card_text: str, discount: str, bank: Optional[str], wallet: Optional[str]) -> str:
+        """Extract a human-readable title from the visible card text."""
+        entity = bank or wallet or ''
+
+        if 'cuotas' in discount.lower():
+            m = re.search(r'(\d+\s*cuotas?\s*sin\s*inter[eé]s[^.!?\n]{0,120})', card_text, re.IGNORECASE)
+            title = m.group(1).strip() if m else discount
+        else:
+            # Prefer descriptive sentence ("30% de descuento en un pago con...")
+            # over the badge text ("30% de Ahorro")
+            descriptive = re.search(
+                r'(\d+%\s*(?:de\s*)?(?:descuento|ahorro)\s+(?:en|con|si|pagando)[^.!?\n]{5,150})',
+                card_text, re.IGNORECASE,
+            )
+            if descriptive:
+                title = descriptive.group(1).strip()
+            else:
+                m = re.search(r'(\d+%\s*(?:de\s*)?(?:descuento|ahorro)[^.!?\n]{5,150})', card_text, re.IGNORECASE)
+                title = m.group(1).strip() if m else f"{discount} de descuento"
+
+        if entity and entity.lower() not in title.lower():
+            title = f"{title} con {entity}"
+
+        return title
+
+    def _extract_discount_from_legal(self, legal_text: str) -> Optional[str]:
+        """
+        Extract discount specifically from the legal text patterns like
+        'BENEFICIO DEL 30%' or '10% DE DESCUENTO'.
+        """
+        m = re.search(r'BENEFICIO\s+DEL\s+(\d+)\s*%', legal_text, re.IGNORECASE)
+        if m:
+            return f"{m.group(1)}%"
+        m = re.search(r'(\d+)\s*%\s*(?:DE\s+)?(?:DESCUENTO|AHORRO|REINTEGRO|DEVOLUCI[OÓ]N)', legal_text, re.IGNORECASE)
+        if m:
+            return f"{m.group(1)}%"
+        m = re.search(r'(?:hasta\s+)?(\d+)\s*CUOTAS?\s*SIN\s*INTER[EÉ]S', legal_text, re.IGNORECASE)
+        if m:
+            return f"{m.group(1)} cuotas sin interés"
+        return None
+
     def _extract_discount(self, text: str) -> str:
         """Extrae porcentaje de descuento o cuotas sin interés"""
         if not text:
@@ -508,25 +633,42 @@ class CarrefourScraplingScraper:
 
         return ""
 
+    @staticmethod
+    def _strip_accents(text: str) -> str:
+        """Remove diacritics so 'nación' matches 'nacion'."""
+        return ''.join(
+            c for c in unicodedata.normalize('NFD', text)
+            if unicodedata.category(c) != 'Mn'
+        )
+
+    _bank_abbreviations = {
+        'bna': 'Banco Nación',
+        'bbva': 'BBVA',
+        'icbc': 'ICBC',
+        'hsbc': 'HSBC',
+    }
+
     def _extract_bank(self, text: str) -> Optional[str]:
-        """Extrae banco del texto"""
+        """Extrae banco del texto (accent-insensitive, handles abbreviations)"""
         if not text:
             return None
-        
-        text_lower = text.lower()
+        normalized = self._strip_accents(text.lower())
         for key, value in self._banks.items():
-            if key in text_lower:
+            if key in normalized:
+                return value
+        # Check abbreviations with word boundaries to avoid false positives
+        for abbr, value in self._bank_abbreviations.items():
+            if re.search(r'\b' + abbr + r'\b', normalized):
                 return value
         return None
 
     def _extract_wallet(self, text: str) -> Optional[str]:
-        """Extrae billetera digital del texto"""
+        """Extrae billetera digital del texto (accent-insensitive)"""
         if not text:
             return None
-        
-        text_lower = text.lower()
+        normalized = self._strip_accents(text.lower())
         for key, value in self._wallets.items():
-            if key in text_lower:
+            if key in normalized:
                 return value
         return None
 
@@ -546,9 +688,15 @@ class CarrefourScraplingScraper:
         return ""
 
     def _extract_store_types(self, text: str) -> List[str]:
-        """Extrae tipos de tienda"""
+        """Extrae tipos de tienda, respecting negations like 'NO VÁLIDO PARA'."""
         store_types = []
-        
+
+        # Detect explicit online exclusion
+        online_excluded = bool(re.search(
+            r'NO\s+V[AÁ]LID[OA]\s+(?:PARA\s+)?(?:COMPRAS\s+(?:EN|POR)\s+)?(?:WWW\.)?CARREFOUR\.COM',
+            text, re.IGNORECASE,
+        ))
+
         if re.search(r'carrefour\s*market', text, re.IGNORECASE):
             store_types.append('Carrefour Market')
         if re.search(r'carrefour\s*express', text, re.IGNORECASE):
@@ -557,15 +705,15 @@ class CarrefourScraplingScraper:
             store_types.append('Carrefour Maxi')
         if re.search(r'hipermercado', text, re.IGNORECASE):
             store_types.append('Hipermercado Carrefour')
-        if re.search(r'carrefour\.com', text, re.IGNORECASE):
+        if not online_excluded and re.search(r'carrefour\.com', text, re.IGNORECASE):
             store_types.append('Carrefour.com.ar')
-        
+
         return store_types
 
     def _extract_valid_days(self, text: str) -> Optional[str]:
         """Extrae días válidos de la promoción"""
         days_match = re.search(
-            r'(?:todos\s+los|los)\s+(lunes|martes|miércoles|jueves|viernes|sábado|domingo|miercoles|sabado)(?:\s+de\s+\w+)?',
+            r'(?:todos\s+los|los)\s+(?:d[ií]as?\s+)?(lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo)(?:\s+(?:y\s+)?(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bado|domingo))?(?:\s+de\s+\w+)?',
             text, re.IGNORECASE
         )
         if days_match:
