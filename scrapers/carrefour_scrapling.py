@@ -48,8 +48,10 @@ class CarrefourScraplingScraper:
             'supervielle': 'Supervielle',
             'frances': 'Banco Francés',
             'itau': 'Itaú',
+            'comafi': 'Banco Comafi',
+            'carrefour banco': 'Carrefour Banco',
         }
-        
+
         self._wallets = {
             'cuenta dni': 'Cuenta DNI',
             'mercado pago': 'Mercado Pago',
@@ -58,12 +60,26 @@ class CarrefourScraplingScraper:
             'naranja x': 'Naranja X',
             'modo': 'MODO',
             'personal pay': 'Personal Pay',
+            'club la nacion': 'Club La Nación',
+            'mi carrefour': 'Mi Carrefour',
         }
+
+    # Carrefour only renders promos for the selected day.  We iterate
+    # through each day filter to capture ALL promotions for the month.
+    _DAY_URLS = [
+        ('Lunes', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Lunes'),
+        ('Martes', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Martes'),
+        ('Miércoles', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Mi%C3%A9rcoles'),
+        ('Jueves', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Jueves'),
+        ('Viernes', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Viernes'),
+        ('Sábado', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=S%C3%A1bado'),
+        ('Domingo', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Domingo'),
+    ]
 
     def scrape(self) -> List[Dict]:
         """
-        Scrape síncrono de promociones de Carrefour usando Scrapling.
-        Retorna lista de promociones encontradas.
+        Scrape ALL Carrefour promos by iterating each day filter.
+        The Carrefour page only renders the current day's promos by default.
         """
         try:
             from scrapling.fetchers import StealthyFetcher
@@ -71,32 +87,39 @@ class CarrefourScraplingScraper:
             raise CarrefourScraplingError(
                 "Scrapling no está instalado. Ejecuta: pip install 'scrapling[fetchers]' && scrapling install"
             )
-        
+
+        all_promotions: List[Dict] = []
+
         try:
-            print(f"🔍 Scraping {self.name} con Scrapling...")
-            print(f"   🌐 URL: {self.url}")
-            print(f"   🎯 Modo adaptive: {self.use_adaptive}")
-            
-            page = StealthyFetcher.fetch(
-                self.url,
-                headless=self.headless,
-                network_idle=True,
-                timeout=30000,
-            )
-            
-            print(f"   ✅ Página cargada correctamente")
-            
-            if os.environ.get('DEBUG_SCRAPER'):
-                debug_path = 'debug_carrefour_scrapling.html'
-                with open(debug_path, 'w', encoding='utf-8') as f:
-                    f.write(str(page.html_content))
-                print(f"   💾 HTML guardado en: {debug_path}")
-            
-            promotions = self._extract_promotions(page)
-            
-            print(f"✅ {self.name}: {len(promotions)} promociones encontradas")
-            return promotions
-            
+            print(f"🔍 Scraping {self.name} con Scrapling (all days)...")
+
+            for day_name, day_url in self._DAY_URLS:
+                try:
+                    print(f"   📅 {day_name}: {day_url}")
+                    page = StealthyFetcher.fetch(
+                        day_url,
+                        headless=self.headless,
+                        network_idle=True,
+                        timeout=30000,
+                    )
+
+                    if os.environ.get('DEBUG_SCRAPER'):
+                        debug_path = f'debug_carrefour_{day_name.lower()}.html'
+                        with open(debug_path, 'w', encoding='utf-8') as f:
+                            f.write(str(page.html_content))
+
+                    day_promos = self._extract_promotions(page)
+                    print(f"      ✅ {len(day_promos)} promos para {day_name}")
+                    all_promotions.extend(day_promos)
+
+                except Exception as e:
+                    print(f"      ⚠️ Error en {day_name}: {e}")
+
+            # Global dedup across all days
+            all_promotions = self._deduplicate(all_promotions)
+            print(f"✅ {self.name}: {len(all_promotions)} promociones únicas (all days)")
+            return all_promotions
+
         except Exception as e:
             print(f"❌ Error en {self.name} (Scrapling): {e}")
             import traceback
@@ -418,34 +441,47 @@ class CarrefourScraplingScraper:
         try:
             text = self._strip_html_to_text(page)
 
-            legal_pattern = re.compile(r'\*?\s*PROMOCI[OÓ]N\s+V[AÁ]LIDA', re.IGNORECASE)
+            # Carrefour legal blocks start with various patterns:
+            # "DESCUENTO EXCLUSIVO...", "BENEFICIO VÁLIDO...",
+            # "PROMOCIÓN VÁLIDA...", "*FINANCIACIÓN EXCLUSIVA..."
+            legal_pattern = re.compile(
+                r'\*?\s*(?:'
+                r'DESCUENTO\s+EXCLUSIVO|'
+                r'BENEFICIO\s+V[AÁ]LID|'
+                r'PROMOCI[OÓ]N\s+V[AÁ]LIDA|'
+                r'FINANCIACI[OÓ]N\s+EXCLUSIV'
+                r')',
+                re.IGNORECASE,
+            )
             legal_starts = [m.start() for m in legal_pattern.finditer(text)]
 
             if not legal_starts:
-                print(f"   ⚠️ No PROMOCIÓN VÁLIDA blocks found, trying discount-pattern fallback")
+                print(f"   ⚠️ No legal blocks found, trying discount-pattern fallback")
                 return self._extract_from_full_text_legacy(text)
 
             print(f"   🔍 Found {len(legal_starts)} PROMOCIÓN VÁLIDA blocks")
 
+            prev_legal_end = 0
             for i, start in enumerate(legal_starts):
+                # Card text: everything between previous legal block end and this one
+                card_start = max(prev_legal_end, start - 600)
+                card_text = text[card_start:start].strip()
+
                 raw_end = legal_starts[i + 1] if i + 1 < len(legal_starts) else min(start + 5000, len(text))
                 block = text[start:raw_end]
 
                 # Legal text ends at the next card header ("Ver legal" button,
-                # "Comprando en:", "Todos los", etc.) — NOT at the next PROMOCIÓN VÁLIDA
+                # "Comprando en:", "Todos los", etc.)
                 boundary = re.search(
                     r'(?:Ver\s+legal|Comprando\s+en|Todos\s+los\s+\w)',
                     block[150:],
                 )
                 if boundary:
                     legal_text = block[:150 + boundary.start()].strip()
+                    prev_legal_end = start + 150 + boundary.start()
                 else:
                     legal_text = block[:2500].strip()
-
-                card_start = max(0, start - 600)
-                if i > 0:
-                    card_start = max(card_start, legal_starts[i - 1] + 200)
-                card_text = text[card_start:start].strip()
+                    prev_legal_end = start + len(legal_text)
 
                 promo = self._promo_from_legal_block(legal_text, card_text)
                 if promo:
@@ -604,18 +640,27 @@ class CarrefourScraplingScraper:
 
     def _extract_discount_from_legal(self, legal_text: str) -> Optional[str]:
         """
-        Extract discount specifically from the legal text patterns like
-        'BENEFICIO DEL 30%' or '10% DE DESCUENTO'.
+        Extract discount from legal text patterns:
+        'BENEFICIO DEL 30%', '10% DE DESCUENTO', '3 CUOTAS SIN INTERÉS',
+        '10% DE REINTEGRO', 'DESCUENTO EXCLUSIVO ... 15%'.
         """
-        m = re.search(r'BENEFICIO\s+DEL\s+(\d+)\s*%', legal_text, re.IGNORECASE)
-        if m:
-            return f"{m.group(1)}%"
-        m = re.search(r'(\d+)\s*%\s*(?:DE\s+)?(?:DESCUENTO|AHORRO|REINTEGRO|DEVOLUCI[OÓ]N)', legal_text, re.IGNORECASE)
-        if m:
-            return f"{m.group(1)}%"
+        # Cuotas pattern first (higher priority)
         m = re.search(r'(?:hasta\s+)?(\d+)\s*CUOTAS?\s*SIN\s*INTER[EÉ]S', legal_text, re.IGNORECASE)
         if m:
             return f"{m.group(1)} cuotas sin interés"
+        m = re.search(r'BENEFICIO\s+DEL\s+(\d+)\s*%', legal_text, re.IGNORECASE)
+        if m:
+            return f"{m.group(1)}%"
+        m = re.search(
+            r'(\d+)\s*%\s*(?:DE\s+)?(?:DESCUENTO|AHORRO|REINTEGRO|DEVOLUCI[OÓ]N|BONIFICACI[OÓ]N)',
+            legal_text, re.IGNORECASE,
+        )
+        if m:
+            return f"{m.group(1)}%"
+        # Generic fallback: any N% in the legal text
+        m = re.search(r'(\d+)\s*%', legal_text)
+        if m:
+            return f"{m.group(1)}%"
         return None
 
     def _extract_discount(self, text: str) -> str:
