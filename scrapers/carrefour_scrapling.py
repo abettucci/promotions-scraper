@@ -1,12 +1,17 @@
 """
 Scraper de Carrefour usando Scrapling - Adaptive Web Scraping
-Usa StealthyFetcher para bypass de anti-bot y adaptive scraping para
-resistir cambios en la estructura del sitio.
+
+Uses Scrapling's dynamic features (find_by_regex, find_similar) to discover
+promo cards automatically, without hardcoding CSS selectors or URL slugs.
+The scraper adapts to page structure changes.
 
 Strategy:
-1. Try extracting structured promo data from VTEX __RUNTIME__ JSON first
-2. Fall back to targeted CSS selectors with parent-child dedup
-3. Last resort: full-text regex extraction (with <template> tags stripped)
+1. Fetch the page with StealthyFetcher
+2. Use find_by_regex to locate ONE discount badge element (N% or N cuotas)
+3. Walk up the DOM to find the card container level
+4. Use find_similar() to discover ALL sibling cards
+5. Parse each card's text dynamically
+6. Follow pagination links to get all pages
 """
 import json
 import re
@@ -16,23 +21,16 @@ from typing import List, Dict, Optional
 
 
 class CarrefourScraplingError(Exception):
-    """Error específico del scraper de Carrefour con Scrapling"""
     pass
 
 
 class CarrefourScraplingScraper:
     def __init__(self, use_adaptive: bool = False, headless: bool = True):
-        """
-        Args:
-            use_adaptive: Adaptive mode is OFF by default for Carrefour because
-                         the VTEX page has too many similar generic elements.
-            headless: Si True, ejecuta el browser sin interfaz gráfica
-        """
         self.name = 'Carrefour'
         self.url = 'https://www.carrefour.com.ar/descuentos-bancarios'
         self.use_adaptive = use_adaptive
         self.headless = headless
-        
+
         self._banks = {
             'galicia': 'Banco Galicia',
             'santander': 'Santander',
@@ -64,22 +62,12 @@ class CarrefourScraplingScraper:
             'mi carrefour': 'Mi Carrefour',
         }
 
-    # Carrefour only renders promos for the selected day.  We iterate
-    # through each day filter to capture ALL promotions for the month.
-    _DAY_URLS = [
-        ('Lunes', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Lunes'),
-        ('Martes', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Martes'),
-        ('Miércoles', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Mi%C3%A9rcoles'),
-        ('Jueves', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Jueves'),
-        ('Viernes', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Viernes'),
-        ('Sábado', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=S%C3%A1bado'),
-        ('Domingo', 'https://www.carrefour.com.ar/descuentos-bancarios?filtro=dia&dia=Domingo'),
-    ]
+    MAX_PAGES = 10
 
     def scrape(self) -> List[Dict]:
         """
-        Scrape ALL Carrefour promos by iterating each day filter.
-        The Carrefour page only renders the current day's promos by default.
+        Dynamic scraping: fetch page, discover cards via find_similar(),
+        follow pagination links automatically.
         """
         try:
             from scrapling.fetchers import StealthyFetcher
@@ -91,33 +79,47 @@ class CarrefourScraplingScraper:
         all_promotions: List[Dict] = []
 
         try:
-            print(f"🔍 Scraping {self.name} con Scrapling (all days)...")
+            print(f"🔍 Scraping {self.name} con Scrapling (dynamic discovery)...")
 
-            for day_name, day_url in self._DAY_URLS:
+            urls_to_visit = [self.url]
+            visited = set()
+
+            while urls_to_visit and len(visited) < self.MAX_PAGES:
+                current_url = urls_to_visit.pop(0)
+                if current_url in visited:
+                    continue
+                visited.add(current_url)
+
+                page_label = f"page {len(visited)}"
+                print(f"   📄 {page_label}: {current_url}")
+
                 try:
-                    print(f"   📅 {day_name}: {day_url}")
                     page = StealthyFetcher.fetch(
-                        day_url,
+                        current_url,
                         headless=self.headless,
                         network_idle=True,
                         timeout=30000,
                     )
 
                     if os.environ.get('DEBUG_SCRAPER'):
-                        debug_path = f'debug_carrefour_{day_name.lower()}.html'
+                        debug_path = f'debug_carrefour_p{len(visited)}.html'
                         with open(debug_path, 'w', encoding='utf-8') as f:
                             f.write(str(page.html_content))
 
-                    day_promos = self._extract_promotions(page)
-                    print(f"      ✅ {len(day_promos)} promos para {day_name}")
-                    all_promotions.extend(day_promos)
+                    page_promos = self._extract_with_find_similar(page)
+                    if not page_promos:
+                        page_promos = self._extract_promotions(page)
+                    print(f"      ✅ {len(page_promos)} promos")
+                    all_promotions.extend(page_promos)
+
+                    new_links = self._discover_pagination_links(page, visited)
+                    urls_to_visit.extend(new_links)
 
                 except Exception as e:
-                    print(f"      ⚠️ Error en {day_name}: {e}")
+                    print(f"      ⚠️ Error en {page_label}: {e}")
 
-            # Global dedup across all days
             all_promotions = self._deduplicate(all_promotions)
-            print(f"✅ {self.name}: {len(all_promotions)} promociones únicas (all days)")
+            print(f"✅ {self.name}: {len(all_promotions)} promociones únicas ({len(visited)} pages)")
             return all_promotions
 
         except Exception as e:
@@ -137,32 +139,176 @@ class CarrefourScraplingScraper:
         return await asyncio.to_thread(self.scrape)
 
     # ------------------------------------------------------------------
-    # Extraction pipeline
+    # Dynamic discovery via find_similar()
+    # ------------------------------------------------------------------
+
+    def _extract_with_find_similar(self, page) -> List[Dict]:
+        """
+        Scrapling-native approach:
+        1. find_by_regex to locate a discount badge (N% or cuotas)
+        2. Walk up the DOM to the card container level
+        3. find_similar() to get all sibling cards
+        4. Parse each card's text
+        """
+        badge = None
+        try:
+            badge = page.find_by_regex(r'\d+\s*%', first_match=True)
+        except Exception:
+            pass
+        if badge is None:
+            try:
+                badge = page.find_by_regex(r'\d+\s*cuotas?', first_match=True)
+            except Exception:
+                pass
+        if badge is None:
+            return []
+
+        card = self._find_card_container(badge)
+        if card is None:
+            return []
+
+        try:
+            siblings = card.find_similar()
+        except Exception:
+            siblings = []
+
+        all_cards = [card] + list(siblings)
+        print(f"   🔍 find_similar: 1 seed + {len(siblings)} siblings = {len(all_cards)} cards")
+
+        promotions = []
+        for card_el in all_cards:
+            text = card_el.text or ''
+            if len(text) < 30:
+                continue
+            promo = self._parse_card_text(text)
+            if promo:
+                promotions.append(promo)
+
+        return self._deduplicate(promotions)
+
+    def _find_card_container(self, element):
+        """
+        Walk up from a discount badge element until we find the level
+        where find_similar() returns multiple results (= the card level).
+        """
+        card = element
+        for _ in range(8):
+            parent = card.parent
+            if parent is None:
+                break
+            try:
+                similar = card.find_similar()
+                if len(similar) >= 2:
+                    return card
+            except Exception:
+                pass
+            card = parent
+        return card
+
+    def _parse_card_text(self, text: str) -> Optional[Dict]:
+        """Parse a single card's visible text into a promo dict."""
+        discount = self._extract_discount(text)
+        if not discount:
+            return None
+
+        bank = self._extract_bank(text)
+        wallet = self._extract_wallet(text)
+        if not bank and not wallet:
+            return None
+
+        entity = bank or wallet
+        valid_days = self._extract_valid_days(text)
+        dates = self._extract_dates(text)
+        store_types = self._extract_store_types(text)
+        payment_method = self._extract_payment_method(text)
+
+        title_base = f"{discount} de descuento" if '%' in discount else discount
+        title = f"{title_base} con {entity}"
+
+        return {
+            'title': self._clean_text(title),
+            'discount': discount,
+            'bank': bank,
+            'wallet': wallet,
+            'card_type': None,
+            'payment_method': payment_method,
+            'store_types': ', '.join(store_types) if store_types else None,
+            'valid_days': valid_days,
+            'url': self.url,
+            'image_url': '',
+            'terms_raw': self._clean_text(text[:3000]),
+            'exclusions': None,
+            'requirements': None,
+            'valid_from': dates.get('valid_from'),
+            'valid_until': dates.get('valid_until'),
+        }
+
+    def _discover_pagination_links(self, page, visited: set) -> List[str]:
+        """
+        Discover pagination URLs from the page.  Looks for numbered page
+        links or "next" buttons and extracts their href.
+        """
+        links = []
+        try:
+            page_links = page.find_by_regex(
+                r'^[2-9]$|^1[0-9]$', first_match=False
+            ) or []
+            for el in page_links:
+                href = None
+                if el.tag == 'a':
+                    href = el.attrib.get('href')
+                elif el.parent and el.parent.tag == 'a':
+                    href = el.parent.attrib.get('href')
+                if href and href not in visited:
+                    if href.startswith('/'):
+                        href = 'https://www.carrefour.com.ar' + href
+                    if 'descuentos-bancarios' in href:
+                        links.append(href)
+        except Exception:
+            pass
+
+        try:
+            next_el = page.find_by_text('Siguiente', partial=True, first_match=True)
+            if next_el:
+                a = next_el if next_el.tag == 'a' else next_el.parent
+                if a and a.tag == 'a':
+                    href = a.attrib.get('href', '')
+                    if href.startswith('/'):
+                        href = 'https://www.carrefour.com.ar' + href
+                    if href and href not in visited and 'descuentos-bancarios' in href:
+                        links.append(href)
+        except Exception:
+            pass
+
+        return links
+
+    # ------------------------------------------------------------------
+    # Fallback extraction pipeline
     # ------------------------------------------------------------------
 
     def _extract_promotions(self, page) -> List[Dict]:
         """
-        Three-stage extraction pipeline:
-        1. VTEX __RUNTIME__ JSON  (structured, most reliable)
-        2. Targeted CSS selectors (with parent-child dedup)
-        3. Full-text regex        (last resort)
+        Fallback pipeline used when find_similar() doesn't work.
+        Tries VTEX JSON, CSS selectors, legal blocks, and plain text.
         """
-        # --- Stage 1: VTEX structured JSON ---
         promotions = self._extract_from_vtex_json(page)
         if promotions:
-            print(f"   📊 {len(promotions)} promos extraídas desde __RUNTIME__ JSON")
+            print(f"   📊 {len(promotions)} promos desde __RUNTIME__ JSON")
             return self._deduplicate(promotions)
 
-        # --- Stage 2: CSS selectors ---
         promotions = self._extract_from_css(page)
         if promotions:
-            print(f"   📊 {len(promotions)} promos extraídas desde CSS selectors")
+            print(f"   📊 {len(promotions)} promos desde CSS selectors")
             return self._deduplicate(promotions)
 
-        # --- Stage 3: full-text fallback ---
-        print(f"   🔄 Intentando extracción por texto completo...")
         promotions = self._extract_from_full_text(page)
-        print(f"   📊 {len(promotions)} promos extraídas desde texto completo")
+        if promotions:
+            print(f"   📊 {len(promotions)} promos desde legal blocks")
+            return self._deduplicate(promotions)
+
+        promotions = self._extract_cards_simple(page)
+        if promotions:
+            print(f"   📊 {len(promotions)} promos desde card badges")
         return self._deduplicate(promotions)
 
     def _deduplicate(self, promotions: List[Dict]) -> List[Dict]:
@@ -415,6 +561,45 @@ class CarrefourScraplingScraper:
         except Exception as e:
             print(f"   ⚠️ Error parseando elemento: {e}")
             return None
+
+    # ------------------------------------------------------------------
+    # Stage 2.5 – Simple card extraction from visible text
+    # ------------------------------------------------------------------
+
+    def _extract_cards_simple(self, page) -> List[Dict]:
+        """
+        Last-resort fallback: split visible text at discount badges and
+        extract from surrounding context.
+        """
+        promotions = []
+        text = self._strip_html_to_text(page)
+        if len(text) < 100:
+            return []
+
+        badge_pattern = re.compile(
+            r'(?:(?:hasta\s+)?(\d+)\s*cuotas?\s*sin\s*inter[eé]s|(\d+)\s*%)',
+            re.IGNORECASE,
+        )
+        matches = list(badge_pattern.finditer(text))
+        if not matches:
+            return []
+
+        for i, m in enumerate(matches):
+            if i > 0:
+                midpoint = (matches[i - 1].end() + m.start()) // 2
+                start = max(midpoint, m.start() - 200)
+            else:
+                start = max(0, m.start() - 200)
+            end = matches[i + 1].start() if i + 1 < len(matches) else min(m.end() + 800, len(text))
+            context = text[start:end]
+
+            discount = f"{m.group(1)} cuotas sin interés" if m.group(1) else f"{m.group(2)}%"
+            promo = self._parse_card_text(context)
+            if promo:
+                promo['discount'] = discount
+                promotions.append(promo)
+
+        return promotions
 
     # ------------------------------------------------------------------
     # Stage 3 – legal-block extraction (splits on PROMOCIÓN VÁLIDA)
