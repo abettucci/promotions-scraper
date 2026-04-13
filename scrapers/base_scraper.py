@@ -75,7 +75,14 @@ class BaseScraper(ABC):
         text_lower = text.lower()
         
         # Lista de bancos comunes en Argentina
+        # Order matters: more specific patterns first to avoid false matches
         banks = {
+            'carrefour banco': 'Carrefour Banco',
+            'carrefour crédito': 'Carrefour Banco',
+            'carrefour credito': 'Carrefour Banco',
+            'mi carrefour': 'Carrefour Banco',
+            'cuenta digital': 'Carrefour Banco',
+            'club la naci': 'Club La Nación',
             'galicia': 'Banco Galicia',
             'santander': 'Santander',
             'bbva': 'BBVA',
@@ -111,6 +118,7 @@ class BaseScraper(ABC):
             'mercado pago': 'Mercado Pago',
             'ualá': 'Ualá',
             'uala': 'Ualá',
+            'naranjax': 'Naranja X',
             'naranja x': 'Naranja X',
             'modo': 'MODO',
             'personal pay': 'Personal Pay',

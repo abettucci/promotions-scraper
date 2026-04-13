@@ -161,7 +161,7 @@ class CarrefourScraper(BaseScraper):
                                 const hasDiscount = /\\d+\\s*%/.test(text);
                                 // Require explicit bank/wallet info — "carrefour" alone is NOT enough
                                 // since every element on carrefour.com.ar contains the word "carrefour"
-                                const hasBankInfo = /banco|santander|galicia|bbva|macro|icbc|hsbc|credicoop|supervielle|patagonia|naci[oó]n|provincia|frances|itau|comafi|mercado pago|cuenta dni|personal pay|naranja|ual[aá]|modo/i.test(text);
+                                const hasBankInfo = /banco|cuenta digital|santander|galicia|bbva|macro|icbc|hsbc|credicoop|supervielle|patagonia|naci[oó]n|provincia|frances|itau|comafi|mercado pago|cuenta dni|personal pay|naranja|ual[aá]|modo|anses/i.test(text);
 
                                 // Require both discount AND bank info; keep only reasonably-sized containers
                                 if (hasDiscount && hasBankInfo && text.length > 50 && text.length < 5000) {
@@ -308,14 +308,18 @@ class CarrefourScraper(BaseScraper):
                 except Exception as e:
                     print(f"   ⚠️ Error procesando promoción {idx+1}: {e}")
 
-            # Final dedup: one promo per (bank/wallet, discount) — safety net for any
-            # remaining duplicates that slipped through the JS or HTML extraction
+            # Final dedup: one promo per (bank/wallet, discount, valid_days, store_types) — safety net
+            # for any remaining duplicates. Include valid_days and store_types so same-bank promos
+            # that differ by day or store type (e.g. Carrefour Banco 15% lunes vs 15% sábados) are kept.
             seen = set()
             unique_promotions = []
             for p in promotions:
                 entity = (p.get('bank') or p.get('wallet') or '').lower().strip()
                 discount = (p.get('discount') or '').strip()
-                key = (entity, discount)
+                valid_days = (p.get('valid_days') or '').lower().strip()
+                store_types = (p.get('store_types') or '').lower().strip()
+                title = (p.get('title') or '').lower().strip()[:80]
+                key = (entity, discount, valid_days, store_types, title)
                 if key not in seen:
                     seen.add(key)
                     unique_promotions.append(p)
