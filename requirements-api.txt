@@ -17,3 +17,7 @@ uvicorn[standard]==0.30.6
 
 # HTTP requests (para health checks, etc.)
 requests==2.31.0
+
+# Auth
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
