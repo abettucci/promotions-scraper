@@ -21,13 +21,17 @@ from database import Database
 
 # ── Auth deps ─────────────────────────────────────────────────────────────────
 try:
-    from passlib.context import CryptContext
+    import bcrypt as _bcrypt
     from jose import JWTError, jwt
     AUTH_AVAILABLE = True
-    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
 except ImportError:
     AUTH_AVAILABLE = False
-    pwd_context = None
+
+def _hash_password(password: str) -> str:
+    return _bcrypt.hashpw(password.encode(), _bcrypt.gensalt()).decode()
+
+def _verify_password(password: str, hashed: str) -> bool:
+    return _bcrypt.checkpw(password.encode(), hashed.encode())
 
 app = FastAPI(
     title="Promo Scraper API",
@@ -102,7 +106,7 @@ def _decode_token(token: str) -> Optional[int]:
 
 def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
     if not AUTH_AVAILABLE:
-        raise HTTPException(503, "Auth no disponible: instalá passlib y python-jose")
+        raise HTTPException(503, "Auth no disponible: instalá bcrypt y python-jose")
     if not credentials:
         raise HTTPException(401, "Token requerido")
     user_id = _decode_token(credentials.credentials)
@@ -162,7 +166,7 @@ def register(body: RegisterBody):
     if len(body.password) < 6:
         raise HTTPException(400, "La contraseña debe tener al menos 6 caracteres")
 
-    pw_hash = pwd_context.hash(body.password)
+    pw_hash = _hash_password(body.password)
     user_id = _db.create_user(email, pw_hash)
     if not user_id:
         raise HTTPException(409, "Ya existe una cuenta con ese email")
@@ -177,7 +181,7 @@ def login(body: LoginBody):
     if not AUTH_AVAILABLE:
         raise HTTPException(503, "Auth no disponible")
     user = _db.get_user_by_email(body.email)
-    if not user or not pwd_context.verify(body.password, user["password_hash"]):
+    if not user or not _verify_password(body.password, user["password_hash"]):
         raise HTTPException(401, "Email o contraseña incorrectos")
 
     token = _create_token(user["id"])
