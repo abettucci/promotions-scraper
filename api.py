@@ -1,11 +1,14 @@
 """
 FastAPI REST API for promo-scraper
 Exposes the SQLite database with promotions, banks, supermarkets
+Includes user auth (JWT) and personalized promotion endpoints
 """
-from fastapi import FastAPI, Query, HTTPException
+from fastapi import FastAPI, Query, HTTPException, Depends
 from fastapi.middleware.cors import CORSMiddleware
+from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List
-from datetime import date, datetime
+from datetime import date, datetime, timedelta, timezone
+from pydantic import BaseModel
 import sqlite3
 import json
 from pathlib import Path
@@ -14,25 +17,32 @@ import os
 
 sys.path.insert(0, str(Path(__file__).parent))
 import config
+from database import Database
+
+# ── Auth deps ─────────────────────────────────────────────────────────────────
+try:
+    from passlib.context import CryptContext
+    from jose import JWTError, jwt
+    AUTH_AVAILABLE = True
+    pwd_context = CryptContext(schemes=["bcrypt"], deprecated="auto")
+except ImportError:
+    AUTH_AVAILABLE = False
+    pwd_context = None
 
 app = FastAPI(
     title="Promo Scraper API",
     description="API de promociones de supermercados argentinos con descuentos bancarios",
-    version="1.0.0"
+    version="2.0.0"
 )
 
-# CORS: permitir frontend en desarrollo y producción
-# En producción, FRONTEND_URL debe ser la URL de Vercel (ej: https://promo-scraper.vercel.app)
+# ── CORS ──────────────────────────────────────────────────────────────────────
 allowed_origins = [
     "http://localhost:3000",
     "http://127.0.0.1:3000",
 ]
-
-# Agregar URL de producción si está configurada
 frontend_url = os.environ.get("FRONTEND_URL")
 if frontend_url:
     allowed_origins.append(frontend_url)
-    # También permitir sin trailing slash y con www
     if not frontend_url.endswith("/"):
         allowed_origins.append(frontend_url + "/")
     if "www." not in frontend_url:
@@ -42,22 +52,15 @@ app.add_middleware(
     CORSMiddleware,
     allow_origins=allowed_origins,
     allow_credentials=True,
-    allow_methods=["GET"],
+    allow_methods=["GET", "POST", "PUT", "DELETE", "OPTIONS"],
     allow_headers=["*"],
 )
 
-
-@app.get("/health")
-def health_check():
-    """Health check endpoint para Railway"""
-    return {"status": "healthy", "service": "promo-scraper-api"}
-
-
+# ── DB helpers ────────────────────────────────────────────────────────────────
 def get_conn():
     conn = sqlite3.connect(config.DATABASE_PATH)
     conn.row_factory = sqlite3.Row
     return conn
-
 
 def row_to_dict(row: sqlite3.Row) -> dict:
     d = dict(row)
@@ -73,24 +76,178 @@ def row_to_dict(row: sqlite3.Row) -> dict:
                 else:
                     d[field] = []
             except json.JSONDecodeError:
-                # Plain text — present as a single readable block
                 d[field] = [val.strip()]
         else:
             d[field] = []
     return d
 
+_db = Database()
+
+# ── JWT helpers ───────────────────────────────────────────────────────────────
+security = HTTPBearer(auto_error=False)
+
+def _create_token(user_id: int) -> str:
+    payload = {
+        "sub": str(user_id),
+        "exp": datetime.now(timezone.utc) + timedelta(days=config.JWT_EXPIRE_DAYS),
+    }
+    return jwt.encode(payload, config.JWT_SECRET, algorithm=config.JWT_ALGORITHM)
+
+def _decode_token(token: str) -> Optional[int]:
+    try:
+        payload = jwt.decode(token, config.JWT_SECRET, algorithms=[config.JWT_ALGORITHM])
+        return int(payload["sub"])
+    except (JWTError, KeyError, ValueError):
+        return None
+
+def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    if not AUTH_AVAILABLE:
+        raise HTTPException(503, "Auth no disponible: instalá passlib y python-jose")
+    if not credentials:
+        raise HTTPException(401, "Token requerido")
+    user_id = _decode_token(credentials.credentials)
+    if not user_id:
+        raise HTTPException(401, "Token inválido o expirado")
+    user = _db.get_user_by_id(user_id)
+    if not user:
+        raise HTTPException(401, "Usuario no encontrado")
+    return user
+
+def _user_response(user: dict) -> dict:
+    methods = _db.get_user_payment_methods(user["id"])
+    return {
+        "id": user["id"],
+        "email": user["email"],
+        "telegram_chat_id": user.get("telegram_chat_id"),
+        "notify_daily": bool(user.get("notify_daily", True)),
+        "notify_hour": user.get("notify_hour", 9),
+        "payment_methods": methods,
+        "created_at": user.get("created_at"),
+    }
+
+# ── Pydantic models ───────────────────────────────────────────────────────────
+class RegisterBody(BaseModel):
+    email: str
+    password: str
+
+class LoginBody(BaseModel):
+    email: str
+    password: str
+
+class PaymentMethod(BaseModel):
+    name: str
+    type: str  # bank | wallet | club
+
+class UpdatePaymentMethodsBody(BaseModel):
+    methods: List[PaymentMethod]
+
+class UpdateProfileBody(BaseModel):
+    telegram_chat_id: Optional[str] = None
+    notify_daily: Optional[bool] = None
+    notify_hour: Optional[int] = None
+
+# ── Health ────────────────────────────────────────────────────────────────────
+@app.get("/health")
+def health_check():
+    return {"status": "healthy", "service": "promo-scraper-api"}
+
+# ── Auth endpoints ────────────────────────────────────────────────────────────
+@app.post("/api/auth/register")
+def register(body: RegisterBody):
+    if not AUTH_AVAILABLE:
+        raise HTTPException(503, "Auth no disponible")
+    email = body.email.lower().strip()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Email inválido")
+    if len(body.password) < 6:
+        raise HTTPException(400, "La contraseña debe tener al menos 6 caracteres")
+
+    pw_hash = pwd_context.hash(body.password)
+    user_id = _db.create_user(email, pw_hash)
+    if not user_id:
+        raise HTTPException(409, "Ya existe una cuenta con ese email")
+
+    user = _db.get_user_by_id(user_id)
+    token = _create_token(user_id)
+    return {"token": token, "user": _user_response(user)}
+
+
+@app.post("/api/auth/login")
+def login(body: LoginBody):
+    if not AUTH_AVAILABLE:
+        raise HTTPException(503, "Auth no disponible")
+    user = _db.get_user_by_email(body.email)
+    if not user or not pwd_context.verify(body.password, user["password_hash"]):
+        raise HTTPException(401, "Email o contraseña incorrectos")
+
+    token = _create_token(user["id"])
+    return {"token": token, "user": _user_response(user)}
+
+
+@app.get("/api/auth/me")
+def get_me(current_user=Depends(get_current_user)):
+    return _user_response(current_user)
+
+
+@app.put("/api/auth/me")
+def update_me(body: UpdateProfileBody, current_user=Depends(get_current_user)):
+    user = current_user
+    _db.update_user_telegram(
+        user["id"],
+        telegram_chat_id=body.telegram_chat_id if body.telegram_chat_id is not None else user.get("telegram_chat_id"),
+        notify_daily=body.notify_daily if body.notify_daily is not None else bool(user.get("notify_daily", True)),
+        notify_hour=body.notify_hour if body.notify_hour is not None else user.get("notify_hour", 9),
+    )
+    updated = _db.get_user_by_id(user["id"])
+    return _user_response(updated)
+
+
+@app.put("/api/auth/me/payment-methods")
+def update_payment_methods(body: UpdatePaymentMethodsBody, current_user=Depends(get_current_user)):
+    methods = [{"name": m.name, "type": m.type} for m in body.methods]
+    _db.set_user_payment_methods(current_user["id"], methods)
+    updated = _db.get_user_by_id(current_user["id"])
+    return _user_response(updated)
+
+
+@app.get("/api/auth/me/promotions")
+def get_my_promotions(
+    today_only: bool = Query(True),
+    current_user=Depends(get_current_user),
+):
+    promos = _db.get_promotions_for_user(current_user["id"], today_only=today_only)
+
+    # Group by supermarket
+    by_super: dict = {}
+    for p in promos:
+        name = p["supermarket_name"]
+        by_super.setdefault(name, []).append(p)
+
+    return {
+        "total": len(promos),
+        "today_only": today_only,
+        "by_supermarket": [
+            {"supermarket": name, "promotions": items}
+            for name, items in by_super.items()
+        ],
+    }
+
+# ── Catálogo de medios de pago ────────────────────────────────────────────────
+@app.get("/api/catalog/payment-methods")
+def get_payment_methods_catalog():
+    return config.PAYMENT_METHODS_CATALOG
 
 # ---------------------------------------------------------------------------
 # GET /api/promotions
 # ---------------------------------------------------------------------------
 @app.get("/api/promotions")
 def get_promotions(
-    supermarket: Optional[str] = Query(None, description="Nombre del supermercado"),
-    bank: Optional[str] = Query(None, description="Nombre del banco o wallet"),
-    day: Optional[str] = Query(None, description="Día de la semana (lunes, martes, ...)"),
-    search: Optional[str] = Query(None, description="Búsqueda libre en título o términos"),
-    discount_type: Optional[str] = Query(None, description="Tipo: percent | cuotas | cashback"),
-    active_today: Optional[bool] = Query(None, description="Solo promos vigentes hoy"),
+    supermarket: Optional[str] = Query(None),
+    bank: Optional[str] = Query(None),
+    day: Optional[str] = Query(None),
+    search: Optional[str] = Query(None),
+    discount_type: Optional[str] = Query(None),
+    active_today: Optional[bool] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -125,14 +282,11 @@ def get_promotions(
             conditions.append("(LOWER(p.discount) LIKE '%cashback%' OR LOWER(p.discount) LIKE '%reintegro%')")
 
     if active_today:
-        today = date.today().isoformat()
-        day_name = date.today().strftime("%A").lower()
-        # Map English day name to Spanish
         day_map = {
             "monday": "lunes", "tuesday": "martes", "wednesday": "miércoles",
             "thursday": "jueves", "friday": "viernes", "saturday": "sábado", "sunday": "domingo"
         }
-        today_es = day_map.get(day_name, day_name)
+        today_es = day_map.get(date.today().strftime("%A").lower(), "")
         conditions.append(
             "(p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ?)"
         )
@@ -141,48 +295,33 @@ def get_promotions(
     where_clause = " AND ".join(conditions)
     offset = (page - 1) * page_size
 
-    count_query = f"""
-        SELECT COUNT(*)
-        FROM promotions p
-        JOIN supermarkets s ON p.supermarket_id = s.id
-        WHERE {where_clause}
-    """
-    total = cursor.execute(count_query, params).fetchone()[0]
+    total = cursor.execute(
+        f"SELECT COUNT(*) FROM promotions p JOIN supermarkets s ON p.supermarket_id = s.id WHERE {where_clause}",
+        params
+    ).fetchone()[0]
 
-    data_query = f"""
+    rows = cursor.execute(f"""
         SELECT
             p.id, p.title, p.discount, p.bank, p.wallet, p.card_type,
             p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             p.is_active, p.scraped_at,
             s.name AS supermarket_name,
-            COALESCE(
-                (SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
-                p.exclusions
-            ) AS exclusions,
-            COALESCE(
-                (SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
-                p.requirements
-            ) AS requirements,
-            (SELECT t.max_discount FROM terms_conditions t
-             WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
+            COALESCE((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.exclusions) AS exclusions,
+            COALESCE((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.requirements) AS requirements,
+            (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
             p.min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE {where_clause}
         ORDER BY p.scraped_at DESC
         LIMIT ? OFFSET ?
-    """
-    rows = cursor.execute(data_query, params + [page_size, offset]).fetchall()
+    """, params + [page_size, offset]).fetchall()
     conn.close()
 
-    return {
-        "total": total,
-        "page": page,
-        "page_size": page_size,
-        "pages": (total + page_size - 1) // page_size,
-        "data": [row_to_dict(r) for r in rows],
-    }
+    return {"total": total, "page": page, "page_size": page_size,
+            "pages": (total + page_size - 1) // page_size,
+            "data": [row_to_dict(r) for r in rows]}
 
 
 # ---------------------------------------------------------------------------
@@ -194,28 +333,18 @@ def get_promotions_today():
         "monday": "lunes", "tuesday": "martes", "wednesday": "miércoles",
         "thursday": "jueves", "friday": "viernes", "saturday": "sábado", "sunday": "domingo"
     }
-    day_en = datetime.now().strftime("%A").lower()
-    day_es = day_map.get(day_en, day_en)
+    day_es = day_map.get(datetime.now().strftime("%A").lower(), "")
 
     conn = get_conn()
-    cursor = conn.cursor()
-
-    rows = cursor.execute("""
+    rows = conn.execute("""
         SELECT
             p.id, p.title, p.discount, p.bank, p.wallet, p.card_type,
             p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             s.name AS supermarket_name,
-            COALESCE(
-                (SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
-                p.exclusions
-            ) AS exclusions,
-            COALESCE(
-                (SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1),
-                p.requirements
-            ) AS requirements,
-            (SELECT t.max_discount FROM terms_conditions t
-             WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
+            COALESCE((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.exclusions) AS exclusions,
+            COALESCE((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.requirements) AS requirements,
+            (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
             p.min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
@@ -234,9 +363,7 @@ def get_promotions_today():
 @app.get("/api/promotions/{promotion_id}")
 def get_promotion(promotion_id: int):
     conn = get_conn()
-    cursor = conn.cursor()
-
-    row = cursor.execute("""
+    row = conn.execute("""
         SELECT
             p.id, p.supermarket_id, p.title, p.discount, p.bank, p.wallet,
             p.card_type, p.payment_method, p.store_types, p.valid_days,
@@ -260,10 +387,9 @@ def get_promotion(promotion_id: int):
         raise HTTPException(status_code=404, detail="Promoción no encontrada")
 
     d = row_to_dict(row)
-    # Parse remaining JSON arrays
     for field in ("payment_methods", "tc_valid_days"):
         val = d.get(field)
-        if val and isinstance(val, str) and val.strip():
+        if val and isinstance(val, str):
             try:
                 d[field] = json.loads(val)
             except json.JSONDecodeError:
@@ -279,22 +405,17 @@ def get_promotion(promotion_id: int):
 @app.get("/api/banks")
 def get_banks():
     conn = get_conn()
-    cursor = conn.cursor()
-
-    rows = cursor.execute("""
-        SELECT bank AS name, COUNT(*) AS count
-        FROM promotions
+    rows = conn.execute("""
+        SELECT bank AS name, COUNT(*) AS count FROM promotions
         WHERE is_active = 1 AND bank IS NOT NULL AND bank != ''
         GROUP BY bank
         UNION
-        SELECT wallet AS name, COUNT(*) AS count
-        FROM promotions
+        SELECT wallet AS name, COUNT(*) AS count FROM promotions
         WHERE is_active = 1 AND wallet IS NOT NULL AND wallet != ''
         GROUP BY wallet
         ORDER BY count DESC
     """).fetchall()
     conn.close()
-
     return [dict(r) for r in rows]
 
 
@@ -304,19 +425,15 @@ def get_banks():
 @app.get("/api/supermarkets")
 def get_supermarkets():
     conn = get_conn()
-    cursor = conn.cursor()
-
-    rows = cursor.execute("""
-        SELECT
-            s.id, s.name, s.url, s.last_scraped, s.scrape_count,
-            COUNT(p.id) AS active_promotions
+    rows = conn.execute("""
+        SELECT s.id, s.name, s.url, s.last_scraped, s.scrape_count,
+               COUNT(p.id) AS active_promotions
         FROM supermarkets s
         LEFT JOIN promotions p ON s.id = p.supermarket_id AND p.is_active = 1
         GROUP BY s.id
         ORDER BY active_promotions DESC
     """).fetchall()
     conn.close()
-
     return [dict(r) for r in rows]
 
 
@@ -326,41 +443,20 @@ def get_supermarkets():
 @app.get("/api/stats")
 def get_stats():
     conn = get_conn()
-    cursor = conn.cursor()
-
-    total_promos = cursor.execute(
-        "SELECT COUNT(*) FROM promotions WHERE is_active = 1"
-    ).fetchone()[0]
-
-    total_banks = cursor.execute(
-        "SELECT COUNT(DISTINCT bank) FROM promotions WHERE is_active = 1 AND bank != ''"
-    ).fetchone()[0]
-
-    total_supermarkets = cursor.execute(
-        "SELECT COUNT(*) FROM supermarkets WHERE enabled = 1"
-    ).fetchone()[0]
-
-    last_updated = cursor.execute(
-        "SELECT MAX(scraped_at) FROM promotions WHERE is_active = 1"
-    ).fetchone()[0]
-
-    top_banks = cursor.execute("""
-        SELECT bank AS name, COUNT(*) AS count
-        FROM promotions
+    total_promos = conn.execute("SELECT COUNT(*) FROM promotions WHERE is_active = 1").fetchone()[0]
+    total_banks = conn.execute("SELECT COUNT(DISTINCT bank) FROM promotions WHERE is_active = 1 AND bank != ''").fetchone()[0]
+    total_supermarkets = conn.execute("SELECT COUNT(*) FROM supermarkets WHERE enabled = 1").fetchone()[0]
+    last_updated = conn.execute("SELECT MAX(scraped_at) FROM promotions WHERE is_active = 1").fetchone()[0]
+    top_banks = conn.execute("""
+        SELECT bank AS name, COUNT(*) AS count FROM promotions
         WHERE is_active = 1 AND bank IS NOT NULL AND bank != ''
-        GROUP BY bank
-        ORDER BY count DESC
-        LIMIT 5
+        GROUP BY bank ORDER BY count DESC LIMIT 5
     """).fetchall()
-
-    by_supermarket = cursor.execute("""
-        SELECT s.name, COUNT(p.id) AS count
-        FROM supermarkets s
+    by_supermarket = conn.execute("""
+        SELECT s.name, COUNT(p.id) AS count FROM supermarkets s
         LEFT JOIN promotions p ON s.id = p.supermarket_id AND p.is_active = 1
-        GROUP BY s.id
-        ORDER BY count DESC
+        GROUP BY s.id ORDER BY count DESC
     """).fetchall()
-
     conn.close()
 
     return {

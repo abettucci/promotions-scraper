@@ -32,3 +32,7 @@ uvicorn[standard]==0.30.6
 # AI extraction (opcional - requerido para --ai mode)
 anthropic>=0.18.0
 
+# Auth
+passlib[bcrypt]==1.7.4
+python-jose[cryptography]==3.3.0
+

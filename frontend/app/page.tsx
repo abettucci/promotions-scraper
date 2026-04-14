@@ -8,6 +8,7 @@ import { FilterBar } from "@/components/FilterBar"
 import { PromoGrid } from "@/components/PromoGrid"
 import { StatsBar } from "@/components/StatsBar"
 import { Button } from "@/components/ui/button"
+import { UserMenu } from "@/components/UserMenu"
 import { CalendarDays, AlertCircle } from "lucide-react"
 
 const DEFAULT_FILTERS: FilterState = {
@@ -86,18 +87,22 @@ export default function Home() {
               Descuentos de supermercados
             </span>
           </div>
-          <Button
-            variant={todayOnly ? "default" : "outline"}
-            size="sm"
-            onClick={() => {
-              setTodayOnly((v) => !v)
-              setFilters(DEFAULT_FILTERS)
-            }}
-            className="gap-1.5 text-sm"
-          >
-            <CalendarDays className="w-4 h-4" />
-            Hoy — {todayLabel}
-          </Button>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={todayOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => {
+                setTodayOnly((v) => !v)
+                setFilters(DEFAULT_FILTERS)
+              }}
+              className="gap-1.5 text-sm"
+            >
+              <CalendarDays className="w-4 h-4" />
+              <span className="hidden sm:inline">Hoy — {todayLabel}</span>
+              <span className="sm:hidden">Hoy</span>
+            </Button>
+            <UserMenu />
+          </div>
         </div>
       </header>
 

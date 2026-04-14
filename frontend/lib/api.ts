@@ -1,39 +1,87 @@
-import type { PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, Promotion } from "./types"
+import type {
+  PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, Promotion,
+  User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse,
+} from "./types"
 
-async function fetchJSON<T>(path: string, params?: Record<string, string | number | boolean | undefined>): Promise<T> {
-  const base = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
-  const url = new URL(path, base)
+const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
+
+// ── GET helper ────────────────────────────────────────────────────────────────
+async function fetchJSON<T>(
+  path: string,
+  params?: Record<string, string | number | boolean | undefined>,
+  token?: string | null,
+): Promise<T> {
+  const url = new URL(path, API_BASE)
   if (params) {
     Object.entries(params).forEach(([k, v]) => {
-      if (v !== undefined && v !== null && v !== "") {
-        url.searchParams.set(k, String(v))
-      }
+      if (v !== undefined && v !== null && v !== "") url.searchParams.set(k, String(v))
     })
   }
-  const res = await fetch(url.toString(), { cache: "no-store" })
-  if (!res.ok) throw new Error(`API error ${res.status}: ${await res.text()}`)
+  const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
+  const res = await fetch(url.toString(), { cache: "no-store", headers })
+  if (!res.ok) {
+    const text = await res.text()
+    let detail = text
+    try { detail = JSON.parse(text)?.detail ?? text } catch {}
+    throw new Error(detail)
+  }
+  return res.json() as Promise<T>
+}
+
+// ── POST / PUT helper ─────────────────────────────────────────────────────────
+async function fetchMutation<T>(
+  method: "POST" | "PUT",
+  path: string,
+  body: unknown,
+  token?: string | null,
+): Promise<T> {
+  const headers: HeadersInit = {
+    "Content-Type": "application/json",
+    ...(token ? { Authorization: `Bearer ${token}` } : {}),
+  }
+  const res = await fetch(new URL(path, API_BASE).toString(), {
+    method,
+    headers,
+    body: JSON.stringify(body),
+  })
+  if (!res.ok) {
+    const text = await res.text()
+    let detail = text
+    try { detail = JSON.parse(text)?.detail ?? text } catch {}
+    throw new Error(detail)
+  }
   return res.json() as Promise<T>
 }
 
 export const api = {
+  // ── Public endpoints ────────────────────────────────────────────────────────
   getPromotions: (params: {
-    supermarket?: string
-    bank?: string
-    day?: string
-    search?: string
-    discount_type?: string
-    active_today?: boolean
-    page?: number
-    page_size?: number
+    supermarket?: string; bank?: string; day?: string; search?: string
+    discount_type?: string; active_today?: boolean; page?: number; page_size?: number
   }) => fetchJSON<PromotionsResponse>("/api/promotions", params as Record<string, string | number | boolean | undefined>),
 
   getPromotion: (id: number) => fetchJSON<Promotion>(`/api/promotions/${id}`),
-
   getTodayPromotions: () => fetchJSON<TodayResponse>("/api/promotions/today"),
-
   getBanks: () => fetchJSON<Bank[]>("/api/banks"),
-
   getSupermarkets: () => fetchJSON<Supermarket[]>("/api/supermarkets"),
-
   getStats: () => fetchJSON<Stats>("/api/stats"),
+  getPaymentMethodsCatalog: () => fetchJSON<PaymentMethodsCatalog>("/api/catalog/payment-methods"),
+
+  // ── Auth ────────────────────────────────────────────────────────────────────
+  register: (email: string, password: string) =>
+    fetchMutation<AuthResponse>("POST", "/api/auth/register", { email, password }),
+
+  login: (email: string, password: string) =>
+    fetchMutation<AuthResponse>("POST", "/api/auth/login", { email, password }),
+
+  getMe: (token: string) => fetchJSON<User>("/api/auth/me", undefined, token),
+
+  updateProfile: (token: string, data: { telegram_chat_id?: string; notify_daily?: boolean; notify_hour?: number }) =>
+    fetchMutation<User>("PUT", "/api/auth/me", data, token),
+
+  updatePaymentMethods: (token: string, methods: PaymentMethod[]) =>
+    fetchMutation<User>("PUT", "/api/auth/me/payment-methods", { methods }, token),
+
+  getMyPromotions: (token: string, today_only = true) =>
+    fetchJSON<MyPromotionsResponse>("/api/auth/me/promotions", { today_only }, token),
 }

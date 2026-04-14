@@ -67,3 +67,38 @@ export interface FilterState {
   discount_type: string
   page: number
 }
+
+export interface PaymentMethod {
+  name: string
+  type: "bank" | "wallet" | "club"
+}
+
+export interface User {
+  id: number
+  email: string
+  telegram_chat_id: string | null
+  notify_daily: boolean
+  notify_hour: number
+  payment_methods: PaymentMethod[]
+  created_at: string
+}
+
+export interface AuthResponse {
+  token: string
+  user: User
+}
+
+export interface PaymentMethodsCatalog {
+  bank: string[]
+  wallet: string[]
+  club: string[]
+}
+
+export interface MyPromotionsResponse {
+  total: number
+  today_only: boolean
+  by_supermarket: {
+    supermarket: string
+    promotions: Promotion[]
+  }[]
+}

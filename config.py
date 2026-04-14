@@ -135,3 +135,44 @@ AI_MAX_TOKENS = int(os.getenv("AI_MAX_TOKENS", "4096"))
 # Número máximo de screenshots por página (para páginas largas)
 AI_MAX_SCREENSHOTS = int(os.getenv("AI_MAX_SCREENSHOTS", "5"))
 
+# ============================================
+# CONFIGURACIÓN DE TELEGRAM
+# ============================================
+# Token del bot (obtenelo hablando con @BotFather en Telegram)
+TELEGRAM_BOT_TOKEN = os.getenv("TELEGRAM_BOT_TOKEN", "")
+
+# ID del chat/grupo donde enviar las notificaciones
+# Para obtenerlo: habla con @userinfobot en Telegram
+TELEGRAM_CHAT_ID = os.getenv("TELEGRAM_CHAT_ID", "")
+
+# Si True, envía notificación automáticamente al finalizar el scraping
+TELEGRAM_NOTIFY_ON_SCRAPE = os.getenv("TELEGRAM_NOTIFY_ON_SCRAPE", "false").lower() == "true"
+
+# Si True, el digest diario incluye solo promos válidas para el día de hoy
+TELEGRAM_TODAY_ONLY = os.getenv("TELEGRAM_TODAY_ONLY", "true").lower() == "true"
+
+# ============================================
+# AUTENTICACIÓN JWT
+# ============================================
+JWT_SECRET = os.getenv("JWT_SECRET", "cambia-esto-en-produccion-usa-openssl-rand-hex-32")
+JWT_ALGORITHM = "HS256"
+JWT_EXPIRE_DAYS = 30
+
+# ============================================
+# CATÁLOGO DE MEDIOS DE PAGO
+# ============================================
+PAYMENT_METHODS_CATALOG = {
+    "bank": [
+        "Banco Nación", "Banco Galicia", "Santander", "BBVA", "Macro",
+        "ICBC", "HSBC", "Banco Ciudad", "Banco Patagonia", "Credicoop",
+        "Supervielle", "Banco Francés", "Itaú", "Comafi", "Carrefour Banco",
+    ],
+    "wallet": [
+        "Mercado Pago", "Ualá", "Naranja X", "MODO", "Personal Pay",
+        "Cuenta DNI", "Claro Pay",
+    ],
+    "club": [
+        "Club La Nación", "ANSES / Jubilados",
+    ],
+}
+

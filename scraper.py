@@ -19,6 +19,7 @@ import random
 import config
 from database import Database
 from terms_parser import TermsParser
+from notifier import TelegramNotifier
 
 # Scrapers específicos
 from scrapers.carrefour_scraper import CarrefourScraper
@@ -321,6 +322,14 @@ class PromoScraper:
         
         # Mostrar resumen
         self.print_summary()
+
+        # Notificación Telegram (si está habilitada o se pidió explícitamente)
+        if getattr(self, 'notify', False) or config.TELEGRAM_NOTIFY_ON_SCRAPE:
+            self.log("📤 Enviando notificación Telegram...")
+            notifier = TelegramNotifier()
+            elapsed = (datetime.now() - self.stats['start_time']).total_seconds()
+            notifier.send_scrape_summary({**self.stats, 'elapsed_seconds': elapsed})
+            notifier.send_promotions(today_only=config.TELEGRAM_TODAY_ONLY)
     
     def print_summary(self):
         """Imprime resumen de la ejecución"""
@@ -374,7 +383,17 @@ def main():
         help='Usar IA (Claude Vision) para extraer promociones en lugar de selectores CSS',
         action='store_true'
     )
-    
+    parser.add_argument(
+        '--notify',
+        help='Enviar notificación Telegram al finalizar el scraping',
+        action='store_true'
+    )
+    parser.add_argument(
+        '--notify-only',
+        help='Solo enviar notificación Telegram con las promos actuales en DB (sin scrapear)',
+        action='store_true'
+    )
+
     args = parser.parse_args()
     
     # Listar supermercados
@@ -402,13 +421,25 @@ def main():
         print("   Y configura: export ANTHROPIC_API_KEY='tu-api-key'\n")
         sys.exit(1)
     
+    # --notify-only: solo enviar digest sin scrapear
+    if args.notify_only:
+        notifier = TelegramNotifier()
+        print(f"📤 Enviando digest Telegram (sin scrapear)...")
+        notifier.send_promotions(
+            supermarket_filter=args.supermarket,
+            today_only=config.TELEGRAM_TODAY_ONLY,
+        )
+        print("✅ Notificación enviada")
+        return
+
     # Ejecutar scraper
     try:
         scraper = PromoScraper(verbose=args.verbose, use_ai=args.ai)
+        scraper.notify = args.notify
     except Exception as e:
         print(f"\n❌ Error inicializando scraper: {e}")
         sys.exit(1)
-    
+
     try:
         asyncio.run(scraper.run(supermarket_filter=args.supermarket))
     except KeyboardInterrupt:
