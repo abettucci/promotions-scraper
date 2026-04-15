@@ -530,6 +530,160 @@ class Database:
         
         return deactivated
 
+# ── UserDatabase — DB separada para usuarios (Railway Volume) ─────────────────
+class UserDatabase:
+    """
+    Base de datos exclusiva para usuarios y métodos de pago.
+    Se persiste en Railway Volume (/app/userdata/users.db) y NO se sobreescribe
+    en cada deploy, a diferencia de promotions.db que viene del repo.
+    """
+
+    def __init__(self, db_path: str = None):
+        self.db_path = str(db_path or config.USERS_DB_PATH)
+        self._init()
+
+    def _conn(self):
+        conn = sqlite3.connect(self.db_path)
+        conn.row_factory = sqlite3.Row
+        conn.execute("PRAGMA foreign_keys = ON")
+        return conn
+
+    def _init(self):
+        conn = self._conn()
+        conn.executescript("""
+            CREATE TABLE IF NOT EXISTS users (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                email TEXT UNIQUE NOT NULL,
+                password_hash TEXT NOT NULL,
+                telegram_chat_id TEXT,
+                notify_daily BOOLEAN DEFAULT 1,
+                notify_hour INTEGER DEFAULT 9,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
+                updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE TABLE IF NOT EXISTS user_payment_methods (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                entity_name TEXT NOT NULL,
+                entity_type TEXT NOT NULL,
+                UNIQUE(user_id, entity_name)
+            );
+        """)
+        conn.commit()
+        conn.close()
+        print(f"✅ Users DB inicializada: {self.db_path}")
+
+    def create_user(self, email: str, password_hash: str) -> Optional[int]:
+        conn = self._conn()
+        try:
+            cursor = conn.execute(
+                "INSERT INTO users (email, password_hash) VALUES (?, ?)",
+                (email.lower().strip(), password_hash),
+            )
+            conn.commit()
+            return cursor.lastrowid
+        except sqlite3.IntegrityError:
+            return None
+        finally:
+            conn.close()
+
+    def get_user_by_email(self, email: str) -> Optional[Dict]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM users WHERE email = ?", (email.lower().strip(),)
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def get_user_by_id(self, user_id: int) -> Optional[Dict]:
+        conn = self._conn()
+        row = conn.execute("SELECT * FROM users WHERE id = ?", (user_id,)).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def update_user_telegram(self, user_id: int, telegram_chat_id: str,
+                             notify_daily: bool, notify_hour: int):
+        conn = self._conn()
+        conn.execute(
+            """UPDATE users
+               SET telegram_chat_id = ?, notify_daily = ?, notify_hour = ?,
+                   updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (telegram_chat_id or None, int(notify_daily), int(notify_hour), user_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def set_user_payment_methods(self, user_id: int, methods: List[Dict]):
+        conn = self._conn()
+        conn.execute("DELETE FROM user_payment_methods WHERE user_id = ?", (user_id,))
+        conn.executemany(
+            "INSERT OR IGNORE INTO user_payment_methods (user_id, entity_name, entity_type) VALUES (?, ?, ?)",
+            [(user_id, m["name"], m["type"]) for m in methods if m.get("name") and m.get("type")],
+        )
+        conn.commit()
+        conn.close()
+
+    def get_user_payment_methods(self, user_id: int) -> List[Dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT entity_name AS name, entity_type AS type FROM user_payment_methods WHERE user_id = ?",
+            (user_id,),
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def get_users_for_notification(self) -> List[Dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM users WHERE telegram_chat_id IS NOT NULL AND notify_daily = 1"
+        ).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def get_promotions_for_user(self, user_id: int, today_only: bool = True) -> List[Dict]:
+        """Promociones activas que coinciden con los métodos de pago del usuario.
+        Lee desde promotions.db (separada)."""
+        methods = self.get_user_payment_methods(user_id)
+        if not methods:
+            return []
+
+        day_map = {
+            "monday": "lunes", "tuesday": "martes", "wednesday": "miércoles",
+            "thursday": "jueves", "friday": "viernes", "saturday": "sábado", "sunday": "domingo"
+        }
+        today_es = day_map.get(datetime.now().strftime("%A").lower(), "")
+
+        entity_conditions = " OR ".join(
+            ["(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ?)"] * len(methods)
+        )
+        entity_params: list = []
+        for m in methods:
+            entity_params.extend([f"%{m['name'].lower()}%", f"%{m['name'].lower()}%"])
+
+        day_clause = ""
+        day_params: list = []
+        if today_only and today_es:
+            day_clause = "AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ?)"
+            day_params = [f"%{today_es}%", "%todos los d%"]
+
+        query = f"""
+            SELECT p.id, p.title, p.discount, p.bank, p.wallet,
+                   p.valid_days, p.store_types, p.tope, p.min_purchase,
+                   p.acumulable, s.name AS supermarket_name
+            FROM promotions p
+            JOIN supermarkets s ON p.supermarket_id = s.id
+            WHERE p.is_active = 1 AND ({entity_conditions}) {day_clause}
+            ORDER BY s.name, p.discount DESC
+        """
+        # Lee desde promotions.db (distinta a esta DB de usuarios)
+        promo_conn = sqlite3.connect(str(config.DATABASE_PATH))
+        promo_conn.row_factory = sqlite3.Row
+        rows = promo_conn.execute(query, entity_params + day_params).fetchall()
+        promo_conn.close()
+        return [dict(r) for r in rows]
+
+
 # Inicializar base de datos al importar
 if __name__ == "__main__":
     db = Database()

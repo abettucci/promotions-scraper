@@ -13,8 +13,13 @@ BASE_DIR = Path(__file__).parent
 DATA_DIR = BASE_DIR / "data"
 DATA_DIR.mkdir(exist_ok=True)
 
-# Base de datos
+# Base de datos de promociones (viene de git, se sobreescribe en cada deploy)
 DATABASE_PATH = DATA_DIR / "promotions.db"
+
+# Base de datos de usuarios (persistida en Railway Volume en /app/userdata)
+_USERS_DB_DIR = Path(os.getenv("USERS_DB_DIR", str(BASE_DIR / "userdata")))
+_USERS_DB_DIR.mkdir(exist_ok=True)
+USERS_DB_PATH = _USERS_DB_DIR / "users.db"
 
 # Configuración de scraping
 MIN_DELAY = 2  # segundos entre requests

@@ -255,13 +255,13 @@ class TelegramNotifier:
         self.send_message('\n'.join(lines))
 
 
-    def send_user_digests(self, db_path: Path = None):
+    def send_user_digests(self):
         """
         Envía a cada usuario registrado (con Telegram configurado) las promociones
         que aplican para su stack de tarjetas/billeteras en el día de hoy.
         """
-        from database import Database
-        db = Database(str(db_path or config.DATABASE_PATH))
+        from database import UserDatabase
+        db = UserDatabase()
         users = db.get_users_for_notification()
 
         if not users:

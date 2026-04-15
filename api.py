@@ -17,7 +17,7 @@ import os
 
 sys.path.insert(0, str(Path(__file__).parent))
 import config
-from database import Database
+from database import UserDatabase
 
 # ── Auth deps ─────────────────────────────────────────────────────────────────
 try:
@@ -85,7 +85,7 @@ def row_to_dict(row: sqlite3.Row) -> dict:
             d[field] = []
     return d
 
-_db = Database()
+_db = UserDatabase()
 
 # ── JWT helpers ───────────────────────────────────────────────────────────────
 security = HTTPBearer(auto_error=False)

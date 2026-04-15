@@ -18,8 +18,10 @@ RUN pip install --no-cache-dir -r requirements-api.txt
 # Copiar el resto del código
 COPY . .
 
-# Crear directorio de datos
-RUN mkdir -p data
+# Crear directorios de datos
+# data/ → promotions.db viene del repo (se actualiza con cada deploy via GitHub Actions)
+# userdata/ → users.db persiste en Railway Volume (montar en /app/userdata)
+RUN mkdir -p data userdata
 
 # Puerto que usa Railway
 EXPOSE 8000
