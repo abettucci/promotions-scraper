@@ -4,7 +4,7 @@ on:
   schedule:
     # Corre cada 6 horas (0:00, 6:00, 12:00, 18:00 UTC)
     # Ajustá según necesites: https://crontab.guru/
-    - cron: '0 */6 * * *'
+    - cron: '0 */12 * * *'
   
   # También permite ejecutar manualmente desde GitHub
   workflow_dispatch:
