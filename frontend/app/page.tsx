@@ -3,13 +3,14 @@
 import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
+import { useAuthStore } from "@/lib/auth"
 import type { FilterState } from "@/lib/types"
 import { FilterBar } from "@/components/FilterBar"
 import { PromoGrid } from "@/components/PromoGrid"
 import { StatsBar } from "@/components/StatsBar"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/UserMenu"
-import { CalendarDays, AlertCircle } from "lucide-react"
+import { CalendarDays, AlertCircle, CreditCard } from "lucide-react"
 
 const DEFAULT_FILTERS: FilterState = {
   supermarket: "",
@@ -23,10 +24,13 @@ const DEFAULT_FILTERS: FilterState = {
 export default function Home() {
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [todayOnly, setTodayOnly] = useState(false)
+  const [myPromosMode, setMyPromosMode] = useState(false)
+  const { user, token } = useAuthStore()
 
   const updateFilters = useCallback((partial: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...partial }))
     setTodayOnly(false)
+    setMyPromosMode(false)
     if (partial.page || partial.supermarket || partial.bank || partial.day || partial.discount_type) {
       window.scrollTo({ top: 0, behavior: "smooth" })
     }
@@ -35,6 +39,7 @@ export default function Home() {
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS)
     setTodayOnly(false)
+    setMyPromosMode(false)
   }, [])
 
   const { data: stats, isLoading: statsLoading } = useQuery({
@@ -53,25 +58,36 @@ export default function Home() {
   })
 
   const { data: promos, isLoading: promosLoading, isFetching, error } = useQuery({
-    queryKey: ["promotions", filters, todayOnly],
-    queryFn: () =>
-      todayOnly
-        ? api.getTodayPromotions().then((r) => ({
-            total: r.total,
-            page: 1,
-            page_size: r.total,
-            pages: 1,
-            data: r.data,
-          }))
-        : api.getPromotions({
-            supermarket: filters.supermarket || undefined,
-            bank: filters.bank || undefined,
-            day: filters.day || undefined,
-            search: filters.search || undefined,
-            discount_type: filters.discount_type || undefined,
-            page: filters.page,
-            page_size: 24,
-          }),
+    queryKey: ["promotions", filters, todayOnly, myPromosMode],
+    queryFn: () => {
+      if (myPromosMode && token) {
+        return api.getMyPromotions(token, true).then((r) => ({
+          total: r.total,
+          page: 1,
+          page_size: r.total,
+          pages: 1,
+          data: r.by_supermarket.flatMap((s) => s.promotions),
+        }))
+      }
+      if (todayOnly) {
+        return api.getTodayPromotions().then((r) => ({
+          total: r.total,
+          page: 1,
+          page_size: r.total,
+          pages: 1,
+          data: r.data,
+        }))
+      }
+      return api.getPromotions({
+        supermarket: filters.supermarket || undefined,
+        bank: filters.bank || undefined,
+        day: filters.day || undefined,
+        search: filters.search || undefined,
+        discount_type: filters.discount_type || undefined,
+        page: filters.page,
+        page_size: 24,
+      })
+    },
   })
 
   const todayLabel = new Date().toLocaleDateString("es-AR", { weekday: "long" })
@@ -93,6 +109,7 @@ export default function Home() {
               size="sm"
               onClick={() => {
                 setTodayOnly((v) => !v)
+                setMyPromosMode(false)
                 setFilters(DEFAULT_FILTERS)
               }}
               className="gap-1.5 text-sm"
@@ -101,6 +118,22 @@ export default function Home() {
               <span className="hidden sm:inline">Hoy — {todayLabel}</span>
               <span className="sm:hidden">Hoy</span>
             </Button>
+            {user && (user.payment_methods?.length ?? 0) > 0 && (
+              <Button
+                variant={myPromosMode ? "default" : "outline"}
+                size="sm"
+                onClick={() => {
+                  setMyPromosMode((v) => !v)
+                  setTodayOnly(false)
+                  setFilters(DEFAULT_FILTERS)
+                }}
+                className="gap-1.5 text-sm"
+              >
+                <CreditCard className="w-4 h-4" />
+                <span className="hidden sm:inline">Mis promos</span>
+                <span className="sm:hidden">Mis</span>
+              </Button>
+            )}
             <UserMenu />
           </div>
         </div>
@@ -111,7 +144,7 @@ export default function Home() {
         <StatsBar stats={stats ?? null} loading={statsLoading} />
 
         {/* Filters */}
-        {!todayOnly && (
+        {!todayOnly && !myPromosMode && (
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <FilterBar
               filters={filters}
@@ -122,6 +155,26 @@ export default function Home() {
               totalResults={promos?.total ?? 0}
               loading={isFetching}
             />
+          </div>
+        )}
+
+        {/* My promos mode banner */}
+        {myPromosMode && (
+          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
+            <div className="flex items-center gap-2 text-blue-800">
+              <CreditCard className="w-4 h-4" />
+              <span className="text-sm font-medium">
+                {promos?.total ?? 0} promociones para tus medios de pago — {todayLabel}
+              </span>
+            </div>
+            <Button
+              variant="ghost"
+              size="sm"
+              onClick={resetFilters}
+              className="text-blue-700 hover:text-blue-900"
+            >
+              Ver todas
+            </Button>
           </div>
         )}
 
