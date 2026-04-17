@@ -10,6 +10,7 @@ import { PromoGrid } from "@/components/PromoGrid"
 import { StatsBar } from "@/components/StatsBar"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/UserMenu"
+import { useRouter } from "next/navigation"
 import { CalendarDays, AlertCircle, CreditCard } from "lucide-react"
 
 const DEFAULT_FILTERS: FilterState = {
@@ -26,6 +27,8 @@ export default function Home() {
   const [todayOnly, setTodayOnly] = useState(false)
   const [myPromosMode, setMyPromosMode] = useState(false)
   const { user, token } = useAuthStore()
+  const router = useRouter()
+  const hasPaymentMethods = (user?.payment_methods?.length ?? 0) > 0
 
   const updateFilters = useCallback((partial: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...partial }))
@@ -118,11 +121,15 @@ export default function Home() {
               <span className="hidden sm:inline">Hoy — {todayLabel}</span>
               <span className="sm:hidden">Hoy</span>
             </Button>
-            {user && (user.payment_methods?.length ?? 0) > 0 && (
+            {user && (
               <Button
                 variant={myPromosMode ? "default" : "outline"}
                 size="sm"
                 onClick={() => {
+                  if (!hasPaymentMethods) {
+                    router.push("/profile")
+                    return
+                  }
                   setMyPromosMode((v) => !v)
                   setTodayOnly(false)
                   setFilters(DEFAULT_FILTERS)
