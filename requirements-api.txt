@@ -1,23 +1,28 @@
-# Requirements para el backend API (Railway)
-# NO incluye Scrapling ni Playwright - el scraper corre en GitHub Actions
+# Requirements para Railway (API + Scraper)
 
-# HTML parsing (para términos y condiciones)
-beautifulsoup4==4.12.2
-lxml==4.9.3
-
-# Environment & config
-python-dotenv==1.0.0
-
-# Database
-sqlalchemy==2.0.23
-
-# API
+# ── API ───────────────────────────────────────────────────────────────────────
 fastapi==0.115.0
 uvicorn[standard]==0.30.6
-
-# HTTP requests (para health checks, etc.)
+python-dotenv==1.0.0
 requests==2.31.0
+sqlalchemy==2.0.23
 
 # Auth
 bcrypt==4.3.0
 python-jose[cryptography]==3.3.0
+
+# ── Scraper ───────────────────────────────────────────────────────────────────
+# Browser automation
+playwright==1.56.0
+playwright-stealth==1.0.6
+setuptools>=65.0.0
+
+# Adaptive scraping
+scrapling[fetchers]>=0.4.0
+
+# HTML parsing
+beautifulsoup4>=4.12.0
+lxml>=6.0.2
+
+# AI extraction (opcional)
+anthropic>=0.18.0

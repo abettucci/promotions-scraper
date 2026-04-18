@@ -33,6 +33,11 @@ def _hash_password(password: str) -> str:
 def _verify_password(password: str, hashed: str) -> bool:
     return _bcrypt.checkpw(password.encode(), hashed.encode())
 
+# ── Background scraper scheduler ─────────────────────────────────────────────
+if os.getenv("ENABLE_SCRAPER", "").lower() in ("1", "true", "yes"):
+    import scheduler
+    scheduler.start()
+
 app = FastAPI(
     title="Promo Scraper API",
     description="API de promociones de supermercados argentinos con descuentos bancarios",
