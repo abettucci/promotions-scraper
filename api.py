@@ -160,6 +160,31 @@ class UpdateProfileBody(BaseModel):
 def health_check():
     return {"status": "healthy", "service": "promo-scraper-api"}
 
+# ── Admin: trigger manual scrape ──────────────────────────────────────────────
+@app.post("/api/admin/scrape")
+def trigger_scrape(token: str = Query(...)):
+    """Lanza el scraper en background. Requiere ?token=<ADMIN_TOKEN>."""
+    expected = os.getenv("ADMIN_TOKEN", "")
+    if not expected or token != expected:
+        raise HTTPException(403, "Token inválido")
+    try:
+        import scheduler
+        import threading
+        threading.Thread(target=scheduler._run_scraper, daemon=True).start()
+        return {"status": "started", "message": "Scraper lanzado en background. Ver logs para progreso."}
+    except Exception as e:
+        raise HTTPException(500, f"Error lanzando scraper: {e}")
+
+@app.get("/api/admin/last-scrape")
+def get_last_scrape():
+    """Devuelve timestamp del último scraping."""
+    conn = get_conn()
+    row = conn.execute(
+        "SELECT MAX(scraped_at) as last FROM scrape_history WHERE status = 'success'"
+    ).fetchone()
+    conn.close()
+    return {"last_successful_scrape": row["last"] if row else None}
+
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 @app.post("/api/auth/register")
 def register(body: RegisterBody):
