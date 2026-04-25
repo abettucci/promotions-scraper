@@ -667,6 +667,7 @@ class UserDatabase:
             day_clause = "AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ?)"
             day_params = [f"%{today_es}%", "%todos los d%"]
 
+        today_iso = datetime.now().date().isoformat()
         query = f"""
             SELECT p.id, p.title, p.discount, p.bank, p.wallet,
                    p.valid_days, p.store_types, p.tope, p.min_purchase,
@@ -674,12 +675,16 @@ class UserDatabase:
             FROM promotions p
             JOIN supermarkets s ON p.supermarket_id = s.id
             WHERE p.is_active = 1 AND ({entity_conditions}) {day_clause}
+              AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+              AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
             ORDER BY s.name, p.discount DESC
         """
         # Lee desde promotions.db (distinta a esta DB de usuarios)
         promo_conn = sqlite3.connect(str(config.DATABASE_PATH))
         promo_conn.row_factory = sqlite3.Row
-        rows = promo_conn.execute(query, entity_params + day_params).fetchall()
+        rows = promo_conn.execute(
+            query, entity_params + day_params + [today_iso, today_iso]
+        ).fetchall()
         promo_conn.close()
         return [dict(r) for r in rows]
 

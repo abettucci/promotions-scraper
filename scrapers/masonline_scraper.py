@@ -388,14 +388,23 @@ class MasOnlineScraper:
         # 4. Extraer descuento/reintegro
         # "20% de reintegro"
         reintegro_match = re.search(r'(\d+)\s*%\s*(?:de\s+)?reintegro', text, re.I)
-        if reintegro_match:
+        if reintegro_match and int(reintegro_match.group(1)) > 0:
             promo['discount'] = f"{reintegro_match.group(1)}% reintegro"
             promo['discount_type'] = 'Reintegro'
         else:
-            # Descuento normal
-            discount_match = re.search(r'(\d+)\s*%\s*(?:de\s+)?(?:descuento|dto|off)?', text, re.I)
-            if discount_match:
-                promo['discount'] = f"{discount_match.group(1)}%"
+            # Descuento normal — preferir patrones que mencionen "descuento/dto/off/ahorro"
+            # y filtrar el 0% que suele venir de "0% interés" o números de tope
+            for pattern in [
+                r'(\d+)\s*%\s*(?:de\s+)?(?:descuento|dto|off|ahorro)',  # "20% de descuento"
+                r'(\d+)\s*%\s*(?:OFF)',                                   # "20% OFF"
+                r'(?<!\d)(\d{1,2})\s*%(?!\s*(?:de\s+)?(?:inter[eé]s|tna|tea|cft))',  # cualquier % que no sea TNA/TEA/CFT/interés
+            ]:
+                discount_match = re.search(pattern, text, re.I)
+                if discount_match:
+                    val = int(discount_match.group(1))
+                    if val > 0:
+                        promo['discount'] = f"{val}%"
+                        break
         
         # 5. Extraer cuotas sin interés - mejorado
         cuotas_patterns = [
@@ -917,18 +926,16 @@ class MasOnlineScraper:
         # Lista de bancos
         # IMPORTANTE: Los patrones deben ser específicos para evitar falsos positivos
         # Ej: "Patagonia" es también una marca de cerveza, así que buscamos "BANCO PATAGONIA"
+        # Nota: Usamos \s* (cero o más espacios) porque algunos sitios tienen los logos como "BANCOPATAGONIA" sin espacio
         bank_patterns = [
             (r'COMAFI', 'Banco Comafi'),
             (r'GALICIA', 'Banco Galicia'),
             (r'MACRO', 'Banco Macro'),
             (r'NACI[OÓ]N|(?<!\+)BNA(?!\+)', 'Banco Nación'),
-            # Ciudad: debe estar precedido por "BANCO" para evitar confusión con "Ciudad de X"
-            (r'BANCO\s+CIUDAD|\bCIUDAD\s+BANCO\b', 'Banco Ciudad'),
-            # Provincia: debe estar precedido por "BANCO" para evitar confusión con "Provincia de X"
-            (r'BANCO\s+PROVINCIA|\bPROVINCIA\s+BANCO\b|BAPRO\b', 'Banco Provincia'),
+            (r'BANCO\s*CIUDAD|\bCIUDAD\s+BANCO\b', 'Banco Ciudad'),
+            (r'BANCO\s*PROVINCIA|\bPROVINCIA\s+BANCO\b|BAPRO\b', 'Banco Provincia'),
             (r'SANTANDER', 'Banco Santander'),
-            # Patagonia: debe estar precedido por "BANCO" para evitar confusión con cerveza Patagonia
-            (r'BANCO\s+PATAGONIA|\bPATAGONIA\s+BANCO\b', 'Banco Patagonia'),
+            (r'BANCO\s*PATAGONIA|\bPATAGONIA\s+BANCO\b', 'Banco Patagonia'),
             (r'SUPERVIELLE', 'Supervielle'),
             (r'HIPOTECARIO', 'Banco Hipotecario'),
             (r'CREDICOOP', 'Banco Credicoop'),
@@ -940,8 +947,7 @@ class MasOnlineScraper:
             (r'BIND|INDUSTRIAL', 'Banco Industrial'),
             (r'FRANCES', 'Banco Francés'),
             (r'ITAU|ITA[UÚ]', 'Itaú'),
-            # Columbia: evitar falsos positivos con marcas
-            (r'BANCO\s+COLUMBIA', 'Banco Columbia'),
+            (r'BANCO\s*COLUMBIA', 'Banco Columbia'),
             (r'PIANO', 'Banco Piano'),
             (r'BICA', 'Banco BICA'),
             (r'ROELA', 'Banco Roela'),
@@ -951,7 +957,8 @@ class MasOnlineScraper:
             (r'CHUBUT', 'Banco Chubut'),
             (r'NEUQU[EÉ]N', 'Banco Neuquén'),
             (r'TIERRA DEL FUEGO', 'Banco Tierra del Fuego'),
-            (r'CORRIENTES', 'Banco Corrientes'),
+            # Corrientes: requerir "BANCO" para evitar falsos positivos con "cuenta corriente"
+            (r'BANCO\s*(?:DE\s+)?CORRIENTES', 'Banco Corrientes'),
             (r'FORMOSA', 'Banco Formosa'),
             # Tarjetas regionales/especiales
             # SOL: buscar "TARJETA SOL", "SOL" como palabra aislada (en contexto de tarjeta), o "(SL)" como código
@@ -963,6 +970,7 @@ class MasOnlineScraper:
             (r'TARJETA\s+NATIVA|NATIVA', 'Tarjeta Nativa'),
             (r'CMR\s*FALABELLA|CMR', 'CMR Falabella'),
             (r'CENCOSUD', 'Tarjeta Cencosud'),
+            (r'\bYOY\b', 'YOY'),
         ]
         
         # 0. PRIMERO: Buscar programas de fidelidad (MásClub, Club Día, etc.)

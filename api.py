@@ -288,8 +288,15 @@ def get_promotions(
     conn = get_conn()
     cursor = conn.cursor()
 
-    conditions = ["p.is_active = 1"]
-    params: list = []
+    today_iso = date.today().isoformat()
+    conditions = [
+        "p.is_active = 1",
+        # Excluir promos vencidas (valid_until < hoy)
+        "(p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)",
+        # Excluir promos que aún no empezaron (valid_from > hoy)
+        "(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)",
+    ]
+    params: list = [today_iso, today_iso]
 
     if supermarket:
         conditions.append("LOWER(s.name) = ?")
@@ -300,8 +307,12 @@ def get_promotions(
         params.extend([f"%{bank.lower()}%", f"%{bank.lower()}%"])
 
     if day:
-        conditions.append("LOWER(p.valid_days) LIKE ?")
-        params.append(f"%{day.lower()}%")
+        # Incluye promos del día específico + las que aplican todos los días (o sin día definido)
+        conditions.append(
+            "(LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ? "
+            "OR p.valid_days IS NULL OR p.valid_days = '')"
+        )
+        params.extend([f"%{day.lower()}%", "%todos los d%"])
 
     if search:
         conditions.append("(LOWER(p.title) LIKE ? OR LOWER(p.terms_raw) LIKE ?)")
@@ -369,6 +380,7 @@ def get_promotions_today():
     }
     day_es = day_map.get(datetime.now().strftime("%A").lower(), "")
 
+    today_iso = date.today().isoformat()
     conn = get_conn()
     rows = conn.execute("""
         SELECT
@@ -383,9 +395,11 @@ def get_promotions_today():
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE p.is_active = 1
-          AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ?)
+          AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE '%todos los d%')
+          AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+          AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
         ORDER BY p.scraped_at DESC
-    """, (f"%{day_es}%",)).fetchall()
+    """, (f"%{day_es}%", today_iso, today_iso)).fetchall()
     conn.close()
 
     return {"day": day_es, "total": len(rows), "data": [row_to_dict(r) for r in rows]}
