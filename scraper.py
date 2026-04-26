@@ -28,6 +28,9 @@ from scrapers.dia_scraper import DiaScraper
 from scrapers.coto_scraper import CotoScraper
 from scrapers.masonline_scraper import MasOnlineScraper
 from scrapers.cencosud_scraper import CencosudScraper
+from scrapers.shell_scraper import ShellScraper
+from scrapers.axion_scraper import AxionScraper
+from scrapers.puma_scraper import PumaScraper
 
 # AI Extractor (opcional)
 try:
@@ -123,6 +126,9 @@ class PromoScraper:
             'coto': CotoScraper,
             'masonline': MasOnlineScraper,
             'cencosud': CencosudScraper,
+            'shell': ShellScraper,
+            'axion': AxionScraper,
+            'puma': PumaScraper,
         }
         
         if supermarket_key in standalone_scrapers:
@@ -138,7 +144,8 @@ class PromoScraper:
             # Obtener o crear ID del supermercado en DB
             supermarket_id = self.db.insert_supermarket(
                 supermarket_data['name'],
-                supermarket_data['url']
+                supermarket_data['url'],
+                supermarket_data.get('category', 'supermarket'),
             )
             
             promotions = []

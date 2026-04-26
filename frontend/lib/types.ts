@@ -41,10 +41,13 @@ export interface Bank {
   count: number
 }
 
+export type Category = "supermarket" | "fuel"
+
 export interface Supermarket {
   id: number
   name: string
   url: string
+  category: Category
   last_scraped: string | null
   scrape_count: number
   active_promotions: number

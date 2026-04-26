@@ -4,14 +4,14 @@ import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
-import type { FilterState } from "@/lib/types"
+import type { FilterState, Category } from "@/lib/types"
 import { FilterBar } from "@/components/FilterBar"
 import { PromoGrid } from "@/components/PromoGrid"
 import { StatsBar } from "@/components/StatsBar"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/UserMenu"
 import { useRouter } from "next/navigation"
-import { CalendarDays, AlertCircle, CreditCard } from "lucide-react"
+import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel } from "lucide-react"
 
 const DEFAULT_FILTERS: FilterState = {
   supermarket: "",
@@ -23,6 +23,7 @@ const DEFAULT_FILTERS: FilterState = {
 }
 
 export default function Home() {
+  const [category, setCategory] = useState<Category>("supermarket")
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
   const [todayOnly, setTodayOnly] = useState(false)
   const [myPromosMode, setMyPromosMode] = useState(false)
@@ -56,12 +57,12 @@ export default function Home() {
   })
 
   const { data: supermarkets = [] } = useQuery({
-    queryKey: ["supermarkets"],
-    queryFn: api.getSupermarkets,
+    queryKey: ["supermarkets", category],
+    queryFn: () => api.getSupermarkets(category),
   })
 
   const { data: promos, isLoading: promosLoading, isFetching, error } = useQuery({
-    queryKey: ["promotions", filters, todayOnly, myPromosMode],
+    queryKey: ["promotions", filters, todayOnly, myPromosMode, category],
     queryFn: () => {
       if (myPromosMode && token) {
         return api.getMyPromotions(token, true).then((r) => ({
@@ -87,6 +88,7 @@ export default function Home() {
         day: filters.day || undefined,
         search: filters.search || undefined,
         discount_type: filters.discount_type || undefined,
+        category,
         page: filters.page,
         page_size: 24,
       })
@@ -100,11 +102,43 @@ export default function Home() {
       {/* Header */}
       <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
-          <div className="flex items-center gap-2">
+          <div className="flex items-center gap-4">
             <span className="text-xl font-black text-slate-900 tracking-tight">PromoAR</span>
-            <span className="hidden sm:inline text-xs text-slate-400 font-normal">
-              Descuentos de supermercados
-            </span>
+            {/* Category tabs */}
+            <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+              <button
+                onClick={() => {
+                  setCategory("supermarket")
+                  setFilters(DEFAULT_FILTERS)
+                  setTodayOnly(false)
+                  setMyPromosMode(false)
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  category === "supermarket"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <ShoppingCart className="w-4 h-4" />
+                <span className="hidden sm:inline">Supermercados</span>
+              </button>
+              <button
+                onClick={() => {
+                  setCategory("fuel")
+                  setFilters(DEFAULT_FILTERS)
+                  setTodayOnly(false)
+                  setMyPromosMode(false)
+                }}
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                  category === "fuel"
+                    ? "bg-white text-slate-900 shadow-sm"
+                    : "text-slate-500 hover:text-slate-700"
+                }`}
+              >
+                <Fuel className="w-4 h-4" />
+                <span className="hidden sm:inline">Combustible</span>
+              </button>
+            </div>
           </div>
           <div className="flex items-center gap-2">
             <Button

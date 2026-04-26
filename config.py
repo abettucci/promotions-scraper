@@ -80,6 +80,25 @@ SUPERMARKETS = {
         'url': 'https://www.masonline.com.ar/promociones-bancarias',
         'enabled': True
     },
+    # ── Estaciones de servicio ──────────────────────────────────────────────
+    'shell': {
+        'name': 'Shell',
+        'url': 'https://www.shell.com.ar/conductores/descuentos-vigentes.html',
+        'enabled': True,
+        'category': 'fuel',
+    },
+    'axion': {
+        'name': 'Axion',
+        'url': 'https://www.axionenergy.com/promociones',
+        'enabled': True,
+        'category': 'fuel',
+    },
+    'puma': {
+        'name': 'Puma Energy',
+        'url': 'https://www.pumaenergy.com.ar/promociones',
+        'enabled': True,
+        'category': 'fuel',
+    },
     # Deshabilitados por ahora (sin scraper específico)
     # 'disco': {
     #     'name': 'Disco',

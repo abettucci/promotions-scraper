@@ -57,13 +57,15 @@ export const api = {
   // ── Public endpoints ────────────────────────────────────────────────────────
   getPromotions: (params: {
     supermarket?: string; bank?: string; day?: string; search?: string
-    discount_type?: string; active_today?: boolean; page?: number; page_size?: number
+    discount_type?: string; active_today?: boolean; category?: string
+    page?: number; page_size?: number
   }) => fetchJSON<PromotionsResponse>("/api/promotions", params as Record<string, string | number | boolean | undefined>),
 
   getPromotion: (id: number) => fetchJSON<Promotion>(`/api/promotions/${id}`),
   getTodayPromotions: () => fetchJSON<TodayResponse>("/api/promotions/today"),
   getBanks: () => fetchJSON<Bank[]>("/api/banks"),
-  getSupermarkets: () => fetchJSON<Supermarket[]>("/api/supermarkets"),
+  getSupermarkets: (category?: string) =>
+    fetchJSON<Supermarket[]>("/api/supermarkets", category ? { category } : undefined),
   getStats: () => fetchJSON<Stats>("/api/stats"),
   getPaymentMethodsCatalog: () => fetchJSON<PaymentMethodsCatalog>("/api/catalog/payment-methods"),
 

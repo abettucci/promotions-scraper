@@ -2,10 +2,41 @@
 Gestión de base de datos SQLite
 """
 import sqlite3
+import re
 from datetime import datetime
 from typing import List, Dict, Optional
 import json
 import config
+
+
+def normalize_date_iso(value) -> Optional[str]:
+    """Normaliza una fecha a formato ISO (YYYY-MM-DD) para que las comparaciones de strings funcionen.
+
+    Acepta:
+    - 'YYYY-MM-DD' o 'YYYY/MM/DD' → ya está OK
+    - 'DD/MM/YYYY' o 'DD-MM-YYYY' → convierte
+    - 'DD/MM/YY' → asume 20YY
+    - Otros formatos → devuelve '' (sin filtro)
+    """
+    if not value:
+        return ''
+    s = str(value).strip()
+    if not s:
+        return ''
+    # ISO ya correcto
+    m = re.match(r'^(\d{4})[-/](\d{1,2})[-/](\d{1,2})$', s)
+    if m:
+        y, mo, d = m.groups()
+        return f"{y}-{int(mo):02d}-{int(d):02d}"
+    # DD/MM/YYYY o DD-MM-YYYY
+    m = re.match(r'^(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})$', s)
+    if m:
+        d, mo, y = m.groups()
+        if len(y) == 2:
+            y = f"20{y}"
+        return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+    # No reconocemos el formato — devolver vacío para que no se filtre
+    return ''
 
 class Database:
     def __init__(self, db_path: str = None):
@@ -23,18 +54,26 @@ class Database:
         conn = self.get_connection()
         cursor = conn.cursor()
         
-        # Tabla de supermercados
+        # Tabla de supermercados / merchants
+        # category: 'supermarket' | 'fuel'
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS supermarkets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 name TEXT NOT NULL UNIQUE,
                 url TEXT NOT NULL,
+                category TEXT DEFAULT 'supermarket',
                 last_scraped TIMESTAMP,
                 scrape_count INTEGER DEFAULT 0,
                 enabled BOOLEAN DEFAULT 1,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
         """)
+        # Migración: agregar columna category si no existe
+        try:
+            cursor.execute("ALTER TABLE supermarkets ADD COLUMN category TEXT DEFAULT 'supermarket'")
+            conn.commit()
+        except Exception:
+            pass
         
         # Tabla de promociones
         cursor.execute("""
@@ -120,6 +159,43 @@ class Database:
             conn.commit()
         except Exception:
             pass
+
+        # Migración: normalizar valid_from/valid_until existentes a ISO (YYYY-MM-DD)
+        try:
+            rows = cursor.execute(
+                "SELECT id, valid_from, valid_until FROM promotions "
+                "WHERE valid_from IS NOT NULL OR valid_until IS NOT NULL"
+            ).fetchall()
+            updated = 0
+            for r in rows:
+                new_from = normalize_date_iso(r['valid_from'])
+                new_until = normalize_date_iso(r['valid_until'])
+                if new_from != (r['valid_from'] or '') or new_until != (r['valid_until'] or ''):
+                    cursor.execute(
+                        "UPDATE promotions SET valid_from = ?, valid_until = ? WHERE id = ?",
+                        (new_from, new_until, r['id']),
+                    )
+                    updated += 1
+            if updated:
+                conn.commit()
+                print(f"📅 Migración fechas: {updated} promos normalizadas a ISO")
+        except Exception as e:
+            print(f"⚠️ Migración fechas falló: {e}")
+
+        # Desactivar promos vencidas (valid_until < hoy) sin esperar al próximo scrape
+        try:
+            today_iso = datetime.now().date().isoformat()
+            res = cursor.execute(
+                "UPDATE promotions SET is_active = 0 "
+                "WHERE is_active = 1 AND valid_until IS NOT NULL "
+                "AND valid_until != '' AND valid_until < ?",
+                (today_iso,),
+            )
+            if res.rowcount:
+                conn.commit()
+                print(f"🗓️  {res.rowcount} promos vencidas desactivadas")
+        except Exception as e:
+            print(f"⚠️ Desactivación de vencidas falló: {e}")
 
         # ── Tabla de usuarios ────────────────────────────────────────────────
         cursor.execute("""
@@ -263,24 +339,24 @@ class Database:
         conn.close()
         return [dict(r) for r in rows]
     
-    def insert_supermarket(self, name: str, url: str) -> int:
-        """Inserta o actualiza un supermercado"""
+    def insert_supermarket(self, name: str, url: str, category: str = 'supermarket') -> int:
+        """Inserta o actualiza un supermercado / merchant. category: 'supermarket' | 'fuel'."""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         cursor.execute("""
-            INSERT INTO supermarkets (name, url)
-            VALUES (?, ?)
-            ON CONFLICT(name) DO UPDATE SET url=excluded.url
-        """, (name, url))
-        
+            INSERT INTO supermarkets (name, url, category)
+            VALUES (?, ?, ?)
+            ON CONFLICT(name) DO UPDATE SET url=excluded.url, category=excluded.category
+        """, (name, url, category))
+
         supermarket_id = cursor.lastrowid or cursor.execute(
             "SELECT id FROM supermarkets WHERE name = ?", (name,)
         ).fetchone()[0]
-        
+
         conn.commit()
         conn.close()
-        
+
         return supermarket_id
     
     def update_supermarket_scraped(self, supermarket_id: int):
@@ -310,6 +386,10 @@ class Database:
 
             # Truncate title so near-identical long titles hit the UNIQUE constraint
             title = (promo_data.get('title', '') or '')[:200]
+
+            # Normalizar fechas a ISO (YYYY-MM-DD) para que el filtro de vigencia funcione
+            valid_from = normalize_date_iso(promo_data.get('valid_from'))
+            valid_until = normalize_date_iso(promo_data.get('valid_until'))
 
             cursor.execute("""
                 INSERT INTO promotions
@@ -343,8 +423,8 @@ class Database:
                 promo_data.get('payment_method', ''),
                 store_types,
                 promo_data.get('valid_days', ''),
-                promo_data.get('valid_from'),
-                promo_data.get('valid_until'),
+                valid_from,
+                valid_until,
                 promo_data.get('url', ''),
                 promo_data.get('image_url', ''),
                 promo_data.get('terms_raw', ''),

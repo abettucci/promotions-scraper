@@ -282,6 +282,7 @@ def get_promotions(
     search: Optional[str] = Query(None),
     discount_type: Optional[str] = Query(None),
     active_today: Optional[bool] = Query(None),
+    category: Optional[str] = Query(None),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -297,6 +298,10 @@ def get_promotions(
         "(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)",
     ]
     params: list = [today_iso, today_iso]
+
+    if category:
+        conditions.append("LOWER(COALESCE(s.category, 'supermarket')) = ?")
+        params.append(category.lower())
 
     if supermarket:
         conditions.append("LOWER(s.name) = ?")
@@ -471,16 +476,23 @@ def get_banks():
 # GET /api/supermarkets
 # ---------------------------------------------------------------------------
 @app.get("/api/supermarkets")
-def get_supermarkets():
+def get_supermarkets(category: Optional[str] = Query(None)):
     conn = get_conn()
-    rows = conn.execute("""
-        SELECT s.id, s.name, s.url, s.last_scraped, s.scrape_count,
+    where = ""
+    params: list = []
+    if category:
+        where = "WHERE LOWER(COALESCE(s.category, 'supermarket')) = ?"
+        params.append(category.lower())
+    rows = conn.execute(f"""
+        SELECT s.id, s.name, s.url, COALESCE(s.category, 'supermarket') AS category,
+               s.last_scraped, s.scrape_count,
                COUNT(p.id) AS active_promotions
         FROM supermarkets s
         LEFT JOIN promotions p ON s.id = p.supermarket_id AND p.is_active = 1
+        {where}
         GROUP BY s.id
         ORDER BY active_promotions DESC
-    """).fetchall()
+    """, params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
