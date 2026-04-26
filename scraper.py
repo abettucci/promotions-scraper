@@ -335,8 +335,13 @@ class PromoScraper:
             self.log("📤 Enviando notificación Telegram...")
             notifier = TelegramNotifier()
             elapsed = (datetime.now() - self.stats['start_time']).total_seconds()
+            # Resumen al chat de admin (TELEGRAM_CHAT_ID)
             notifier.send_scrape_summary({**self.stats, 'elapsed_seconds': elapsed})
-            notifier.send_promotions(today_only=config.TELEGRAM_TODAY_ONLY)
+            # Digest personalizado a cada usuario registrado, filtrado por sus métodos de pago
+            try:
+                notifier.send_user_digests()
+            except Exception as e:
+                self.log(f"⚠️  Error enviando digests personalizados: {e}", 'WARNING')
     
     def print_summary(self):
         """Imprime resumen de la ejecución"""
@@ -431,11 +436,8 @@ def main():
     # --notify-only: solo enviar digest sin scrapear
     if args.notify_only:
         notifier = TelegramNotifier()
-        print(f"📤 Enviando digest Telegram (sin scrapear)...")
-        notifier.send_promotions(
-            supermarket_filter=args.supermarket,
-            today_only=config.TELEGRAM_TODAY_ONLY,
-        )
+        print(f"📤 Enviando digests personalizados Telegram (sin scrapear)...")
+        notifier.send_user_digests()
         print("✅ Notificación enviada")
         return
 

@@ -89,13 +89,13 @@ SUPERMARKETS = {
     },
     'axion': {
         'name': 'Axion',
-        'url': 'https://www.axionenergy.com/promociones',
+        'url': 'https://www.axionenergy.com/Paginas/beneficios/beneficiosypromociones.aspx',
         'enabled': True,
         'category': 'fuel',
     },
     'puma': {
         'name': 'Puma Energy',
-        'url': 'https://www.pumaenergy.com.ar/promociones',
+        'url': 'https://pumaenergyarg.com.ar/promociones',
         'enabled': True,
         'category': 'fuel',
     },

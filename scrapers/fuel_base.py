@@ -1,119 +1,74 @@
 """
-Scraper genérico para estaciones de servicio.
-Comparte la lógica de extracción de promociones — cada estación define su URL y selectores específicos.
+Scraper genérico para estaciones de servicio usando Claude Vision.
+
+Las páginas de combustibles tienen layouts muy variados (tabs por día, cards,
+URLs numeradas, etc.) — usar Claude Vision permite extraer los datos sin tener
+que escribir selectores específicos para cada una.
 """
 import asyncio
-import re
+import os
 from typing import List, Dict
-from bs4 import BeautifulSoup
 from playwright.async_api import async_playwright
 
 
-# Diccionarios reutilizables
-WALLET_PATTERNS = [
-    (r'\bMODO\b', 'MODO'),
-    (r'MERCADO\s*PAGO', 'Mercado Pago'),
-    (r'PERSONAL\s*PAY', 'Personal Pay'),
-    (r'CUENTA\s*DNI', 'Cuenta DNI'),
-    (r'\bUAL[AÁ]\b', 'Ualá'),
-    (r'NARANJA\s*X', 'Naranja X'),
-    (r'YPF\s*APP|APP\s*YPF', 'YPF App'),
-    (r'SHELL\s*BOX', 'Shell Box'),
-]
+# Prompt específico para combustibles
+FUEL_SYSTEM_PROMPT = """Eres un experto en extraer información de promociones bancarias de estaciones de servicio (combustible) en Argentina.
 
-BANK_PATTERNS = [
-    (r'GALICIA', 'Banco Galicia'),
-    (r'MACRO', 'Banco Macro'),
-    (r'NACI[OÓ]N|\bBNA\b', 'Banco Nación'),
-    (r'BANCO\s*CIUDAD', 'Banco Ciudad'),
-    (r'BANCO\s*PROVINCIA|BAPRO', 'Banco Provincia'),
-    (r'SANTANDER', 'Banco Santander'),
-    (r'BANCO\s*PATAGONIA|\bPATAGONIA\b', 'Banco Patagonia'),
-    (r'SUPERVIELLE', 'Supervielle'),
-    (r'CREDICOOP', 'Banco Credicoop'),
-    (r'\bHSBC\b', 'HSBC'),
-    (r'\bBBVA\b', 'BBVA'),
-    (r'\bICBC\b', 'ICBC'),
-    (r'COMAFI', 'Banco Comafi'),
-    (r'BANCO\s*COLUMBIA', 'Banco Columbia'),
-]
+Tu tarea es analizar la imagen de una página web de promociones de combustibles y extraer TODAS las promociones bancarias visibles.
 
-DAYS_ES = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo']
+Para cada promoción, extrae la siguiente información en formato JSON:
+- title: Título o descripción principal de la promoción (ej: "20% de descuento en YPF con Banco Galicia")
+- discount: Descuento (ej: "20%", "$50/L", "30% reintegro")
+- bank: Nombre del banco (ej: "Banco Galicia", "Santander", "BBVA", "Macro", "Banco Nación", "Banco Patagonia"). null si no hay banco específico.
+- wallet: Billetera digital si aplica (ej: "Mercado Pago", "Modo", "Naranja X", "Personal Pay", "YPF App", "Shell Box"). null si no aplica.
+- card_type: Tipo de tarjeta (ej: "Crédito", "Débito", "Crédito y Débito"). null si no se especifica.
+- payment_method: Método de pago específico si se menciona
+- valid_days: Días de validez (ej: "Lunes", "Lunes y Martes", "Todos los días", "Viernes y Sábados")
+- valid_from: Fecha de inicio en formato YYYY-MM-DD si está visible
+- valid_until: Fecha de fin en formato YYYY-MM-DD si está visible
+- terms_raw: Términos y condiciones visibles (texto resumido)
+- tope: Tope de reintegro/descuento (ej: "$10000 mensual", "$5000 por transacción", "Sin tope")
+- min_purchase: Compra mínima si se menciona
+- exclusions: Lista de exclusiones (ej: "No acumulable con otras promos")
+- requirements: Lista de requisitos (ej: "Pagando con QR", "App YPF", "Cuenta Sueldo")
 
+IMPORTANTE:
+- Extrae TODAS las promociones visibles, incluso si están en tabs o secciones colapsables
+- Si una promo aplica a múltiples bancos/billeteras, crear UNA entrada por cada banco/billetera
+- Los descuentos pueden ser % o $/litro
+- Si no se menciona un banco/billetera identificable, NO incluyas la promo (descartá info institucional genérica)
+- Presta atención a los días — son críticos
+- Si la imagen no muestra promociones bancarias claras, devolvé "promotions": []
 
-def identify_bank_and_wallet(text: str) -> tuple:
-    """Devuelve (bank, wallet) detectados en el texto."""
-    text_upper = text.upper()
-    bank, wallet = None, None
-    for pattern, name in WALLET_PATTERNS:
-        if re.search(pattern, text_upper):
-            wallet = name
-            break
-    for pattern, name in BANK_PATTERNS:
-        if re.search(pattern, text_upper):
-            bank = name
-            break
-    if not bank and wallet in ['Mercado Pago', 'Ualá', 'Naranja X', 'Personal Pay', 'Cuenta DNI']:
-        bank, wallet = wallet, None
-    return bank or '', wallet
+Responde ÚNICAMENTE con un JSON válido:
+{
+    "promotions": [
+        {"title": "...", "discount": "...", "bank": "...", ...},
+        ...
+    ],
+    "extraction_notes": "Notas sobre la extracción"
+}"""
 
 
-def extract_discount(text: str) -> str:
-    """Extrae el descuento principal del texto."""
-    # Reintegro
-    m = re.search(r'(\d+)\s*%\s*(?:de\s+)?reintegro', text, re.I)
-    if m and int(m.group(1)) > 0:
-        return f"{m.group(1)}% reintegro"
-    # Descuento explícito
-    for pattern in [
-        r'(\d+)\s*%\s*(?:de\s+)?(?:descuento|dto|off|ahorro)',
-        r'\$\s*(\d+)\s*(?:por\s+litro|/L|por\s+L)',  # $X por litro
-        r'(\d+)\s*%\s*OFF',
-    ]:
-        m = re.search(pattern, text, re.I)
-        if m:
-            val = int(m.group(1))
-            if val > 0:
-                return f"{val}%" if "%" in pattern else f"${val}/L"
-    return ''
+async def scrape_fuel_station_with_ai(name: str, url: str, debug_name: str = None) -> List[Dict]:
+    """
+    Scrapea una estación de servicio usando Claude Vision.
 
+    Toma screenshots de la página completa (con scroll) y los envía a Claude para extracción.
+    """
+    try:
+        from .ai_extractor import AIExtractor
+    except ImportError:
+        print(f"   ❌ anthropic no instalado — no se puede usar AI")
+        return []
 
-def extract_valid_days(text: str) -> str:
-    """Detecta días en el texto."""
-    text_lower = text.lower()
-    if re.search(r'todos\s+los\s+d[ií]as|toda\s+la\s+semana', text_lower):
-        return 'Todos los días'
-    found = set()
-    for day in DAYS_ES:
-        if re.search(rf'\b{day}s?\b', text_lower):
-            found.add(day.capitalize())
-    if len(found) == 7:
-        return 'Todos los días'
-    if found:
-        order = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
-        return ', '.join(sorted(found, key=lambda x: order.index(x) if x in order else 99))
-    return ''
+    if not os.getenv("ANTHROPIC_API_KEY"):
+        print(f"   ❌ ANTHROPIC_API_KEY no configurada")
+        return []
 
+    print(f"\n🔍 Scraping {name} con Claude Vision...")
+    print(f"   🌐 {url}")
 
-def extract_tope(text: str) -> str:
-    """Extrae tope/máximo del texto."""
-    for pattern in [
-        r'[Tt]ope[:\s]*\$?\s*([\d.,]+)',
-        r'[Mm][aá]ximo[:\s]*\$?\s*([\d.,]+)',
-        r'[Hh]asta\s+\$?\s*([\d.,]+)\s+(?:de\s+)?(?:reintegro|descuento)',
-    ]:
-        m = re.search(pattern, text, re.I)
-        if m:
-            try:
-                amount = float(m.group(1).replace('.', '').replace(',', '.'))
-                return f"${amount:,.0f}".replace(',', '.')
-            except Exception:
-                return f"${m.group(1)}"
-    return ''
-
-
-async def fetch_html(url: str, scroll: bool = True, wait_selector: str = None) -> str:
-    """Trae el HTML completo de una página con Playwright."""
     async with async_playwright() as p:
         browser = await p.chromium.launch(headless=True)
         try:
@@ -123,85 +78,102 @@ async def fetch_html(url: str, scroll: bool = True, wait_selector: str = None) -
                            '(KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
             )
             page = await context.new_page()
-            await page.goto(url, wait_until='networkidle', timeout=60000)
-            if wait_selector:
+            try:
+                response = await page.goto(url, wait_until='networkidle', timeout=60000)
+                print(f"   📡 Status: {response.status if response else '?'}")
+            except Exception as e:
+                print(f"   ⚠️ goto falló (sigo igual): {e}")
+
+            # Esperar a que cargue todo el JS
+            await asyncio.sleep(3)
+
+            # Si hay tabs (Lunes/Martes/...) — clickear cada una y capturar todo
+            await _click_day_tabs_if_present(page)
+
+            # Scroll completo para forzar carga lazy
+            await _scroll_full_page(page)
+
+            # Debug
+            if debug_name:
                 try:
-                    await page.wait_for_selector(wait_selector, timeout=10000)
-                except Exception:
-                    pass
-            if scroll:
-                for _ in range(5):
-                    await page.evaluate('window.scrollBy(0, 600)')
-                    await asyncio.sleep(0.4)
-                await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
-                await asyncio.sleep(1)
-            return await page.content()
+                    html = await page.content()
+                    with open(f'debug_{debug_name}.html', 'w', encoding='utf-8') as f:
+                        f.write(html)
+                    await page.screenshot(path=f'debug_{debug_name}.png', full_page=True)
+                    print(f"   📸 Debug guardado: debug_{debug_name}.html/.png")
+                except Exception as e:
+                    print(f"   ⚠️ No se pudo guardar debug: {e}")
+
+            # Usar AI con prompt específico para combustibles
+            extractor = AIExtractor()
+            extractor.system_prompt = FUEL_SYSTEM_PROMPT
+            promos = await extractor.extract_from_screenshot(page, name, url, scroll_and_capture=True)
+
+            # Normalizar para que coincida con el schema de DB
+            normalized = []
+            for p in promos:
+                normalized.append({
+                    'supermarket': name,
+                    'title': p.get('title') or '',
+                    'discount': p.get('discount') or '',
+                    'bank': p.get('bank') or '',
+                    'wallet': p.get('wallet') or '',
+                    'card_type': p.get('card_type') or '',
+                    'payment_method': p.get('payment_method') or '',
+                    'store_types': p.get('store_types') or '',
+                    'valid_days': p.get('valid_days') or '',
+                    'valid_from': p.get('valid_from'),
+                    'valid_until': p.get('valid_until'),
+                    'tope': p.get('tope') or '',
+                    'min_purchase': p.get('min_purchase') or '',
+                    'terms_raw': p.get('terms_raw') or '',
+                    'exclusions': ', '.join(p.get('exclusions', []) if isinstance(p.get('exclusions'), list) else [p.get('exclusions')] if p.get('exclusions') else []),
+                    'requirements': ', '.join(p.get('requirements', []) if isinstance(p.get('requirements'), list) else [p.get('requirements')] if p.get('requirements') else []),
+                    'url': url,
+                })
+            print(f"✅ {name}: {len(normalized)} promociones extraídas con AI")
+            return normalized
+
         finally:
             await browser.close()
 
 
-def parse_promo_cards(html: str, station_name: str, url: str) -> List[Dict]:
-    """Encuentra cards de promociones genéricas (descuento + banco/billetera)."""
-    soup = BeautifulSoup(html, 'html.parser')
-    promos = []
-    seen = set()
+async def _scroll_full_page(page):
+    """Scroll completo en pasos para forzar carga lazy."""
+    try:
+        height = await page.evaluate('document.body.scrollHeight')
+        for y in range(0, int(height), 600):
+            await page.evaluate(f'window.scrollTo(0, {y})')
+            await asyncio.sleep(0.3)
+        await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
+        await asyncio.sleep(1)
+        await page.evaluate('window.scrollTo(0, 0)')
+        await asyncio.sleep(0.5)
+    except Exception as e:
+        print(f"   ⚠️ Scroll falló: {e}")
 
-    for div in soup.find_all('div'):
-        text = div.get_text(' ', strip=True)
-        if not (50 < len(text) < 2000):
-            continue
 
-        has_discount = bool(re.search(r'\d+\s*%|cuotas?\s*sin\s*inter|reintegro|\$\s*\d+\s*(?:por\s+litro|/L)', text, re.I))
-        has_bank = bool(re.search(
-            r'banco|santander|galicia|bbva|macro|naci[oó]n|provincia|patagonia|credicoop|hsbc|icbc|'
-            r'mercado pago|cuenta dni|naranja|ual[aá]|modo|personal pay|comafi|columbia|supervielle',
-            text, re.I
-        ))
-        if not (has_discount and has_bank):
-            continue
-
-        # Solo tomar leaf nodes
-        child_divs = div.find_all('div', recursive=False)
-        is_parent = any(re.search(r'\d+\s*%', c.get_text(' ', strip=True))
-                        and len(c.get_text(' ', strip=True)) > 40
-                        for c in child_divs)
-        if is_parent:
-            continue
-
-        key = re.sub(r'\s+', ' ', text[:120])
-        if key in seen:
-            continue
-        seen.add(key)
-
-        bank, wallet = identify_bank_and_wallet(text)
-        discount = extract_discount(text)
-        if not discount:
-            continue
-
-        valid_days = extract_valid_days(text)
-        tope = extract_tope(text)
-
-        title_parts = []
-        if bank:
-            title_parts.append(bank)
-        if wallet:
-            title_parts.append(f"(vía {wallet})")
-        if discount:
-            title_parts.append(discount)
-        if valid_days:
-            title_parts.append(f"- {valid_days}")
-        title = ' '.join(title_parts) or text[:80]
-
-        promos.append({
-            'supermarket': station_name,
-            'title': title,
-            'discount': discount,
-            'bank': bank,
-            'wallet': wallet,
-            'valid_days': valid_days,
-            'tope': tope,
-            'url': url,
-            'terms_raw': text[:3000],
-        })
-
-    return promos
+async def _click_day_tabs_if_present(page):
+    """Si la página tiene tabs por día (Lunes/Martes/...), los clickea para que carguen su contenido."""
+    days = ['lunes', 'martes', 'miércoles', 'miercoles', 'jueves',
+            'viernes', 'sábado', 'sabado', 'domingo']
+    clicked = 0
+    for day in days:
+        # Buscar elementos clickeables que contengan ese día
+        for selector in [
+            f'a:has-text("{day}")',
+            f'button:has-text("{day}")',
+            f'[role="tab"]:has-text("{day}")',
+            f'li:has-text("{day}")',
+        ]:
+            try:
+                el = page.locator(selector).first
+                if await el.is_visible(timeout=500):
+                    await el.click(timeout=1500)
+                    await asyncio.sleep(0.5)
+                    clicked += 1
+                    break
+            except Exception:
+                pass
+    if clicked:
+        print(f"   📅 Cliqueados {clicked} tabs de día")
