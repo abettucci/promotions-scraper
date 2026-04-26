@@ -185,6 +185,71 @@ def get_last_scrape():
     conn.close()
     return {"last_successful_scrape": row["last"] if row else None}
 
+
+@app.post("/api/admin/notify")
+def trigger_notify(token: str = Query(...)):
+    """Lanza envío de digest personalizado a todos los usuarios. Requiere ?token=<ADMIN_TOKEN>."""
+    expected = os.getenv("ADMIN_TOKEN", "")
+    if not expected or token != expected:
+        raise HTTPException(403, "Token inválido")
+    try:
+        from notifier import TelegramNotifier
+        notifier = TelegramNotifier()
+        notifier.send_user_digests()
+        return {"status": "sent", "message": "Digests personalizados enviados a usuarios con notify_daily=True"}
+    except Exception as e:
+        raise HTTPException(500, f"Error enviando digests: {e}")
+
+
+@app.post("/api/auth/me/notify")
+def trigger_my_notify(current_user=Depends(get_current_user)):
+    """Envía un digest de prueba SOLO al usuario autenticado (útil para testear desde el perfil)."""
+    if not current_user.get("telegram_chat_id"):
+        raise HTTPException(400, "No tenés Telegram chat_id configurado en tu perfil")
+    methods = _db.get_user_payment_methods(current_user["id"])
+    if not methods:
+        raise HTTPException(400, "No tenés métodos de pago configurados")
+
+    try:
+        from notifier import TelegramNotifier, _today_name, _format_promo, SUPERMARKET_EMOJI
+        notifier = TelegramNotifier()
+        promos = _db.get_promotions_for_user(current_user["id"], today_only=True)
+
+        today = _today_name()
+        method_names = ", ".join(m["name"] for m in methods[:4])
+        if len(methods) > 4:
+            method_names += f" +{len(methods) - 4} más"
+
+        if not promos:
+            notifier.send_message_to(
+                current_user["telegram_chat_id"],
+                f"👋 ¡Buen {today}!\n\nℹ️ Hoy no hay promociones activas para tus tarjetas y billeteras.",
+            )
+            return {"status": "sent", "promos": 0}
+
+        by_super: dict = {}
+        for p in promos:
+            by_super.setdefault(p["supermarket_name"], []).append(p)
+
+        header = (
+            f"👋 ¡Buen {today}!\n"
+            f"🎯 *Tus promos de hoy* ({method_names})\n"
+            f"{'─' * 32}\n"
+        )
+        notifier.send_message_to(current_user["telegram_chat_id"], header)
+        for super_name, super_promos in by_super.items():
+            sm_emoji = SUPERMARKET_EMOJI.get(super_name.lower(), "🛒")
+            lines = [f"{sm_emoji} *{super_name}*"]
+            for p in super_promos:
+                lines.append(_format_promo(p))
+                lines.append("")
+            lines.append(f"_Total: {len(super_promos)} promociones_")
+            notifier.send_message_to(current_user["telegram_chat_id"], "\n".join(lines))
+
+        return {"status": "sent", "promos": len(promos)}
+    except Exception as e:
+        raise HTTPException(500, f"Error enviando digest: {e}")
+
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 @app.post("/api/auth/register")
 def register(body: RegisterBody):
