@@ -172,6 +172,10 @@ async def telegram_webhook(payload: dict, request: Request):
     if expected:
         got = request.headers.get("x-telegram-bot-api-secret-token", "")
         if got != expected:
+            # Log diagnóstico (sin filtrar el secret completo)
+            exp_hint = f"set ({len(expected)} chars, ends ...{expected[-4:]})" if expected else "empty"
+            got_hint = f"set ({len(got)} chars, ends ...{got[-4:]})" if got else "MISSING"
+            print(f"⚠️  Telegram webhook 403 — expected={exp_hint}, got={got_hint}")
             raise HTTPException(403, "Invalid secret")
 
     try:

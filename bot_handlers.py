@@ -5,6 +5,8 @@ Cada comando se resuelve consultando directamente la DB de promociones y la de
 usuarios. La interacción es two-way: comandos en texto + inline keyboards para
 paginación y selección.
 
+Usa parse_mode=HTML (más robusto que Markdown para texto scrapeado).
+
 Comandos:
   P0: /start /ayuda /hoy /mis
   P1: /buscar /banco /super /combustible /stats
@@ -12,18 +14,14 @@ Comandos:
 """
 from __future__ import annotations
 
+import html
 import sqlite3
 from datetime import date, datetime
 from typing import Optional
 
 import config
 from database import UserDatabase
-from notifier import (
-    TelegramNotifier,
-    _format_promo,
-    _today_name,
-    DAY_NAMES_ES,
-)
+from notifier import TelegramNotifier, _today_name, DAY_NAMES_ES
 
 PAGE_SIZE = 8  # promos por página (Telegram tiene 4096 chars/msg)
 
@@ -108,7 +106,34 @@ def _query_promotions(
     return [dict(r) for r in rows]
 
 
-# ── Render helpers ────────────────────────────────────────────────────────────
+# ── Render helpers (HTML) ─────────────────────────────────────────────────────
+def _esc(value) -> str:
+    """Escape seguro para parse_mode=HTML."""
+    if value is None:
+        return ""
+    return html.escape(str(value), quote=False)
+
+
+def _format_promo_html(p: dict) -> str:
+    """Formatea una promo en HTML escapado."""
+    discount = _esc(p.get("discount") or "")
+    entity = _esc(p.get("bank") or p.get("wallet") or "N/A")
+    parts = [f"💳 <b>{discount}</b> — {entity}"]
+
+    details = []
+    if p.get("valid_days"):
+        details.append(f"📅 {_esc(p['valid_days'])}")
+    if p.get("store_types"):
+        details.append(f"🏪 {_esc(p['store_types'])}")
+    if p.get("tope"):
+        details.append(f"⚠️ Tope {_esc(p['tope'])}")
+    if p.get("min_purchase"):
+        details.append(f"🛍️ Mínimo {_esc(p['min_purchase'])}")
+    if details:
+        parts.append("   " + " | ".join(details))
+    return "\n".join(parts)
+
+
 def _paginate(promos: list[dict], page: int) -> tuple[list[dict], int]:
     """Devuelve (slice, total_pages) — page es 1-indexed."""
     total_pages = max(1, (len(promos) + PAGE_SIZE - 1) // PAGE_SIZE)
@@ -118,19 +143,19 @@ def _paginate(promos: list[dict], page: int) -> tuple[list[dict], int]:
 
 
 def _render_promos(promos: list[dict], header: str, page: int = 1) -> tuple[str, dict]:
-    """Devuelve (texto formateado, reply_markup). Vacío si no hay promos."""
+    """Devuelve (texto formateado HTML, reply_markup). Vacío si no hay promos."""
     if not promos:
-        return f"{header}\n\n_No se encontraron promociones._", {}
+        return f"{header}\n\n<i>No se encontraron promociones.</i>", {}
 
     page_promos, total_pages = _paginate(promos, page)
 
     lines = [header, "─" * 28]
     for p in page_promos:
-        sm = p.get("supermarket_name") or ""
-        lines.append(f"🏷️ *{sm}*")
-        lines.append(_format_promo(p))
+        sm = _esc(p.get("supermarket_name") or "")
+        lines.append(f"🏷️ <b>{sm}</b>")
+        lines.append(_format_promo_html(p))
         lines.append("")
-    lines.append(f"_Página {page}/{total_pages} · {len(promos)} resultados_")
+    lines.append(f"<i>Página {page}/{total_pages} · {len(promos)} resultados</i>")
     return "\n".join(lines), {}
 
 
@@ -158,23 +183,23 @@ def _pagination_markup(callback_prefix: str, page: int, total_pages: int,
 # ── Comandos ──────────────────────────────────────────────────────────────────
 def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
     text = (
-        "👋 *Hola! Soy el bot de PromoAR*\n\n"
+        "👋 <b>Hola! Soy el bot de PromoAR</b>\n\n"
         "Te muestro promos bancarias activas en supermercados y combustibles "
         "de Argentina.\n\n"
-        "*Comandos públicos:*\n"
+        "<b>Comandos públicos:</b>\n"
         "• /hoy — promos vigentes hoy\n"
-        "• /buscar `<texto>` — buscar promos\n"
-        "• /banco `<nombre>` — filtrar por banco/wallet\n"
-        "• /super `<nombre>` — filtrar por super o marca\n"
+        "• /buscar &lt;texto&gt; — buscar promos\n"
+        "• /banco &lt;nombre&gt; — filtrar por banco/wallet\n"
+        "• /super &lt;nombre&gt; — filtrar por super o marca\n"
         "• /combustible — promos de combustible hoy\n"
         "• /stats — estadísticas\n\n"
-        "*Comandos personalizados* (requieren cuenta):\n"
+        "<b>Comandos personalizados</b> (requieren cuenta):\n"
         "• /mis — promos para tus medios de pago\n"
-        "• /medios — ver/editar tus medios\n"
-        "• /notify `on|off` — toggle notificaciones diarias\n"
-        "• /hora `<0-23>` — hora del digest diario\n\n"
+        "• /medios — ver tus medios\n"
+        "• /notify on|off — toggle notificaciones diarias\n"
+        "• /hora &lt;0-23&gt; — hora del digest diario\n\n"
         "Para vincular tu cuenta, registrate en la web y agregá este chat_id "
-        f"en tu perfil:\n`{chat_id}`\n\n"
+        f"en tu perfil:\n<code>{_esc(chat_id)}</code>\n\n"
         "/ayuda — más detalles"
     )
     return text, {}
@@ -182,23 +207,23 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
 
 def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
     text = (
-        "📖 *Ayuda — PromoAR Bot*\n\n"
-        "*Comandos públicos*\n\n"
-        "`/hoy` — Lista promos vigentes hoy. Paginado con botones.\n\n"
-        "`/buscar nafta` — Busca \"nafta\" en título y T&C.\n\n"
-        "`/banco galicia` — Promos del Banco Galicia.\n"
-        "`/banco modo` — Promos pagando con MODO.\n\n"
-        "`/super coto` — Promos en Coto.\n"
-        "`/super ypf` — Promos en YPF.\n\n"
-        "`/combustible` — Solo promos de combustible vigentes hoy.\n\n"
-        "`/stats` — Total de promos, supers y bancos.\n\n"
-        "*Comandos privados* (requieren cuenta linkeada)\n\n"
-        "`/mis` — Promos que matchean tus medios de pago.\n"
-        "`/medios` — Ver tus medios. Editá desde la web.\n"
-        "`/notify on` o `/notify off` — Toggle digest diario.\n"
-        "`/hora 9` — Cambiar hora del digest (0-23).\n\n"
+        "📖 <b>Ayuda — PromoAR Bot</b>\n\n"
+        "<b>Comandos públicos</b>\n\n"
+        "<code>/hoy</code> — Lista promos vigentes hoy. Paginado con botones.\n\n"
+        "<code>/buscar nafta</code> — Busca \"nafta\" en título y T&amp;C.\n\n"
+        "<code>/banco galicia</code> — Promos del Banco Galicia.\n"
+        "<code>/banco modo</code> — Promos pagando con MODO.\n\n"
+        "<code>/super coto</code> — Promos en Coto.\n"
+        "<code>/super ypf</code> — Promos en YPF.\n\n"
+        "<code>/combustible</code> — Solo promos de combustible vigentes hoy.\n\n"
+        "<code>/stats</code> — Total de promos, supers y bancos.\n\n"
+        "<b>Comandos privados</b> (requieren cuenta linkeada)\n\n"
+        "<code>/mis</code> — Promos que matchean tus medios de pago.\n"
+        "<code>/medios</code> — Ver tus medios. Editá desde la web.\n"
+        "<code>/notify on</code> o <code>/notify off</code> — Toggle digest diario.\n"
+        "<code>/hora 9</code> — Cambiar hora del digest (0-23).\n\n"
         "Para vincular: registrate en la web → perfil → "
-        f"pegá `{chat_id}` en \"Telegram chat_id\"."
+        f"pegá <code>{_esc(chat_id)}</code> en \"Telegram chat_id\"."
     )
     return text, {}
 
@@ -206,7 +231,7 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
 def cmd_hoy(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
     promos = _query_promotions(today_only=True)
     today_label = datetime.now().strftime("%A %d/%m").capitalize()
-    header = f"📅 *Promos de hoy — {today_label}*"
+    header = f"📅 <b>Promos de hoy — {_esc(today_label)}</b>"
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
     return text, _pagination_markup("hoy", page, total_pages)
@@ -216,22 +241,22 @@ def cmd_mis(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tu
     user = user_db.get_user_by_telegram_chat_id(chat_id)
     if not user:
         return (
-            "🔒 *No tenés cuenta linkeada*\n\n"
+            "🔒 <b>No tenés cuenta linkeada</b>\n\n"
             "Para usar /mis, registrate en la web y pegá este chat_id en tu perfil:\n"
-            f"`{chat_id}`"
+            f"<code>{_esc(chat_id)}</code>"
         ), {}
 
     methods = user_db.get_user_payment_methods(user["id"])
     if not methods:
         return (
-            "💳 *Tu cuenta no tiene medios de pago*\n\n"
+            "💳 <b>Tu cuenta no tiene medios de pago</b>\n\n"
             "Configurá tus tarjetas/billeteras desde la web (perfil → medios de pago) "
             "y volvé a probar /mis."
         ), {}
 
     promos = _query_promotions(today_only=True, payment_methods=methods)
-    methods_str = ", ".join(m["name"] for m in methods)
-    header = f"💳 *Tus promos de hoy*\n_Medios: {methods_str}_"
+    methods_str = _esc(", ".join(m["name"] for m in methods))
+    header = f"💳 <b>Tus promos de hoy</b>\n<i>Medios: {methods_str}</i>"
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
     return text, _pagination_markup("mis", page, total_pages)
@@ -240,9 +265,9 @@ def cmd_mis(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tu
 def cmd_buscar(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
     query = (args or "").strip()
     if not query:
-        return "❓ Uso: `/buscar <texto>` — ej: `/buscar nafta`", {}
+        return "❓ Uso: <code>/buscar &lt;texto&gt;</code> — ej: <code>/buscar nafta</code>", {}
     promos = _query_promotions(search=query)
-    header = f"🔍 *Búsqueda:* `{query}`"
+    header = f"🔍 <b>Búsqueda:</b> <code>{_esc(query)}</code>"
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
     return text, _pagination_markup("buscar", page, total_pages, extra_args=query[:32])
@@ -251,9 +276,9 @@ def cmd_buscar(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) ->
 def cmd_banco(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
     bank = (args or "").strip()
     if not bank:
-        return "❓ Uso: `/banco <nombre>` — ej: `/banco galicia` o `/banco modo`", {}
+        return "❓ Uso: <code>/banco &lt;nombre&gt;</code> — ej: <code>/banco galicia</code> o <code>/banco modo</code>", {}
     promos = _query_promotions(bank_filter=bank)
-    header = f"🏦 *Promos de:* `{bank}`"
+    header = f"🏦 <b>Promos de:</b> <code>{_esc(bank)}</code>"
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
     return text, _pagination_markup("banco", page, total_pages, extra_args=bank[:32])
@@ -262,9 +287,9 @@ def cmd_banco(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> 
 def cmd_super(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
     sm = (args or "").strip()
     if not sm:
-        return "❓ Uso: `/super <nombre>` — ej: `/super coto` o `/super ypf`", {}
+        return "❓ Uso: <code>/super &lt;nombre&gt;</code> — ej: <code>/super coto</code> o <code>/super ypf</code>", {}
     promos = _query_promotions(supermarket_filter=sm)
-    header = f"🏪 *Promos en:* `{sm}`"
+    header = f"🏪 <b>Promos en:</b> <code>{_esc(sm)}</code>"
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
     return text, _pagination_markup("super", page, total_pages, extra_args=sm[:32])
@@ -272,7 +297,7 @@ def cmd_super(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> 
 
 def cmd_combustible(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
     promos = _query_promotions(today_only=True, category="fuel")
-    header = "⛽ *Promos de combustible — hoy*"
+    header = "⛽ <b>Promos de combustible — hoy</b>"
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
     return text, _pagination_markup("combustible", page, total_pages)
@@ -300,13 +325,13 @@ def cmd_stats(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
     ).fetchone()[0]
     conn.close()
 
-    cat_lines = [f"  • {r['cat']}: {r['n']}" for r in by_cat]
+    cat_lines = [f"  • {_esc(r['cat'])}: {r['n']}" for r in by_cat]
     text = (
-        "📊 *Estadísticas PromoAR*\n\n"
-        f"🎯 Promos activas: *{total}*\n"
-        f"🏪 Comercios con promos: *{super_n}*\n"
-        f"🏦 Bancos/wallets distintos: *{bank_n}*\n\n"
-        "*Por categoría:*\n" + "\n".join(cat_lines)
+        "📊 <b>Estadísticas PromoAR</b>\n\n"
+        f"🎯 Promos activas: <b>{total}</b>\n"
+        f"🏪 Comercios con promos: <b>{super_n}</b>\n"
+        f"🏦 Bancos/wallets distintos: <b>{bank_n}</b>\n\n"
+        "<b>Por categoría:</b>\n" + "\n".join(cat_lines)
     )
     return text, {}
 
@@ -314,12 +339,12 @@ def cmd_stats(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
 def cmd_medios(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
     user = user_db.get_user_by_telegram_chat_id(chat_id)
     if not user:
-        return f"🔒 Linkea tu cuenta primero. Usá /start para ver cómo.", {}
+        return "🔒 Linkea tu cuenta primero. Usá /start para ver cómo.", {}
 
     methods = user_db.get_user_payment_methods(user["id"])
     if not methods:
         text = (
-            "💳 *No tenés medios de pago configurados*\n\n"
+            "💳 <b>No tenés medios de pago configurados</b>\n\n"
             "Editalos desde la web (perfil → medios de pago)."
         )
         return text, {}
@@ -327,14 +352,14 @@ def cmd_medios(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dic
     by_type: dict[str, list[str]] = {}
     for m in methods:
         by_type.setdefault(m["type"], []).append(m["name"])
-    lines = ["💳 *Tus medios de pago*\n"]
+    lines = ["💳 <b>Tus medios de pago</b>\n"]
     type_labels = {"bank": "🏦 Bancos", "wallet": "📱 Wallets", "club": "🎟️ Clubes"}
     for t, names in by_type.items():
-        lines.append(f"*{type_labels.get(t, t)}:*")
+        lines.append(f"<b>{type_labels.get(t, _esc(t))}:</b>")
         for n in names:
-            lines.append(f"  • {n}")
+            lines.append(f"  • {_esc(n)}")
         lines.append("")
-    lines.append("_Para editar, usá la web (perfil)._")
+    lines.append("<i>Para editar, usá la web (perfil).</i>")
     return "\n".join(lines), {}
 
 
@@ -346,7 +371,7 @@ def cmd_notify(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dic
     flag = (args or "").strip().lower()
     if flag not in ("on", "off"):
         current = "ON" if user.get("notify_daily") else "OFF"
-        return f"🔔 Notificaciones: *{current}*\n\nUso: `/notify on` o `/notify off`", {}
+        return f"🔔 Notificaciones: <b>{current}</b>\n\nUso: <code>/notify on</code> o <code>/notify off</code>", {}
 
     notify_on = flag == "on"
     user_db.update_user_telegram(
@@ -355,7 +380,7 @@ def cmd_notify(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dic
         notify_daily=notify_on,
         notify_hour=user.get("notify_hour") or 9,
     )
-    return f"✅ Notificaciones diarias *{'activadas' if notify_on else 'desactivadas'}*", {}
+    return f"✅ Notificaciones diarias <b>{'activadas' if notify_on else 'desactivadas'}</b>", {}
 
 
 def cmd_hora(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
@@ -369,7 +394,7 @@ def cmd_hora(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]
         assert 0 <= hour <= 23
     except (ValueError, AssertionError):
         current = user.get("notify_hour") or 9
-        return f"🕐 Hora actual del digest: *{current}:00*\n\nUso: `/hora 9` (entre 0 y 23)", {}
+        return f"🕐 Hora actual del digest: <b>{current}:00</b>\n\nUso: <code>/hora 9</code> (entre 0 y 23)", {}
 
     user_db.update_user_telegram(
         user["id"],
@@ -377,7 +402,7 @@ def cmd_hora(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]
         notify_daily=bool(user.get("notify_daily")),
         notify_hour=hour,
     )
-    return f"✅ Digest diario configurado a las *{hour}:00*", {}
+    return f"✅ Digest diario configurado a las <b>{hour}:00</b>", {}
 
 
 # ── Dispatcher ────────────────────────────────────────────────────────────────
@@ -415,11 +440,19 @@ def handle_message(update: dict, user_db: UserDatabase, notifier: TelegramNotifi
 
     handler = COMMANDS.get(cmd)
     if not handler:
-        notifier.send_message_to(chat_id, f"❓ Comando desconocido: `{cmd}`\n\nUsá /ayuda")
+        notifier.send_message_to(
+            chat_id,
+            f"❓ Comando desconocido: <code>{_esc(cmd)}</code>\n\nUsá /ayuda",
+            parse_mode="HTML",
+        )
         return
 
     reply_text, reply_markup = handler(chat_id, args, user_db)
-    notifier.send_message_to(chat_id, reply_text, reply_markup=reply_markup or None)
+    notifier.send_message_to(
+        chat_id, reply_text,
+        reply_markup=reply_markup or None,
+        parse_mode="HTML",
+    )
 
 
 def handle_callback_query(update: dict, user_db: UserDatabase, notifier: TelegramNotifier) -> None:
@@ -461,5 +494,9 @@ def handle_callback_query(update: dict, user_db: UserDatabase, notifier: Telegra
     except TypeError:
         reply_text, reply_markup = handler(chat_id, extra, user_db)
 
-    notifier.edit_message_text(chat_id, message_id, reply_text, reply_markup=reply_markup or None)
+    notifier.edit_message_text(
+        chat_id, message_id, reply_text,
+        reply_markup=reply_markup or None,
+        parse_mode="HTML",
+    )
     notifier.answer_callback_query(callback_id)
