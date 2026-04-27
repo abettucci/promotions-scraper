@@ -343,11 +343,13 @@ def get_payment_methods_catalog():
 def get_promotions(
     supermarket: Optional[str] = Query(None),
     bank: Optional[str] = Query(None),
-    day: Optional[str] = Query(None),
+    day: Optional[str] = Query(None, description="Días separados por coma (ej: lunes,martes)"),
     search: Optional[str] = Query(None),
     discount_type: Optional[str] = Query(None),
     active_today: Optional[bool] = Query(None),
-    category: Optional[str] = Query(None),
+    category: Optional[str] = Query(None, description="Categorías separadas por coma (ej: supermarket,fuel)"),
+    state: Optional[str] = Query("activa", description="activa | proxima | finalizada"),
+    modality: Optional[str] = Query(None, description="Modalidades separadas por coma: presencial,online"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -355,18 +357,28 @@ def get_promotions(
     cursor = conn.cursor()
 
     today_iso = date.today().isoformat()
-    conditions = [
-        "p.is_active = 1",
-        # Excluir promos vencidas (valid_until < hoy)
-        "(p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)",
-        # Excluir promos que aún no empezaron (valid_from > hoy)
-        "(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)",
-    ]
-    params: list = [today_iso, today_iso]
+    conditions = ["p.is_active = 1"]
+    params: list = []
+
+    # Estado: activa (default), próxima (aún no empezó), finalizada (ya venció)
+    state_norm = (state or "activa").lower().strip()
+    if state_norm == "proxima":
+        conditions.append("p.valid_from IS NOT NULL AND p.valid_from != '' AND p.valid_from > ?")
+        params.append(today_iso)
+    elif state_norm == "finalizada":
+        conditions.append("p.valid_until IS NOT NULL AND p.valid_until != '' AND p.valid_until < ?")
+        params.append(today_iso)
+    else:  # activa
+        conditions.append("(p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)")
+        conditions.append("(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)")
+        params.extend([today_iso, today_iso])
 
     if category:
-        conditions.append("LOWER(COALESCE(s.category, 'supermarket')) = ?")
-        params.append(category.lower())
+        cats = [c.strip().lower() for c in category.split(",") if c.strip()]
+        if cats:
+            placeholders = ",".join(["?"] * len(cats))
+            conditions.append(f"LOWER(COALESCE(s.category, 'supermarket')) IN ({placeholders})")
+            params.extend(cats)
 
     if supermarket:
         conditions.append("LOWER(s.name) = ?")
@@ -377,12 +389,35 @@ def get_promotions(
         params.extend([f"%{bank.lower()}%", f"%{bank.lower()}%"])
 
     if day:
-        # Incluye promos del día específico + las que aplican todos los días (o sin día definido)
-        conditions.append(
-            "(LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ? "
-            "OR p.valid_days IS NULL OR p.valid_days = '')"
-        )
-        params.extend([f"%{day.lower()}%", "%todos los d%"])
+        # Multi-día: cualquier día match O "todos los días" O sin día definido
+        days = [d.strip().lower() for d in day.split(",") if d.strip()]
+        if days:
+            day_clauses = ["LOWER(p.valid_days) LIKE ?" for _ in days]
+            day_clauses.append("LOWER(p.valid_days) LIKE ?")
+            day_clauses.append("p.valid_days IS NULL")
+            day_clauses.append("p.valid_days = ''")
+            conditions.append("(" + " OR ".join(day_clauses) + ")")
+            params.extend([f"%{d}%" for d in days])
+            params.append("%todos los d%")
+
+    if modality:
+        modalities = [m.strip().lower() for m in modality.split(",") if m.strip()]
+        mod_clauses = []
+        for mod in modalities:
+            if mod == "online":
+                mod_clauses.append(
+                    "(LOWER(p.store_types) LIKE '%online%' OR LOWER(p.store_types) LIKE '%.com%' "
+                    "OR LOWER(p.store_types) LIKE '%web%' OR LOWER(p.store_types) LIKE '%app%')"
+                )
+            elif mod == "presencial":
+                mod_clauses.append(
+                    "(p.store_types IS NULL OR p.store_types = '' "
+                    "OR (LOWER(p.store_types) NOT LIKE '%online%' "
+                    "AND LOWER(p.store_types) NOT LIKE '%.com%' "
+                    "AND LOWER(p.store_types) NOT LIKE '%web%'))"
+                )
+        if mod_clauses:
+            conditions.append("(" + " OR ".join(mod_clauses) + ")")
 
     if search:
         conditions.append("(LOWER(p.title) LIKE ? OR LOWER(p.terms_raw) LIKE ?)")

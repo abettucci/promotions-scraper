@@ -31,6 +31,10 @@ from scrapers.cencosud_scraper import CencosudScraper
 from scrapers.shell_scraper import ShellScraper
 from scrapers.axion_scraper import AxionScraper
 from scrapers.puma_scraper import PumaScraper
+from scrapers.modo_scraper import ModoScraper
+from scrapers.macro_scraper import MacroScraper
+from scrapers.galicia_scraper import GaliciaScraper
+from scrapers.bna_scraper import BnaScraper
 
 # AI Extractor (opcional)
 try:
@@ -129,6 +133,10 @@ class PromoScraper:
             'shell': ShellScraper,
             'axion': AxionScraper,
             'puma': PumaScraper,
+            'modo': ModoScraper,
+            'macro': MacroScraper,
+            'galicia': GaliciaScraper,
+            'bna': BnaScraper,
         }
         
         if supermarket_key in standalone_scrapers:

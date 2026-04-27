@@ -58,6 +58,7 @@ export const api = {
   getPromotions: (params: {
     supermarket?: string; bank?: string; day?: string; search?: string
     discount_type?: string; active_today?: boolean; category?: string
+    state?: string; modality?: string
     page?: number; page_size?: number
   }) => fetchJSON<PromotionsResponse>("/api/promotions", params as Record<string, string | number | boolean | undefined>),
 

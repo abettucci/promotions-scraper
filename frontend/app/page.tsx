@@ -16,9 +16,11 @@ import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel } from "lucid
 const DEFAULT_FILTERS: FilterState = {
   supermarket: "",
   bank: "",
-  day: "",
+  days: [],
   search: "",
   discount_type: "",
+  state: "activa",
+  modality: [],
   page: 1,
 }
 
@@ -35,7 +37,15 @@ export default function Home() {
     setFilters((prev) => ({ ...prev, ...partial }))
     setTodayOnly(false)
     setMyPromosMode(false)
-    if (partial.page || partial.supermarket || partial.bank || partial.day || partial.discount_type) {
+    if (
+      partial.page ||
+      partial.supermarket ||
+      partial.bank ||
+      partial.days ||
+      partial.discount_type ||
+      partial.state ||
+      partial.modality
+    ) {
       window.scrollTo({ top: 0, behavior: "smooth" })
     }
   }, [])
@@ -85,9 +95,11 @@ export default function Home() {
       return api.getPromotions({
         supermarket: filters.supermarket || undefined,
         bank: filters.bank || undefined,
-        day: filters.day || undefined,
+        day: filters.days.length ? filters.days.join(",") : undefined,
         search: filters.search || undefined,
         discount_type: filters.discount_type || undefined,
+        state: filters.state || undefined,
+        modality: filters.modality.length ? filters.modality.join(",") : undefined,
         category,
         page: filters.page,
         page_size: 24,
@@ -191,6 +203,7 @@ export default function Home() {
               filters={filters}
               banks={banks}
               supermarkets={supermarkets}
+              category={category}
               onChange={updateFilters}
               onReset={resetFilters}
               totalResults={promos?.total ?? 0}

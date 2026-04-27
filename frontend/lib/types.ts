@@ -62,12 +62,18 @@ export interface Stats {
   by_supermarket: { name: string; count: number }[]
 }
 
+export type PromotionState = "activa" | "proxima" | "finalizada"
+export type Modality = "presencial" | "online"
+export type DayCode = "lunes" | "martes" | "miércoles" | "jueves" | "viernes" | "sábado" | "domingo"
+
 export interface FilterState {
   supermarket: string
   bank: string
-  day: string
+  days: DayCode[]
   search: string
   discount_type: string
+  state: PromotionState
+  modality: Modality[]
   page: number
 }
 

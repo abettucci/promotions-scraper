@@ -99,6 +99,30 @@ SUPERMARKETS = {
         'enabled': True,
         'category': 'fuel',
     },
+    'modo': {
+        'name': 'MODO',
+        'url': 'https://www.modo.com.ar/promos/combustibles',
+        'enabled': True,
+        'category': 'fuel',
+    },
+    'macro': {
+        'name': 'Banco Macro',
+        'url': 'https://www.macro.com.ar/selecta/combustible',
+        'enabled': True,
+        'category': 'fuel',
+    },
+    'galicia': {
+        'name': 'Banco Galicia',
+        'url': 'https://www.galicia.ar/personas/promociones/promocion-combustible',
+        'enabled': True,
+        'category': 'fuel',
+    },
+    'bna': {
+        'name': 'Banco Nación',
+        'url': 'https://www.bna.com.ar/Personas/DescuentosYPromociones/4486/ypf/',
+        'enabled': True,
+        'category': 'fuel',
+    },
     # Deshabilitados por ahora (sin scraper específico)
     # 'disco': {
     #     'name': 'Disco',
