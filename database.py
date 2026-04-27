@@ -681,6 +681,24 @@ class UserDatabase:
         conn.close()
         return dict(row) if row else None
 
+    def get_user_by_telegram_chat_id(self, chat_id: str) -> Optional[Dict]:
+        conn = self._conn()
+        row = conn.execute(
+            "SELECT * FROM users WHERE telegram_chat_id = ?", (str(chat_id),)
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def link_telegram_chat_id(self, user_id: int, chat_id: str):
+        """Vincula un chat_id a un user (sin tocar notify settings)."""
+        conn = self._conn()
+        conn.execute(
+            "UPDATE users SET telegram_chat_id = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (str(chat_id), user_id),
+        )
+        conn.commit()
+        conn.close()
+
     def update_user_telegram(self, user_id: int, telegram_chat_id: str,
                              notify_daily: bool, notify_hour: int):
         conn = self._conn()

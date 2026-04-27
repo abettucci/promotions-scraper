@@ -99,29 +99,38 @@ SUPERMARKETS = {
         'enabled': True,
         'category': 'fuel',
     },
+    # Aggregators: scrapean páginas de bancos/billeteras y rutean cada promo
+    # a la marca de gasolinera (YPF/Shell/Axion/Puma) extraída por la IA.
+    # NO se insertan como supermarket — sus promos van bajo la marca correspondiente.
     'modo': {
         'name': 'MODO',
         'url': 'https://www.modo.com.ar/promos/combustibles',
         'enabled': True,
         'category': 'fuel',
+        'aggregator': True,
     },
     'macro': {
         'name': 'Banco Macro',
         'url': 'https://www.macro.com.ar/selecta/combustible',
         'enabled': True,
         'category': 'fuel',
+        'aggregator': True,
     },
     'galicia': {
         'name': 'Banco Galicia',
         'url': 'https://www.galicia.ar/personas/promociones/promocion-combustible',
         'enabled': True,
         'category': 'fuel',
+        'aggregator': True,
     },
     'bna': {
         'name': 'Banco Nación',
         'url': 'https://www.bna.com.ar/Personas/DescuentosYPromociones/4486/ypf/',
         'enabled': True,
         'category': 'fuel',
+        'aggregator': True,
+        # BNA es solo YPF — si la IA no extrae la marca, asumir esto
+        'default_brand': 'YPF',
     },
     # Deshabilitados por ahora (sin scraper específico)
     # 'disco': {
@@ -198,6 +207,13 @@ TELEGRAM_NOTIFY_ON_SCRAPE = os.getenv("TELEGRAM_NOTIFY_ON_SCRAPE", "false").lowe
 
 # Si True, el digest diario incluye solo promos válidas para el día de hoy
 TELEGRAM_TODAY_ONLY = os.getenv("TELEGRAM_TODAY_ONLY", "true").lower() == "true"
+
+# Secret para validar webhook entrante (header X-Telegram-Bot-Api-Secret-Token).
+# Si está vacío, no se valida — pero se recomienda setearlo en producción.
+TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+
+# URL pública del webhook (para scripts/setup_webhook.py). Ej: https://promoar.up.railway.app/webhook/telegram
+TELEGRAM_WEBHOOK_URL = os.getenv("TELEGRAM_WEBHOOK_URL", "")
 
 # ============================================
 # AUTENTICACIÓN JWT

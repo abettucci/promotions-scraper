@@ -316,22 +316,32 @@ class TelegramNotifier:
 
             print(f"   ✅ Enviado a {user['email']} ({len(promos)} promos)")
 
-    def send_message_to(self, chat_id: str, text: str) -> bool:
-        """Envía un mensaje a un chat_id específico (override del default)."""
+    def send_message_to(self, chat_id: str, text: str,
+                         reply_markup: dict = None,
+                         parse_mode: str = "Markdown") -> bool:
+        """Envía un mensaje a un chat_id específico.
+
+        reply_markup: dict opcional con inline_keyboard (formato Telegram).
+        El reply_markup solo se adjunta al primer chunk si hay split.
+        """
         if not self.token:
             print("⚠️  TELEGRAM_BOT_TOKEN no configurado")
             return False
         ok = True
-        for chunk in _split_message(text):
+        chunks = _split_message(text)
+        for i, chunk in enumerate(chunks):
+            payload = {
+                "chat_id": chat_id,
+                "text": chunk,
+                "parse_mode": parse_mode,
+                "disable_web_page_preview": True,
+            }
+            if reply_markup is not None and i == len(chunks) - 1:
+                payload["reply_markup"] = reply_markup
             try:
                 resp = requests.post(
                     f"{self._base_url}/sendMessage",
-                    json={
-                        "chat_id": chat_id,
-                        "text": chunk,
-                        "parse_mode": "Markdown",
-                        "disable_web_page_preview": True,
-                    },
+                    json=payload,
                     timeout=15,
                 )
                 if not resp.ok:
@@ -341,6 +351,46 @@ class TelegramNotifier:
                 print(f"❌ Telegram request error: {e}")
                 ok = False
         return ok
+
+    def answer_callback_query(self, callback_id: str, text: str = "") -> bool:
+        """Responde a una callback_query (cierra el spinner del botón)."""
+        if not self.token:
+            return False
+        try:
+            requests.post(
+                f"{self._base_url}/answerCallbackQuery",
+                json={"callback_query_id": callback_id, "text": text},
+                timeout=10,
+            )
+            return True
+        except requests.RequestException:
+            return False
+
+    def edit_message_text(self, chat_id: str, message_id: int, text: str,
+                           reply_markup: dict = None,
+                           parse_mode: str = "Markdown") -> bool:
+        """Edita un mensaje existente (útil para paginación in-place)."""
+        if not self.token:
+            return False
+        payload = {
+            "chat_id": chat_id,
+            "message_id": message_id,
+            "text": text,
+            "parse_mode": parse_mode,
+            "disable_web_page_preview": True,
+        }
+        if reply_markup is not None:
+            payload["reply_markup"] = reply_markup
+        try:
+            resp = requests.post(
+                f"{self._base_url}/editMessageText",
+                json=payload,
+                timeout=15,
+            )
+            return resp.ok
+        except requests.RequestException as e:
+            print(f"❌ Telegram edit error: {e}")
+            return False
 
 
 # ── CLI standalone ─────────────────────────────────────────────────────────────

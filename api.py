@@ -3,7 +3,7 @@ FastAPI REST API for promo-scraper
 Exposes the SQLite database with promotions, banks, supermarkets
 Includes user auth (JWT) and personalized promotion endpoints
 """
-from fastapi import FastAPI, Query, HTTPException, Depends
+from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List
@@ -159,6 +159,37 @@ class UpdateProfileBody(BaseModel):
 @app.get("/health")
 def health_check():
     return {"status": "healthy", "service": "promo-scraper-api"}
+
+
+# ── Telegram webhook ──────────────────────────────────────────────────────────
+@app.post("/webhook/telegram")
+async def telegram_webhook(payload: dict, request: Request):
+    """
+    Recibe updates de Telegram. Configurar con scripts/setup_webhook.py.
+    Valida X-Telegram-Bot-Api-Secret-Token si TELEGRAM_WEBHOOK_SECRET está seteado.
+    """
+    expected = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
+    if expected:
+        got = request.headers.get("x-telegram-bot-api-secret-token", "")
+        if got != expected:
+            raise HTTPException(403, "Invalid secret")
+
+    try:
+        import bot_handlers
+        from notifier import TelegramNotifier
+        notifier = TelegramNotifier()
+
+        if "callback_query" in payload:
+            bot_handlers.handle_callback_query(payload, _db, notifier)
+        else:
+            bot_handlers.handle_message(payload, _db, notifier)
+    except Exception as e:
+        # No re-lanzamos: Telegram reintenta indefinidamente si devolvemos !=2xx
+        print(f"❌ Error procesando webhook: {e}")
+        import traceback
+        traceback.print_exc()
+
+    return {"ok": True}
 
 # ── Admin: trigger manual scrape ──────────────────────────────────────────────
 @app.post("/api/admin/scrape")
@@ -591,6 +622,7 @@ def get_supermarkets(category: Optional[str] = Query(None)):
         LEFT JOIN promotions p ON s.id = p.supermarket_id AND p.is_active = 1
         {where}
         GROUP BY s.id
+        HAVING active_promotions > 0
         ORDER BY active_promotions DESC
     """, params).fetchall()
     conn.close()
