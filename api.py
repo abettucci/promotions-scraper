@@ -155,6 +155,13 @@ class UpdateProfileBody(BaseModel):
     notify_daily: Optional[bool] = None
     notify_hour: Optional[int] = None
 
+class ForgotPasswordBody(BaseModel):
+    email: str
+
+class ResetPasswordBody(BaseModel):
+    token: str
+    new_password: str
+
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/health")
 def health_check():
@@ -316,6 +323,85 @@ def login(body: LoginBody):
 
     token = _create_token(user["id"])
     return {"token": token, "user": _user_response(user)}
+
+
+# ── Password recovery ────────────────────────────────────────────────────────
+def _hash_token(token: str) -> str:
+    """SHA-256 del token. Solo guardamos el hash en DB para defender contra leak."""
+    import hashlib
+    return hashlib.sha256(token.encode()).hexdigest()
+
+
+@app.post("/api/auth/forgot-password")
+def forgot_password(body: ForgotPasswordBody):
+    """
+    Pedido de reset. Siempre responde 200 (no leakear si el email existe).
+    Si el email existe → genera token, envía mail con link.
+    """
+    if not AUTH_AVAILABLE:
+        raise HTTPException(503, "Auth no disponible")
+
+    email = (body.email or "").lower().strip()
+    if not email or "@" not in email:
+        raise HTTPException(400, "Email inválido")
+
+    user = _db.get_user_by_email(email)
+    # Solo procesamos si el user existe — pero respondemos 200 siempre
+    if user:
+        # Rate limit
+        recent = _db.count_recent_password_resets(user["id"], within_seconds=3600)
+        if recent >= config.PASSWORD_RESET_MAX_PER_HOUR:
+            print(f"⚠️  Rate limit hit para user_id={user['id']} ({recent} resets/h)")
+            return {"ok": True}
+
+        import secrets
+        from datetime import datetime, timedelta, timezone
+
+        token = secrets.token_urlsafe(32)
+        token_hash = _hash_token(token)
+        expires_at = (
+            datetime.now(timezone.utc) + timedelta(seconds=config.PASSWORD_RESET_EXPIRY)
+        ).isoformat()
+
+        _db.create_password_reset(user["id"], token_hash, expires_at)
+
+        reset_url = f"{config.FRONTEND_BASE_URL.rstrip('/')}/reset-password?token={token}"
+
+        try:
+            from email_sender import send_password_reset_email
+            ok = send_password_reset_email(email, reset_url)
+            if not ok:
+                print(f"⚠️  Email no enviado a {email} — Resend devolvió error")
+        except Exception as e:
+            print(f"❌ Error enviando email de reset: {e}")
+
+    # Siempre 200 — no revelamos si existe el email
+    return {"ok": True}
+
+
+@app.post("/api/auth/reset-password")
+def reset_password(body: ResetPasswordBody):
+    """
+    Aplica el reset. Valida token, expiración y single-use.
+    """
+    if not AUTH_AVAILABLE:
+        raise HTTPException(503, "Auth no disponible")
+
+    if not body.token:
+        raise HTTPException(400, "Token requerido")
+    if len(body.new_password) < 6:
+        raise HTTPException(400, "La contraseña debe tener al menos 6 caracteres")
+
+    token_hash = _hash_token(body.token)
+    reset = _db.get_password_reset_by_token_hash(token_hash)
+    if not reset:
+        raise HTTPException(400, "Token inválido o expirado")
+
+    new_hash = _hash_password(body.new_password)
+    _db.update_user_password(reset["user_id"], new_hash)
+    _db.mark_password_reset_used(reset["id"])
+
+    return {"ok": True}
 
 
 @app.get("/api/auth/me")

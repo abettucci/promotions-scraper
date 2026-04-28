@@ -77,6 +77,12 @@ export const api = {
   login: (email: string, password: string) =>
     fetchMutation<AuthResponse>("POST", "/api/auth/login", { email, password }),
 
+  forgotPassword: (email: string) =>
+    fetchMutation<{ ok: boolean }>("POST", "/api/auth/forgot-password", { email }),
+
+  resetPassword: (token: string, new_password: string) =>
+    fetchMutation<{ ok: boolean }>("POST", "/api/auth/reset-password", { token, new_password }),
+
   getMe: (token: string) => fetchJSON<User>("/api/auth/me", undefined, token),
 
   updateProfile: (token: string, data: { telegram_chat_id?: string; notify_daily?: boolean; notify_hour?: number }) =>

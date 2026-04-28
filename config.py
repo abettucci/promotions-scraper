@@ -216,6 +216,25 @@ TELEGRAM_WEBHOOK_SECRET = os.getenv("TELEGRAM_WEBHOOK_SECRET", "")
 TELEGRAM_WEBHOOK_URL = os.getenv("TELEGRAM_WEBHOOK_URL", "")
 
 # ============================================
+# CONFIGURACIÓN DE EMAIL (Resend)
+# ============================================
+# API key desde resend.com → API Keys
+RESEND_API_KEY = os.getenv("RESEND_API_KEY", "")
+
+# Remitente verificado (debe matchear con dominio verificado en Resend)
+EMAIL_FROM = os.getenv("EMAIL_FROM", "noreply@promoar.app")
+
+# URL base del frontend para construir links de reset (ej: https://promoar.app)
+# El email arma <FRONTEND_BASE_URL>/reset-password?token=<token>
+FRONTEND_BASE_URL = os.getenv("FRONTEND_BASE_URL", "http://localhost:3000")
+
+# Tiempo de expiración del token de reset (en segundos). Default 1 hora.
+PASSWORD_RESET_EXPIRY = int(os.getenv("PASSWORD_RESET_EXPIRY", "3600"))
+
+# Rate limit: máx pedidos de reset por user en 1 hora
+PASSWORD_RESET_MAX_PER_HOUR = int(os.getenv("PASSWORD_RESET_MAX_PER_HOUR", "3"))
+
+# ============================================
 # AUTENTICACIÓN JWT
 # ============================================
 JWT_SECRET = os.getenv("JWT_SECRET", "cambia-esto-en-produccion-usa-openssl-rand-hex-32")

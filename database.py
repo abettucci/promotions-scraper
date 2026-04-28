@@ -648,6 +648,16 @@ class UserDatabase:
                 entity_type TEXT NOT NULL,
                 UNIQUE(user_id, entity_name)
             );
+            CREATE TABLE IF NOT EXISTS password_resets (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                token_hash TEXT NOT NULL UNIQUE,
+                expires_at TIMESTAMP NOT NULL,
+                used_at TIMESTAMP,
+                created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
+            );
+            CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);
+            CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
         """)
         conn.commit()
         conn.close()
@@ -738,6 +748,61 @@ class UserDatabase:
         ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
+
+    # ── Password reset ────────────────────────────────────────────────────────
+    def create_password_reset(self, user_id: int, token_hash: str, expires_at: str):
+        """Inserta un nuevo password reset. expires_at es ISO timestamp."""
+        conn = self._conn()
+        conn.execute(
+            "INSERT INTO password_resets (user_id, token_hash, expires_at) VALUES (?, ?, ?)",
+            (user_id, token_hash, expires_at),
+        )
+        conn.commit()
+        conn.close()
+
+    def get_password_reset_by_token_hash(self, token_hash: str) -> Optional[Dict]:
+        """Devuelve el reset si existe y NO está usado/vencido."""
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT * FROM password_resets
+               WHERE token_hash = ?
+                 AND used_at IS NULL
+                 AND expires_at > CURRENT_TIMESTAMP""",
+            (token_hash,),
+        ).fetchone()
+        conn.close()
+        return dict(row) if row else None
+
+    def mark_password_reset_used(self, reset_id: int):
+        conn = self._conn()
+        conn.execute(
+            "UPDATE password_resets SET used_at = CURRENT_TIMESTAMP WHERE id = ?",
+            (reset_id,),
+        )
+        conn.commit()
+        conn.close()
+
+    def update_user_password(self, user_id: int, new_password_hash: str):
+        conn = self._conn()
+        conn.execute(
+            """UPDATE users SET password_hash = ?, updated_at = CURRENT_TIMESTAMP
+               WHERE id = ?""",
+            (new_password_hash, user_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def count_recent_password_resets(self, user_id: int, within_seconds: int = 3600) -> int:
+        """Cuenta resets pedidos por este user en las últimas N segundos (rate limit)."""
+        conn = self._conn()
+        row = conn.execute(
+            """SELECT COUNT(*) AS c FROM password_resets
+               WHERE user_id = ?
+                 AND created_at > datetime('now', ?)""",
+            (user_id, f'-{within_seconds} seconds'),
+        ).fetchone()
+        conn.close()
+        return row["c"] if row else 0
 
     def get_promotions_for_user(self, user_id: int, today_only: bool = True) -> List[Dict]:
         """Promociones activas que coinciden con los métodos de pago del usuario.
