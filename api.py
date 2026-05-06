@@ -781,3 +781,22 @@ def get_stats():
         "top_banks": [dict(r) for r in top_banks],
         "by_supermarket": [dict(r) for r in by_supermarket],
     }
+
+
+# ---------------------------------------------------------------------------
+# GET /api/debug/scrape-history
+# Endpoint de diagnóstico: últimos N runs por súper, para entender por qué
+# algunos quedaron en 0 promos. Sin auth — solo muestra metadata, no datos.
+# ---------------------------------------------------------------------------
+@app.get("/api/debug/scrape-history")
+def get_scrape_history(limit: int = Query(50, ge=1, le=500)):
+    conn = get_conn()
+    rows = conn.execute("""
+        SELECT s.name, h.scraped_at, h.status, h.promotions_found, h.notes
+        FROM scrape_history h
+        JOIN supermarkets s ON h.supermarket_id = s.id
+        ORDER BY h.scraped_at DESC
+        LIMIT ?
+    """, (limit,)).fetchall()
+    conn.close()
+    return {"total": len(rows), "data": [dict(r) for r in rows]}

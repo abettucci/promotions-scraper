@@ -71,9 +71,12 @@ class CarrefourScraper(BaseScraper):
                 return await self._scrape_simple()
             
             print(f"   📡 Status: {response.status if response else 'unknown'}")
-            
-            # Esperar un poco más para que cargue el JavaScript
-            await self.random_delay(5, 8)
+
+            # Esperar a que cargue el JavaScript. Configurable vía env vars
+            # CARREFOUR_DELAY_MIN / CARREFOUR_DELAY_MAX para tunear en Railway.
+            delay_min = float(os.environ.get('CARREFOUR_DELAY_MIN', '5'))
+            delay_max = float(os.environ.get('CARREFOUR_DELAY_MAX', '8'))
+            await self.random_delay(delay_min, delay_max)
             
             # Esperar a que el contenido cargue
             try:
