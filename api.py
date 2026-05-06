@@ -11,9 +11,14 @@ from datetime import date, datetime, timedelta, timezone
 from pydantic import BaseModel
 import sqlite3
 import json
+import unicodedata
 from pathlib import Path
 import sys
 import os
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", s or "") if unicodedata.category(c) != "Mn")
 
 sys.path.insert(0, str(Path(__file__).parent))
 import config
@@ -510,15 +515,23 @@ def get_promotions(
         params.extend([f"%{bank.lower()}%", f"%{bank.lower()}%"])
 
     if day:
-        # Multi-día: cualquier día match O "todos los días" O sin día definido
+        # Multi-día: cualquier día match O "todos los días" O sin día definido.
+        # Acentos: scrapers guardan inconsistente ("Miercoles" vs "Miércoles"),
+        # así que comparamos contra ambas variantes.
         days = [d.strip().lower() for d in day.split(",") if d.strip()]
         if days:
-            day_clauses = ["LOWER(p.valid_days) LIKE ?" for _ in days]
+            day_variants: list[str] = []
+            for d in days:
+                day_variants.append(d)
+                accent_free = _strip_accents(d)
+                if accent_free != d:
+                    day_variants.append(accent_free)
+            day_clauses = ["LOWER(p.valid_days) LIKE ?" for _ in day_variants]
             day_clauses.append("LOWER(p.valid_days) LIKE ?")
             day_clauses.append("p.valid_days IS NULL")
             day_clauses.append("p.valid_days = ''")
             conditions.append("(" + " OR ".join(day_clauses) + ")")
-            params.extend([f"%{d}%" for d in days])
+            params.extend([f"%{v}%" for v in day_variants])
             params.append("%todos los d%")
 
     if modality:
@@ -558,10 +571,20 @@ def get_promotions(
             "thursday": "jueves", "friday": "viernes", "saturday": "sábado", "sunday": "domingo"
         }
         today_es = day_map.get(date.today().strftime("%A").lower(), "")
-        conditions.append(
-            "(p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ?)"
-        )
-        params.append(f"%{today_es}%")
+        today_es_norm = _strip_accents(today_es).lower()
+        if today_es_norm != today_es:
+            conditions.append(
+                "(p.valid_days IS NULL OR p.valid_days = '' "
+                "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ? "
+                "OR LOWER(p.valid_days) LIKE '%todos los d%')"
+            )
+            params.extend([f"%{today_es}%", f"%{today_es_norm}%"])
+        else:
+            conditions.append(
+                "(p.valid_days IS NULL OR p.valid_days = '' "
+                "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE '%todos los d%')"
+            )
+            params.append(f"%{today_es}%")
 
     where_clause = " AND ".join(conditions)
     offset = (page - 1) * page_size
@@ -605,6 +628,7 @@ def get_promotions_today():
         "thursday": "jueves", "friday": "viernes", "saturday": "sábado", "sunday": "domingo"
     }
     day_es = day_map.get(datetime.now().strftime("%A").lower(), "")
+    day_norm = _strip_accents(day_es).lower()
 
     today_iso = date.today().isoformat()
     conn = get_conn()
@@ -621,13 +645,21 @@ def get_promotions_today():
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE p.is_active = 1
-          AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE '%todos los d%')
           AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
           AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
         ORDER BY p.scraped_at DESC
-    """, (f"%{day_es}%", today_iso, today_iso)).fetchall()
+    """, (today_iso, today_iso)).fetchall()
     conn.close()
 
+    def _matches_today(vd: Optional[str]) -> bool:
+        if not vd:
+            return True
+        vd_n = _strip_accents(vd).lower()
+        if "todos los d" in vd_n:
+            return True
+        return day_norm in vd_n
+
+    rows = [r for r in rows if _matches_today(r["valid_days"])]
     return {"day": day_es, "total": len(rows), "data": [row_to_dict(r) for r in rows]}
 
 

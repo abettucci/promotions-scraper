@@ -11,6 +11,7 @@ Se puede llamar directamente desde scraper.py con --notify.
 import requests
 import sqlite3
 import argparse
+import unicodedata
 from datetime import datetime
 from pathlib import Path
 import config
@@ -54,14 +55,20 @@ def _today_name() -> str:
     return DAY_NAMES_ES[datetime.now().weekday()]
 
 
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", s or "") if unicodedata.category(c) != "Mn")
+
+
 def _promo_is_today(valid_days: str) -> bool:
-    """True si la promo aplica hoy según su campo valid_days."""
+    """True si la promo aplica hoy según su campo valid_days.
+    Normaliza acentos: scrapers guardan "Miercoles"/"Sabado" sin tilde.
+    """
     if not valid_days:
         return True  # sin restricción de día → siempre aplica
-    vd = valid_days.lower()
-    if 'todos los días' in vd or 'todos los dias' in vd or 'diario' in vd:
+    vd = _strip_accents(valid_days).lower()
+    if 'todos los dias' in vd or 'diario' in vd:
         return True
-    today = _today_name()
+    today = _strip_accents(_today_name()).lower()
     return today in vd
 
 

@@ -3,10 +3,15 @@ Gestión de base de datos SQLite
 """
 import sqlite3
 import re
+import unicodedata
 from datetime import datetime
 from typing import List, Dict, Optional
 import json
 import config
+
+
+def _strip_accents(s: str) -> str:
+    return "".join(c for c in unicodedata.normalize("NFD", s or "") if unicodedata.category(c) != "Mn")
 
 
 def normalize_date_iso(value) -> Optional[str]:
@@ -322,8 +327,16 @@ class Database:
         day_clause = ""
         day_params: list = []
         if today_only and today_es:
-            day_clause = "AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ?)"
-            day_params = [f"%{today_es}%", "%todos los d%"]
+            today_es_norm = _strip_accents(today_es).lower()
+            if today_es_norm != today_es:
+                day_clause = ("AND (p.valid_days IS NULL OR p.valid_days = '' "
+                              "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ? "
+                              "OR LOWER(p.valid_days) LIKE ?)")
+                day_params = [f"%{today_es}%", f"%{today_es_norm}%", "%todos los d%"]
+            else:
+                day_clause = ("AND (p.valid_days IS NULL OR p.valid_days = '' "
+                              "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ?)")
+                day_params = [f"%{today_es}%", "%todos los d%"]
 
         query = f"""
             SELECT p.id, p.title, p.discount, p.bank, p.wallet,
@@ -827,8 +840,16 @@ class UserDatabase:
         day_clause = ""
         day_params: list = []
         if today_only and today_es:
-            day_clause = "AND (p.valid_days IS NULL OR p.valid_days = '' OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ?)"
-            day_params = [f"%{today_es}%", "%todos los d%"]
+            today_es_norm = _strip_accents(today_es).lower()
+            if today_es_norm != today_es:
+                day_clause = ("AND (p.valid_days IS NULL OR p.valid_days = '' "
+                              "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ? "
+                              "OR LOWER(p.valid_days) LIKE ?)")
+                day_params = [f"%{today_es}%", f"%{today_es_norm}%", "%todos los d%"]
+            else:
+                day_clause = ("AND (p.valid_days IS NULL OR p.valid_days = '' "
+                              "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ?)")
+                day_params = [f"%{today_es}%", "%todos los d%"]
 
         today_iso = datetime.now().date().isoformat()
         query = f"""
