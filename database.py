@@ -202,6 +202,18 @@ class Database:
         except Exception as e:
             print(f"⚠️ Desactivación de vencidas falló: {e}")
 
+        # Desactivar promos obsoletas por TTL (no actualizadas en >2 días por scrapes fallidos)
+        try:
+            res = cursor.execute(
+                "UPDATE promotions SET is_active = 0 "
+                "WHERE is_active = 1 AND scraped_at < datetime('now', '-2 days')"
+            )
+            if res.rowcount:
+                conn.commit()
+                print(f"🧹 {res.rowcount} promos obsoletas (>2d sin scrape) desactivadas al iniciar")
+        except Exception as e:
+            print(f"⚠️ Desactivación TTL falló: {e}")
+
         # ── Tabla de usuarios ────────────────────────────────────────────────
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS users (
@@ -318,11 +330,13 @@ class Database:
         today_es = day_map.get(datetime.now().strftime("%A").lower(), "")
 
         entity_conditions = " OR ".join(
-            ["(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ?)"] * len(methods)
+            ["(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? "
+             "OR LOWER(COALESCE(p.payment_method,'')) LIKE ? OR LOWER(COALESCE(p.title,'')) LIKE ?)"] * len(methods)
         )
         entity_params: list = []
         for m in methods:
-            entity_params.extend([f"%{m['name'].lower()}%", f"%{m['name'].lower()}%"])
+            name = f"%{m['name'].lower()}%"
+            entity_params.extend([name, name, name, name])
 
         day_clause = ""
         day_params: list = []
@@ -339,7 +353,7 @@ class Database:
                 day_params = [f"%{today_es}%", "%todos los d%"]
 
         query = f"""
-            SELECT p.id, p.title, p.discount, p.bank, p.wallet,
+            SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.payment_method,
                    p.valid_days, p.store_types, p.tope, p.min_purchase,
                    p.acumulable, s.name AS supermarket_name
             FROM promotions p
@@ -351,7 +365,7 @@ class Database:
         rows = conn.execute(query, entity_params + day_params).fetchall()
         conn.close()
         return [dict(r) for r in rows]
-    
+
     def insert_supermarket(self, name: str, url: str, category: str = 'supermarket') -> int:
         """Inserta o actualiza un supermercado / merchant. category: 'supermarket' | 'fuel'."""
         conn = self.get_connection()
@@ -607,7 +621,7 @@ class Database:
         """Desactiva promociones que ya no están en el sitio"""
         conn = self.get_connection()
         cursor = conn.cursor()
-        
+
         placeholders = ','.join('?' * len(current_titles))
         cursor.execute(f"""
             UPDATE promotions
@@ -616,11 +630,32 @@ class Database:
             AND title NOT IN ({placeholders})
             AND is_active = 1
         """, [supermarket_id] + current_titles)
-        
+
         deactivated = cursor.rowcount
         conn.commit()
         conn.close()
-        
+
+        return deactivated
+
+    def deactivate_stale_promotions(self, max_age_days: int = 2) -> int:
+        """Desactiva promociones que no fueron actualizadas en los últimos N días.
+
+        Cubre el caso donde un scrape falla o retorna 0 resultados: sin este TTL,
+        los datos viejos quedan activos indefinidamente.
+        Con scraping diario, 2 días de antigüedad = al menos 1 ciclo fallido → stale.
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        cursor.execute(
+            "UPDATE promotions SET is_active = 0 "
+            "WHERE is_active = 1 AND scraped_at < datetime('now', ?)",
+            (f"-{max_age_days} days",),
+        )
+        deactivated = cursor.rowcount
+        conn.commit()
+        conn.close()
+        if deactivated:
+            print(f"🧹 {deactivated} promociones obsoletas (>{max_age_days}d sin scrape) desactivadas")
         return deactivated
 
 # ── UserDatabase — DB separada para usuarios (Railway Volume) ─────────────────
@@ -831,11 +866,13 @@ class UserDatabase:
         today_es = day_map.get(datetime.now().strftime("%A").lower(), "")
 
         entity_conditions = " OR ".join(
-            ["(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ?)"] * len(methods)
+            ["(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? "
+             "OR LOWER(COALESCE(p.payment_method,'')) LIKE ? OR LOWER(COALESCE(p.title,'')) LIKE ?)"] * len(methods)
         )
         entity_params: list = []
         for m in methods:
-            entity_params.extend([f"%{m['name'].lower()}%", f"%{m['name'].lower()}%"])
+            name = f"%{m['name'].lower()}%"
+            entity_params.extend([name, name, name, name])
 
         day_clause = ""
         day_params: list = []
@@ -853,7 +890,7 @@ class UserDatabase:
 
         today_iso = datetime.now().date().isoformat()
         query = f"""
-            SELECT p.id, p.title, p.discount, p.bank, p.wallet,
+            SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.payment_method,
                    p.valid_days, p.store_types, p.tope, p.min_purchase,
                    p.acumulable, s.name AS supermarket_name
             FROM promotions p

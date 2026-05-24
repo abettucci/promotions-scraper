@@ -147,15 +147,19 @@ class PromoScraper:
         """Scrape un supermercado específico"""
         try:
             mode_indicator = "🤖" if self.use_ai else "📍"
-            self.log(f"{mode_indicator} Iniciando scrape: {supermarket_data['name']}")
-            
-            # Obtener o crear ID del supermercado en DB
+            is_aggregator = bool(supermarket_data.get('aggregator'))
+            label = supermarket_data['name'] + (" [aggregator]" if is_aggregator else "")
+            self.log(f"{mode_indicator} Iniciando scrape: {label}")
+
+            # Para aggregators (bancos/MODO), no creamos un supermarket entry propio.
+            # Cada promo se rutea a la marca de gasolinera extraída por la IA.
+            # Igual obtenemos el id si existe (de scrapes anteriores) para limpiar promos viejas.
             supermarket_id = self.db.insert_supermarket(
                 supermarket_data['name'],
                 supermarket_data['url'],
                 supermarket_data.get('category', 'supermarket'),
             )
-            
+
             promotions = []
             
             # Modo IA: usar Claude Vision para extracción
@@ -201,41 +205,77 @@ class PromoScraper:
             # Deactivate all existing promos before re-inserting so old duplicates are cleared
             self.db.deactivate_all_for_supermarket(supermarket_id)
 
-            # Guardar promociones en DB
-            current_titles = []
-            for promo in promotions:
-                # Insertar promoción
-                promotion_id = self.db.insert_promotion(supermarket_id, promo)
-                
-                if promotion_id:
-                    current_titles.append(promo.get('title', ''))
-                    
-                    # Parsear y guardar términos y condiciones
-                    if promo.get('terms_raw'):
-                        terms_data = self.terms_parser.parse(promo['terms_raw'])
-                        self.db.insert_terms(promotion_id, terms_data)
-            
-            # Desactivar promociones que ya no existen
-            deactivated = self.db.deactivate_old_promotions(supermarket_id, current_titles)
-            
-            # Actualizar última fecha de scrape
-            self.db.update_supermarket_scraped(supermarket_id)
-            
-            # Registrar historial
+            inserted = 0
             extraction_method = 'ai_vision' if self.use_ai else 'traditional'
-            self.db.insert_scrape_history(
-                supermarket_id,
-                'success',
-                len(promotions),
-                f'Method: {extraction_method}'
-            )
-            
+
+            if is_aggregator:
+                # Splitear cada promo por marca de gasolinera y rutear a su supermarket entry
+                default_brand = supermarket_data.get('default_brand')
+                # Trackear ids únicos tocados para dedup-deactivate al final
+                touched: dict[int, list[str]] = {}
+
+                for promo in promotions:
+                    brands = promo.get('merchant_brands') or []
+                    if not brands and default_brand:
+                        brands = [default_brand]
+                    if not brands:
+                        # Sin marca identificable → entrada genérica
+                        brands = ['Combustible (genérico)']
+
+                    for brand in brands:
+                        brand_id = self.db.insert_supermarket(
+                            brand,
+                            supermarket_data['url'],  # url de origen (la del banco)
+                            'fuel',
+                        )
+                        # Limpiar promos viejas de esta marca solo la primera vez que la tocamos
+                        if brand_id not in touched:
+                            self.db.deactivate_all_for_supermarket(brand_id)
+                            touched[brand_id] = []
+
+                        promo_for_brand = dict(promo)
+                        promo_for_brand['merchant_brand'] = brand
+                        promotion_id = self.db.insert_promotion(brand_id, promo_for_brand)
+                        if promotion_id:
+                            touched[brand_id].append(promo.get('title', ''))
+                            inserted += 1
+                            if promo.get('terms_raw'):
+                                terms_data = self.terms_parser.parse(promo['terms_raw'])
+                                self.db.insert_terms(promotion_id, terms_data)
+
+                # Update scrape metadata para cada marca tocada
+                for bid in touched:
+                    self.db.update_supermarket_scraped(bid)
+                    self.db.insert_scrape_history(bid, 'success', len(touched[bid]),
+                                                   f'Method: {extraction_method} (via {supermarket_data["name"]})')
+
+                # El aggregator entry queda con 0 promos activas (ya las deactivamos arriba)
+                # Eso lo saca del dropdown (HAVING active_promotions > 0 en /api/supermarkets)
+                self.db.insert_scrape_history(supermarket_id, 'success', inserted,
+                                               f'Aggregator: routed to {len(touched)} brand(s)')
+                self.log(f"✅ {supermarket_data['name']}: {inserted} promos ruteadas a {len(touched)} marca(s)")
+            else:
+                # Flujo standard: todas las promos van bajo este supermarket
+                current_titles = []
+                for promo in promotions:
+                    promotion_id = self.db.insert_promotion(supermarket_id, promo)
+                    if promotion_id:
+                        current_titles.append(promo.get('title', ''))
+                        inserted += 1
+                        if promo.get('terms_raw'):
+                            terms_data = self.terms_parser.parse(promo['terms_raw'])
+                            self.db.insert_terms(promotion_id, terms_data)
+
+                deactivated = self.db.deactivate_old_promotions(supermarket_id, current_titles)
+                self.db.update_supermarket_scraped(supermarket_id)
+                self.db.insert_scrape_history(supermarket_id, 'success', inserted,
+                                               f'Method: {extraction_method}')
+                self.log(f"✅ {supermarket_data['name']}: {inserted} promociones guardadas" +
+                         (f", {deactivated} desactivadas" if deactivated > 0 else ""))
+
             # Actualizar stats
-            self.stats['total_promotions'] += len(promotions)
+            self.stats['total_promotions'] += inserted
             self.stats['successful_scrapes'] += 1
-            
-            self.log(f"✅ {supermarket_data['name']}: {len(promotions)} promociones guardadas" + 
-                    (f", {deactivated} desactivadas" if deactivated > 0 else ""))
             
             # Delay entre supermercados
             await asyncio.sleep(random.uniform(3, 6))
@@ -337,6 +377,10 @@ class PromoScraper:
         
         # Mostrar resumen
         self.print_summary()
+
+        # Limpiar promos que quedaron activas por scrapes fallidos (TTL = 2 días)
+        # Cubre: scrape retorna 0 resultados, excepción en el scrape, anti-bot, etc.
+        self.db.deactivate_stale_promotions(max_age_days=2)
 
         # Notificación Telegram (si está habilitada o se pidió explícitamente)
         if getattr(self, 'notify', False) or config.TELEGRAM_NOTIFY_ON_SCRAPE:

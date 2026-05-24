@@ -511,8 +511,11 @@ def get_promotions(
         params.append(supermarket.lower())
 
     if bank:
-        conditions.append("(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ?)")
-        params.extend([f"%{bank.lower()}%", f"%{bank.lower()}%"])
+        conditions.append(
+            "(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? "
+            "OR LOWER(COALESCE(p.payment_method,'')) LIKE ?)"
+        )
+        params.extend([f"%{bank.lower()}%", f"%{bank.lower()}%", f"%{bank.lower()}%"])
 
     if day:
         # Multi-día: cualquier día match O "todos los días" O sin día definido.

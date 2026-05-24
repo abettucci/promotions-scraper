@@ -255,7 +255,37 @@ PAYMENT_METHODS_CATALOG = {
         "Cuenta DNI", "Claro Pay",
     ],
     "club": [
-        "Club La Nación", "ANSES / Jubilados",
+        # Beneficios sociales del Estado
+        "ANSES / Jubilados",
+        "PAMI",
+        # Tarjetas especiales de supermercados / bancos
+        "Tarjeta Soy Tigre",
+        "Tarjeta Cencosud",
+        "Tarjeta Carrefour",
+        "Tarjeta Naranja",
+        # Clubes de fidelización / medios
+        "Club La Nación",
+        "Club Personal",
+        "Clarín 365",
+        "Club Cencosud",
+        # Socios de clubes deportivos
+        "Socios River Plate",
+        "Socios Boca Juniors",
+        "Socios Racing",
+        "Socios San Lorenzo",
+        "Socios Independiente",
+        "Socios Vélez",
+        "Socios Huracán",
+        "Socios Estudiantes LP",
+        # Descuentos para estudiantes universitarios
+        "Estudiantes Universitarios",
     ],
 }
+
+CLUBS_KEYWORDS = [
+    'anses', 'jubilados', 'pami', 'soy tigre', 'cencosud', 'naranja',
+    'club la nacion', 'club personal', 'clarin 365', 'club cencosud',
+    'river plate', 'boca juniors', 'racing', 'san lorenzo', 'independiente',
+    'velez', 'huracan', 'estudiantes universitarios',
+]
 
