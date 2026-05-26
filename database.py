@@ -14,14 +14,20 @@ def _strip_accents(s: str) -> str:
     return "".join(c for c in unicodedata.normalize("NFD", s or "") if unicodedata.category(c) != "Mn")
 
 
+_MONTH_ES = {
+    'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+    'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+    'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12',
+}
+
 def normalize_date_iso(value) -> Optional[str]:
     """Normaliza una fecha a formato ISO (YYYY-MM-DD) para que las comparaciones de strings funcionen.
 
     Acepta:
     - 'YYYY-MM-DD' o 'YYYY/MM/DD' → ya está OK
-    - 'DD/MM/YYYY' o 'DD-MM-YYYY' → convierte
-    - 'DD/MM/YY' → asume 20YY
-    - Otros formatos → devuelve '' (sin filtro)
+    - 'DD/MM/YYYY', 'DD-MM-YYYY', 'DD/MM/YY', 'D/M/YYYY' → convierte
+    - 'DD de ENERO de YYYY' o 'DD de enero de YYYY' (español) → convierte
+    - Otros formatos → devuelve '' (sin filtro de fecha)
     """
     if not value:
         return ''
@@ -33,13 +39,20 @@ def normalize_date_iso(value) -> Optional[str]:
     if m:
         y, mo, d = m.groups()
         return f"{y}-{int(mo):02d}-{int(d):02d}"
-    # DD/MM/YYYY o DD-MM-YYYY
+    # DD/MM/YYYY, DD-MM-YYYY, D/M/YY, etc.
     m = re.match(r'^(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})$', s)
     if m:
         d, mo, y = m.groups()
         if len(y) == 2:
             y = f"20{y}"
         return f"{int(y):04d}-{int(mo):02d}-{int(d):02d}"
+    # "DD de ENERO de YYYY" (español, mayúsculas o minúsculas)
+    m = re.match(r'^(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})$', s, re.I)
+    if m:
+        d, month_name, y = m.groups()
+        mo = _MONTH_ES.get(month_name.lower())
+        if mo:
+            return f"{int(y):04d}-{mo}-{int(d):02d}"
     # No reconocemos el formato — devolver vacío para que no se filtre
     return ''
 
@@ -186,6 +199,29 @@ class Database:
                 print(f"📅 Migración fechas: {updated} promos normalizadas a ISO")
         except Exception as e:
             print(f"⚠️ Migración fechas falló: {e}")
+
+        # Normalizar valid_until/valid_from a ISO para que las comparaciones de strings funcionen.
+        # Los scrapers históricos guardaban "28/02/2026" o "28 de febrero de 2026".
+        try:
+            rows_to_normalize = conn.execute(
+                "SELECT id, valid_from, valid_until FROM promotions "
+                "WHERE (valid_from IS NOT NULL AND valid_from NOT GLOB '[0-9][0-9][0-9][0-9]-*') "
+                "   OR (valid_until IS NOT NULL AND valid_until NOT GLOB '[0-9][0-9][0-9][0-9]-*')"
+            ).fetchall()
+            normalized = 0
+            for row in rows_to_normalize:
+                new_from = normalize_date_iso(row["valid_from"]) if row["valid_from"] else ""
+                new_until = normalize_date_iso(row["valid_until"]) if row["valid_until"] else ""
+                conn.execute(
+                    "UPDATE promotions SET valid_from = ?, valid_until = ? WHERE id = ?",
+                    (new_from or row["valid_from"], new_until or row["valid_until"], row["id"]),
+                )
+                normalized += 1
+            if normalized:
+                conn.commit()
+                print(f"📅 {normalized} fechas normalizadas a ISO")
+        except Exception as e:
+            print(f"⚠️ Normalización de fechas falló: {e}")
 
         # Desactivar promos vencidas (valid_until < hoy) sin esperar al próximo scrape
         try:

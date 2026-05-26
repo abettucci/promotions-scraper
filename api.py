@@ -710,20 +710,116 @@ def get_promotion(promotion_id: int):
 
 # ---------------------------------------------------------------------------
 # GET /api/banks
+# Acepta los mismos filtros que /api/promotions (excepto `bank`) para que
+# los conteos en el dropdown reflejen los filtros activos en el momento.
 # ---------------------------------------------------------------------------
 @app.get("/api/banks")
-def get_banks():
+def get_banks(
+    supermarket: Optional[str] = Query(None),
+    day: Optional[str] = Query(None),
+    category: Optional[str] = Query(None),
+    discount_type: Optional[str] = Query(None),
+    state: Optional[str] = Query("activa"),
+    modality: Optional[str] = Query(None),
+):
+    today_iso = date.today().isoformat()
+
+    conditions = ["p.is_active = 1"]
+    params: list = []
+
+    state_norm = (state or "activa").lower().strip()
+    if state_norm == "proxima":
+        conditions.append("p.valid_from IS NOT NULL AND p.valid_from != '' AND p.valid_from > ?")
+        params.append(today_iso)
+    elif state_norm == "finalizada":
+        conditions.append("p.valid_until IS NOT NULL AND p.valid_until != '' AND p.valid_until < ?")
+        params.append(today_iso)
+    else:
+        conditions.append("(p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)")
+        conditions.append("(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)")
+        params.extend([today_iso, today_iso])
+
+    if category:
+        cats = [c.strip().lower() for c in category.split(",") if c.strip()]
+        if cats:
+            placeholders = ",".join(["?"] * len(cats))
+            conditions.append(f"LOWER(COALESCE(s.category, 'supermarket')) IN ({placeholders})")
+            params.extend(cats)
+
+    if supermarket:
+        conditions.append("LOWER(s.name) = ?")
+        params.append(supermarket.lower())
+
+    if day:
+        days = [d.strip().lower() for d in day.split(",") if d.strip()]
+        if days:
+            day_variants: list[str] = []
+            for d in days:
+                day_variants.append(d)
+                accent_free = _strip_accents(d)
+                if accent_free != d:
+                    day_variants.append(accent_free)
+            day_clauses = ["LOWER(p.valid_days) LIKE ?" for _ in day_variants]
+            day_clauses.append("LOWER(p.valid_days) LIKE ?")
+            day_clauses.append("p.valid_days IS NULL")
+            day_clauses.append("p.valid_days = ''")
+            conditions.append("(" + " OR ".join(day_clauses) + ")")
+            params.extend([f"%{v}%" for v in day_variants])
+            params.append("%todos los d%")
+
+    if modality:
+        modalities = [m.strip().lower() for m in modality.split(",") if m.strip()]
+        mod_clauses = []
+        for mod in modalities:
+            if mod == "online":
+                mod_clauses.append(
+                    "(LOWER(p.store_types) LIKE '%online%' OR LOWER(p.store_types) LIKE '%.com%' "
+                    "OR LOWER(p.store_types) LIKE '%web%' OR LOWER(p.store_types) LIKE '%app%')"
+                )
+            elif mod == "presencial":
+                mod_clauses.append(
+                    "(p.store_types IS NULL OR p.store_types = '' "
+                    "OR (LOWER(p.store_types) NOT LIKE '%online%' "
+                    "AND LOWER(p.store_types) NOT LIKE '%.com%' "
+                    "AND LOWER(p.store_types) NOT LIKE '%web%'))"
+                )
+        if mod_clauses:
+            conditions.append("(" + " OR ".join(mod_clauses) + ")")
+
+    if discount_type:
+        if discount_type == "percent":
+            conditions.append("p.discount LIKE '%\\%%' ESCAPE '\\'")
+        elif discount_type == "cuotas":
+            conditions.append("LOWER(p.discount) LIKE '%cuota%'")
+        elif discount_type == "cashback":
+            conditions.append("(LOWER(p.discount) LIKE '%cashback%' OR LOWER(p.discount) LIKE '%reintegro%')")
+
+    where = " AND ".join(conditions)
+
+    # Redes de pago (no son bancos emisores) — se excluyen del dropdown de bancos
+    # porque sus promos aplican a "cualquier banco que emita esa red"
+    _CARD_NETWORKS = {"visa", "mastercard", "visa/mastercard", "american express", "amex",
+                      "visa y mastercard", "tarjeta visa", "tarjeta mastercard"}
+    network_placeholders = ",".join("?" * len(_CARD_NETWORKS))
+    network_params = [n.lower() for n in _CARD_NETWORKS]
+
     conn = get_conn()
-    rows = conn.execute("""
-        SELECT bank AS name, COUNT(*) AS count FROM promotions
-        WHERE is_active = 1 AND bank IS NOT NULL AND bank != ''
-        GROUP BY bank
-        UNION
-        SELECT wallet AS name, COUNT(*) AS count FROM promotions
-        WHERE is_active = 1 AND wallet IS NOT NULL AND wallet != ''
-        GROUP BY wallet
+    # Params: filtros (x2 por UNION) + exclusion list (x2 por UNION)
+    rows = conn.execute(f"""
+        SELECT b AS name, COUNT(*) AS count FROM (
+            SELECT p.bank AS b
+            FROM promotions p JOIN supermarkets s ON p.supermarket_id = s.id
+            WHERE {where} AND p.bank IS NOT NULL AND p.bank != ''
+              AND LOWER(p.bank) NOT IN ({network_placeholders})
+            UNION ALL
+            SELECT p.wallet AS b
+            FROM promotions p JOIN supermarkets s ON p.supermarket_id = s.id
+            WHERE {where} AND p.wallet IS NOT NULL AND p.wallet != ''
+              AND LOWER(p.wallet) NOT IN ({network_placeholders})
+        )
+        GROUP BY b
         ORDER BY count DESC
-    """).fetchall()
+    """, params + network_params + params + network_params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 

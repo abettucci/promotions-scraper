@@ -64,7 +64,10 @@ export const api = {
 
   getPromotion: (id: number) => fetchJSON<Promotion>(`/api/promotions/${id}`),
   getTodayPromotions: () => fetchJSON<TodayResponse>("/api/promotions/today"),
-  getBanks: () => fetchJSON<Bank[]>("/api/banks"),
+  getBanks: (filters?: {
+    supermarket?: string; day?: string; category?: string
+    discount_type?: string; state?: string; modality?: string
+  }) => fetchJSON<Bank[]>("/api/banks", filters as Record<string, string | undefined>),
   getSupermarkets: (category?: string) =>
     fetchJSON<Supermarket[]>("/api/supermarkets", category ? { category } : undefined),
   getStats: () => fetchJSON<Stats>("/api/stats"),

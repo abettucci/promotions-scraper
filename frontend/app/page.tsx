@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
-import type { FilterState, Category } from "@/lib/types"
+import type { FilterState, Category, DayCode } from "@/lib/types"
 import { FilterBar } from "@/components/FilterBar"
 import { PromoGrid } from "@/components/PromoGrid"
 import { StatsBar } from "@/components/StatsBar"
@@ -24,18 +24,23 @@ const DEFAULT_FILTERS: FilterState = {
   page: 1,
 }
 
+// JS getDay(): 0=domingo .. 6=sábado
+const DAY_CODES: DayCode[] = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
+const todayCode: DayCode = DAY_CODES[new Date().getDay()]
+
 export default function Home() {
   const [category, setCategory] = useState<Category>("supermarket")
   const [filters, setFilters] = useState<FilterState>(DEFAULT_FILTERS)
-  const [todayOnly, setTodayOnly] = useState(false)
   const [myPromosMode, setMyPromosMode] = useState(false)
   const { user, token } = useAuthStore()
   const router = useRouter()
   const hasPaymentMethods = (user?.payment_methods?.length ?? 0) > 0
 
+  // "Hoy" mode = solo el día de hoy está seleccionado en filters.days
+  const todayOnly = filters.days.length === 1 && filters.days[0] === todayCode
+
   const updateFilters = useCallback((partial: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...partial }))
-    setTodayOnly(false)
     setMyPromosMode(false)
     if (
       partial.page ||
@@ -52,9 +57,18 @@ export default function Home() {
 
   const resetFilters = useCallback(() => {
     setFilters(DEFAULT_FILTERS)
-    setTodayOnly(false)
     setMyPromosMode(false)
   }, [])
+
+  const toggleTodayOnly = useCallback(() => {
+    // Si hoy ya está como único filtro de día → limpiar; si no → setear hoy
+    setFilters((prev) => ({
+      ...prev,
+      days: todayOnly ? [] : [todayCode],
+      page: 1,
+    }))
+    setMyPromosMode(false)
+  }, [todayOnly])
 
   const { data: stats, isLoading: statsLoading } = useQuery({
     queryKey: ["stats"],
@@ -62,8 +76,18 @@ export default function Home() {
   })
 
   const { data: banks = [] } = useQuery({
-    queryKey: ["banks"],
-    queryFn: api.getBanks,
+    queryKey: [
+      "banks", category,
+      filters.supermarket, filters.days, filters.discount_type, filters.state, filters.modality,
+    ],
+    queryFn: () => api.getBanks({
+      category,
+      supermarket: filters.supermarket || undefined,
+      day: filters.days.length ? filters.days.join(",") : undefined,
+      discount_type: filters.discount_type || undefined,
+      state: filters.state || undefined,
+      modality: filters.modality.length ? filters.modality.join(",") : undefined,
+    }),
   })
 
   const { data: supermarkets = [] } = useQuery({
@@ -72,7 +96,7 @@ export default function Home() {
   })
 
   const { data: promos, isLoading: promosLoading, isFetching, error } = useQuery({
-    queryKey: ["promotions", filters, todayOnly, myPromosMode, category],
+    queryKey: ["promotions", filters, myPromosMode, category],
     queryFn: () => {
       if (myPromosMode && token) {
         return api.getMyPromotions(token, true).then((r) => ({
@@ -81,15 +105,6 @@ export default function Home() {
           page_size: r.total,
           pages: 1,
           data: r.by_supermarket.flatMap((s) => s.promotions),
-        }))
-      }
-      if (todayOnly) {
-        return api.getTodayPromotions().then((r) => ({
-          total: r.total,
-          page: 1,
-          page_size: r.total,
-          pages: 1,
-          data: r.data,
         }))
       }
       return api.getPromotions({
@@ -122,7 +137,6 @@ export default function Home() {
                 onClick={() => {
                   setCategory("supermarket")
                   setFilters(DEFAULT_FILTERS)
-                  setTodayOnly(false)
                   setMyPromosMode(false)
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -138,7 +152,6 @@ export default function Home() {
                 onClick={() => {
                   setCategory("fuel")
                   setFilters(DEFAULT_FILTERS)
-                  setTodayOnly(false)
                   setMyPromosMode(false)
                 }}
                 className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
@@ -156,11 +169,7 @@ export default function Home() {
             <Button
               variant={todayOnly ? "default" : "outline"}
               size="sm"
-              onClick={() => {
-                setTodayOnly((v) => !v)
-                setMyPromosMode(false)
-                setFilters(DEFAULT_FILTERS)
-              }}
+              onClick={toggleTodayOnly}
               className="gap-1.5 text-sm"
             >
               <CalendarDays className="w-4 h-4" />
@@ -177,7 +186,6 @@ export default function Home() {
                     return
                   }
                   setMyPromosMode((v) => !v)
-                  setTodayOnly(false)
                   setFilters(DEFAULT_FILTERS)
                 }}
                 className="gap-1.5 text-sm"
@@ -196,8 +204,8 @@ export default function Home() {
         {/* Stats bar */}
         <StatsBar stats={stats ?? null} loading={statsLoading} />
 
-        {/* Filters */}
-        {!todayOnly && !myPromosMode && (
+        {/* Filters — siempre visibles excepto en "mis promos" */}
+        {!myPromosMode && (
           <div className="bg-white rounded-xl border border-slate-200 p-4">
             <FilterBar
               filters={filters}
@@ -226,26 +234,6 @@ export default function Home() {
               size="sm"
               onClick={resetFilters}
               className="text-blue-700 hover:text-blue-900"
-            >
-              Ver todas
-            </Button>
-          </div>
-        )}
-
-        {/* Today mode banner */}
-        {todayOnly && (
-          <div className="flex items-center justify-between bg-emerald-50 border border-emerald-200 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2 text-emerald-800">
-              <CalendarDays className="w-4 h-4" />
-              <span className="text-sm font-medium">
-                {promos?.total ?? 0} promociones vigentes hoy — {todayLabel}
-              </span>
-            </div>
-            <Button
-              variant="ghost"
-              size="sm"
-              onClick={resetFilters}
-              className="text-emerald-700 hover:text-emerald-900"
             >
               Ver todas
             </Button>
