@@ -177,14 +177,16 @@ MAX_RETRIES = 3
 RETRY_DELAY = 5  # segundos
 
 # ============================================
-# CONFIGURACIÓN DE IA (Claude Vision)
+# CONFIGURACIÓN DE IA (Gemini o Claude Vision)
+# Prioridad: GEMINI_API_KEY (gratis) → ANTHROPIC_API_KEY
 # ============================================
-# API Key de Anthropic (requerida para modo --ai)
+GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-# Modelo de Claude a usar para extracción
-# Opciones: claude-sonnet-4-20250514, claude-3-5-sonnet-20241022, claude-3-haiku-20240307
-AI_MODEL = os.getenv("AI_MODEL", "claude-sonnet-4-20250514")
+# Modelos por proveedor
+# Gemini: gemini-2.0-flash (gratis, recomendado), gemini-1.5-flash
+# Claude: claude-haiku-4-5-20251001, claude-sonnet-4-5
+AI_MODEL = os.getenv("AI_MODEL", "gemini-2.0-flash")
 
 # Máximo de tokens en la respuesta
 AI_MAX_TOKENS = int(os.getenv("AI_MAX_TOKENS", "4096"))

@@ -18,6 +18,7 @@ Tu tarea es analizar la imagen de una página web de promociones de combustibles
 
 Para cada promoción, extrae la siguiente información en formato JSON:
 - title: Título o descripción principal de la promoción (ej: "20% de descuento en YPF con Banco Galicia")
+- merchant_brands: Lista de marcas de estaciones de servicio donde aplica el descuento (ej: ["YPF"], ["Shell"], ["Axion"], ["Puma"], ["YPF", "Shell"]). Si la promo aplica a "todas las estaciones" o no especifica marca, devolvé []. NUNCA pongas el nombre de un banco acá — solo marcas de combustible (YPF, Shell, Axion, Puma, Total, Refinor, Voy).
 - discount: Descuento (ej: "20%", "$50/L", "30% reintegro")
 - bank: Nombre del banco (ej: "Banco Galicia", "Santander", "BBVA", "Macro", "Banco Nación", "Banco Patagonia"). null si no hay banco específico.
 - wallet: Billetera digital si aplica (ej: "Mercado Pago", "Modo", "Naranja X", "Personal Pay", "YPF App", "Shell Box"). null si no aplica.
@@ -35,6 +36,7 @@ Para cada promoción, extrae la siguiente información en formato JSON:
 IMPORTANTE:
 - Extrae TODAS las promociones visibles, incluso si están en tabs o secciones colapsables
 - Si una promo aplica a múltiples bancos/billeteras, crear UNA entrada por cada banco/billetera
+- merchant_brands DEBE contener solo marcas de gasolineras (YPF/Shell/Axion/Puma/Total/Refinor/Voy), NO bancos
 - Los descuentos pueden ser % o $/litro
 - Si no se menciona un banco/billetera identificable, NO incluyas la promo (descartá info institucional genérica)
 - Presta atención a los días — son críticos
@@ -54,7 +56,8 @@ async def scrape_fuel_station_with_ai(name: str, url: str, debug_name: str = Non
     """
     Scrapea una estación de servicio usando Claude Vision.
 
-    Toma screenshots de la página completa (con scroll) y los envía a Claude para extracción.
+    Si la página tiene tabs por día (Lunes/Martes/...), itera por cada tab
+    y captura las promociones de cada día por separado.
     """
     try:
         from .ai_extractor import AIExtractor
@@ -62,8 +65,8 @@ async def scrape_fuel_station_with_ai(name: str, url: str, debug_name: str = Non
         print(f"   ❌ anthropic no instalado — no se puede usar AI")
         return []
 
-    if not os.getenv("ANTHROPIC_API_KEY"):
-        print(f"   ❌ ANTHROPIC_API_KEY no configurada")
+    if not os.getenv("GEMINI_API_KEY") and not os.getenv("ANTHROPIC_API_KEY"):
+        print(f"   ❌ Configurá GEMINI_API_KEY (gratis) o ANTHROPIC_API_KEY")
         return []
 
     print(f"\n🔍 Scraping {name} con Claude Vision...")
@@ -84,36 +87,96 @@ async def scrape_fuel_station_with_ai(name: str, url: str, debug_name: str = Non
             except Exception as e:
                 print(f"   ⚠️ goto falló (sigo igual): {e}")
 
-            # Esperar a que cargue todo el JS
             await asyncio.sleep(3)
 
-            # Si hay tabs (Lunes/Martes/...) — clickear cada una y capturar todo
-            await _click_day_tabs_if_present(page)
-
-            # Scroll completo para forzar carga lazy
-            await _scroll_full_page(page)
-
-            # Debug
-            if debug_name:
-                try:
-                    html = await page.content()
-                    with open(f'debug_{debug_name}.html', 'w', encoding='utf-8') as f:
-                        f.write(html)
-                    await page.screenshot(path=f'debug_{debug_name}.png', full_page=True)
-                    print(f"   📸 Debug guardado: debug_{debug_name}.html/.png")
-                except Exception as e:
-                    print(f"   ⚠️ No se pudo guardar debug: {e}")
-
-            # Usar AI con prompt específico para combustibles
             extractor = AIExtractor()
             extractor.system_prompt = FUEL_SYSTEM_PROMPT
-            promos = await extractor.extract_from_screenshot(page, name, url, scroll_and_capture=True)
 
-            # Normalizar para que coincida con el schema de DB
+            # Detectar tabs por día. Si hay → iterar; si no → scrape único
+            day_tabs = await _detect_day_tabs(page)
+
+            all_promos: List[Dict] = []
+
+            if day_tabs:
+                print(f"   📅 Encontrados {len(day_tabs)} tabs de día: {[d[0] for d in day_tabs]}")
+                for idx, (day_label, locator_fn) in enumerate(day_tabs):
+                    print(f"\n   ── Tab {idx+1}/{len(day_tabs)}: {day_label} ──")
+                    try:
+                        # Re-localizar el tab por si el DOM cambió
+                        tab_el = await locator_fn()
+                        if not tab_el:
+                            continue
+                        await tab_el.click(timeout=3000)
+                        await asyncio.sleep(1.5)
+
+                        await _scroll_full_page(page)
+                        await expand_all_details(page)
+                        await _scroll_full_page(page)
+
+                        if debug_name:
+                            try:
+                                await page.screenshot(
+                                    path=f'debug_{debug_name}_{day_label}.png',
+                                    full_page=True,
+                                )
+                            except Exception:
+                                pass
+
+                        promos = await extractor.extract_from_screenshot(
+                            page, f"{name} ({day_label})", url, scroll_and_capture=True
+                        )
+                        # Anotar el día detectado en cada promo
+                        for promo in promos:
+                            if not promo.get('valid_days'):
+                                promo['valid_days'] = day_label.capitalize()
+                        all_promos.extend(promos)
+                        print(f"   ✅ {day_label}: {len(promos)} promos")
+                    except Exception as e:
+                        print(f"   ❌ Error en tab {day_label}: {e}")
+            else:
+                # Sin tabs por día → scrape único de toda la página
+                await _scroll_full_page(page)
+                await expand_all_details(page)
+                await _scroll_full_page(page)
+                if debug_name:
+                    try:
+                        html = await page.content()
+                        with open(f'debug_{debug_name}.html', 'w', encoding='utf-8') as f:
+                            f.write(html)
+                        await page.screenshot(path=f'debug_{debug_name}.png', full_page=True)
+                    except Exception:
+                        pass
+                all_promos = await extractor.extract_from_screenshot(
+                    page, name, url, scroll_and_capture=True
+                )
+
+            # Dedup por (bank/wallet, discount, valid_days)
+            seen = set()
+            unique = []
+            for p in all_promos:
+                key = (
+                    (p.get('bank') or '').lower().strip(),
+                    (p.get('wallet') or '').lower().strip(),
+                    (p.get('discount') or '').lower().strip(),
+                    (p.get('valid_days') or '').lower().strip(),
+                )
+                if key in seen:
+                    continue
+                seen.add(key)
+                unique.append(p)
+
+            # Normalizar para schema de DB
             normalized = []
-            for p in promos:
+            for p in unique:
+                # merchant_brands puede venir como lista, string CSV, o vacío
+                raw_brands = p.get('merchant_brands') or p.get('merchant_brand') or []
+                if isinstance(raw_brands, str):
+                    raw_brands = [b.strip() for b in raw_brands.replace(' y ', ',').split(',') if b.strip()]
+                brands = [b.strip() for b in raw_brands if b and b.strip()]
+
                 normalized.append({
                     'supermarket': name,
+                    'merchant_brands': brands,  # lista de marcas (YPF/Shell/etc.)
                     'title': p.get('title') or '',
                     'discount': p.get('discount') or '',
                     'bank': p.get('bank') or '',
@@ -131,11 +194,95 @@ async def scrape_fuel_station_with_ai(name: str, url: str, debug_name: str = Non
                     'requirements': ', '.join(p.get('requirements', []) if isinstance(p.get('requirements'), list) else [p.get('requirements')] if p.get('requirements') else []),
                     'url': url,
                 })
-            print(f"✅ {name}: {len(normalized)} promociones extraídas con AI")
+            print(f"\n✅ {name}: {len(normalized)} promociones únicas extraídas")
             return normalized
 
         finally:
             await browser.close()
+
+
+async def expand_all_details(page) -> int:
+    """
+    Hace click en TODOS los botones tipo "Ver más", "Ver legal", "Ver detalle",
+    "+ Ver más", "Ver términos", etc. para expandir el contenido oculto antes
+    de tomar screenshots o leer el HTML.
+
+    Reusable para supermercados y combustible.
+    """
+    selectors = [
+        # Texto exacto (case-insensitive)
+        'text=/^\\s*\\+?\\s*ver\\s+m[aá]s\\s*$/i',
+        'text=/^\\s*ver\\s+legal\\s*$/i',
+        'text=/^\\s*ver\\s+detalle?s?\\s*$/i',
+        'text=/^\\s*ver\\s+t[eé]rminos\\s*$/i',
+        'text=/^\\s*ver\\s+condiciones\\s*$/i',
+        'text=/^\\s*leer\\s+m[aá]s\\s*$/i',
+        # Clases comunes
+        '[class*="ver-mas"]',
+        '[class*="vermas"]',
+        '[class*="ver-legal"]',
+        '[class*="verLegal"]',
+        '[class*="show-more"]',
+        '[class*="showmore"]',
+        '[class*="expand"]',
+        '[class*="toggle"]',
+        '[aria-expanded="false"]',
+        # Buttons / links que contienen estos textos
+        'button:has-text("Ver más")',
+        'button:has-text("Ver Más")',
+        'button:has-text("VER MÁS")',
+        'button:has-text("Ver legal")',
+        'button:has-text("Ver Legal")',
+        'button:has-text("Ver detalle")',
+        'a:has-text("Ver más")',
+        'a:has-text("VER MÁS")',
+        'a:has-text("+ VER MÁS")',
+        'a:has-text("Ver legal")',
+        'span:has-text("Ver más")',
+        'span:has-text("Ver legal")',
+        'div:has-text("+ ver más")',
+    ]
+
+    expanded = 0
+    seen_handles = set()
+    for selector in selectors:
+        try:
+            elements = page.locator(selector)
+            count = await elements.count()
+        except Exception:
+            continue
+
+        for i in range(min(count, 80)):
+            try:
+                el = elements.nth(i)
+                # Evitar clickear el mismo elemento dos veces
+                handle = await el.element_handle(timeout=300)
+                if not handle:
+                    continue
+                if handle in seen_handles:
+                    continue
+                seen_handles.add(handle)
+
+                if not await el.is_visible(timeout=300):
+                    continue
+
+                # Evitar links que naveguen fuera
+                href = await el.get_attribute('href')
+                if href and href not in ('#', '') and not href.startswith(('javascript:', '#')):
+                    # Es un link de verdad (cambia URL) → no clickear
+                    continue
+
+                await el.click(timeout=1500)
+                expanded += 1
+                await asyncio.sleep(0.15)
+            except Exception:
+                continue
+
+    if expanded:
+        # Pequeña espera para que se renderice el contenido expandido
+        await asyncio.sleep(1)
+        print(f"   📖 Expandidos {expanded} botones 'Ver más/legal/detalle'")
+    return expanded
 
 
 async def _scroll_full_page(page):
@@ -153,27 +300,66 @@ async def _scroll_full_page(page):
         print(f"   ⚠️ Scroll falló: {e}")
 
 
-async def _click_day_tabs_if_present(page):
-    """Si la página tiene tabs por día (Lunes/Martes/...), los clickea para que carguen su contenido."""
-    days = ['lunes', 'martes', 'miércoles', 'miercoles', 'jueves',
-            'viernes', 'sábado', 'sabado', 'domingo']
-    clicked = 0
-    for day in days:
-        # Buscar elementos clickeables que contengan ese día
-        for selector in [
-            f'a:has-text("{day}")',
-            f'button:has-text("{day}")',
-            f'[role="tab"]:has-text("{day}")',
-            f'li:has-text("{day}")',
-        ]:
+async def _detect_day_tabs(page):
+    """
+    Detecta tabs de día en la página y devuelve una lista
+    [(label, async_fn_que_devuelve_locator), ...] para cada tab visible.
+
+    También incluye tabs como "Todos los días" o "Lunes a viernes" si están
+    estructuradas como las demás.
+    """
+    # Patrones de label que vamos a buscar como tabs (caso sensible al texto exacto del tab)
+    label_patterns = [
+        ('todos los dias', 'Todos los días'),
+        ('lunes a viernes', 'Lunes a viernes'),
+        ('lunes', 'Lunes'),
+        ('martes', 'Martes'),
+        ('miércoles', 'Miércoles'),
+        ('miercoles', 'Miércoles'),
+        ('jueves', 'Jueves'),
+        ('viernes', 'Viernes'),
+        ('sábado', 'Sábado'),
+        ('sabado', 'Sábado'),
+        ('domingo', 'Domingo'),
+    ]
+
+    found = []
+    seen_labels = set()
+
+    for needle, label in label_patterns:
+        if label in seen_labels:
+            continue
+
+        # Probar varios selectores que sugieren un tab clickeable
+        selectors = [
+            f'[role="tab"]:has-text("{needle}")',
+            f'button:has-text("{needle}")',
+            f'a[href^="#tab"]:has-text("{needle}")',
+            f'li:has-text("{needle}") >> nth=0',
+        ]
+
+        for selector in selectors:
             try:
-                el = page.locator(selector).first
-                if await el.is_visible(timeout=500):
-                    await el.click(timeout=1500)
-                    await asyncio.sleep(0.5)
-                    clicked += 1
-                    break
+                loc = page.locator(selector).first
+                if not await loc.is_visible(timeout=500):
+                    continue
+
+                # Verificar que el texto sea solo el día (no un párrafo más largo)
+                text = (await loc.text_content() or '').strip().lower()
+                if len(text) > 30:
+                    continue
+                if needle not in text:
+                    continue
+
+                # Capturar selector específico para re-localizar después
+                _selector = selector
+                async def _locator_fn(_sel=_selector, _l=loc):
+                    return page.locator(_sel).first
+
+                found.append((label, _locator_fn))
+                seen_labels.add(label)
+                break
             except Exception:
-                pass
-    if clicked:
-        print(f"   📅 Cliqueados {clicked} tabs de día")
+                continue
+
+    return found
