@@ -175,6 +175,32 @@ class CotoScraper:
                     promo['discount'] = promo['cuotas']
                 break
         
+        _DAY_NAMES = r'(?:LUNES|MARTES|MI[EÉ]RCOLES|JUEVES|VIERNES|S[AÁ]BADO|DOMINGO)'
+        _MONTHS_ES = {
+            'enero': '01', 'febrero': '02', 'marzo': '03', 'abril': '04',
+            'mayo': '05', 'junio': '06', 'julio': '07', 'agosto': '08',
+            'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12',
+        }
+
+        # Patrón especial: "SÁBADO 16, DOMINGO 17 Y LUNES 18 DE MAYO DE 2026"
+        # → tomar el último día como valid_until, el primero como valid_from
+        specific_dates_match = re.search(
+            rf'({_DAY_NAMES})\s+(\d{{1,2}})(?:\s*,\s*{_DAY_NAMES}\s+\d{{1,2}})*\s*(?:,?\s*Y\s+{_DAY_NAMES}\s+(\d{{1,2}}))?\s+DE\s+(\w+)(?:\s+DE\s+(\d{{4}}))?',
+            text, re.I
+        )
+        if specific_dates_match:
+            g = specific_dates_match.groups()
+            first_day_num, last_day_num, month_name, year = g[1], g[2] or g[1], g[3], g[4]
+            mo = _MONTHS_ES.get(month_name.lower())
+            yr = year or str(__import__('datetime').date.today().year)
+            if mo:
+                promo['valid_from'] = f"{yr}-{mo}-{int(first_day_num):02d}"
+                promo['valid_until'] = f"{yr}-{mo}-{int(last_day_num):02d}"
+            # Extraer días de la semana mencionados
+            day_mentions = re.findall(rf'\b({_DAY_NAMES})\b', specific_dates_match.group(0), re.I)
+            if day_mentions:
+                promo['valid_days'] = ', '.join(d.capitalize() for d in dict.fromkeys(day_mentions))
+
         # 4. Extraer días válidos y vigencia completa
         # Patrón más completo: "LOS DÍAS LUNES DESDE EL 01 DE ENERO HASTA EL 31 DE ENERO DE 2026"
         vigencia_patterns = [
@@ -186,7 +212,7 @@ class CotoScraper:
             r'V[AÁ]LIDO\s+(?:PARA\s+)?(?:TODOS\s+)?(?:LOS\s+)?(LUNES|MARTES|MI[EÉ]RCOLES|JUEVES|VIERNES|S[AÁ]BADO|DOMINGO)\s+DE\s+(\w+)\s+(\d{4})',
             # "LOS DÍAS SÁBADO" solo día
             r'(?:LOS\s+)?D[IÍ]AS?\s+(LUNES|MARTES|MI[EÉ]RCOLES|JUEVES|VIERNES|S[AÁ]BADO|DOMINGO)(?:\s+Y\s+(LUNES|MARTES|MI[EÉ]RCOLES|JUEVES|VIERNES|S[AÁ]BADO|DOMINGO))?',
-            # "DE LUNES A DOMINGO"
+            # "DE LUNES A JUEVES"
             r'DE\s+(LUNES|MARTES|MI[EÉ]RCOLES|JUEVES|VIERNES|S[AÁ]BADO|DOMINGO)\s+A\s+(LUNES|MARTES|MI[EÉ]RCOLES|JUEVES|VIERNES|S[AÁ]BADO|DOMINGO)',
         ]
         
@@ -419,8 +445,15 @@ class CotoScraper:
             (r'BANCO\s+CREDICOOP|CREDICOOP', 'Banco Credicoop'),
             (r'BANCO\s+HIPOTECARIO|HIPOTECARIO', 'Banco Hipotecario'),
             (r'BANCO\s+COMAFI|COMAFI', 'Banco Comafi'),
-            (r'NARANJA\s*X?|TARJETA\s+NARANJA', 'Naranja X'),
+            (r'BANCO\s+COLUMBIA|COLUMBIA', 'Banco Columbia'),
+            (r'BANCO\s+C[OÓ]RDOBA|BANCOR', 'Bancor'),
+            (r'\bNARANJA\s*X\b|\bPLAN\s*Z\b|\bTARJETA\s+NARANJA\b', 'Naranja X'),
             (r'MERCADO\s*PAGO', 'Mercado Pago'),
+            (r'\bMODO\b', 'MODO'),
+            # Beneficios sociales — van como bank para que el filtro los detecte
+            (r'\bANSES\b|\bBENEFICIOS?\s+ANSES\b', 'ANSES'),
+            (r'\bPAMI\b', 'PAMI'),
+            (r'\bJUBILADOS?\b', 'Jubilados'),
         ]
         
         for pattern, bank_name in banks:

@@ -137,31 +137,34 @@ class BaseScraper(ABC):
     
     def extract_dates(self, text: str) -> Dict[str, Optional[str]]:
         """Extrae fechas de validez del texto"""
+        from datetime import date as _date
         dates = {'valid_from': None, 'valid_until': None}
-        
+
         if not text:
             return dates
-        
+
+        current_year = str(_date.today().year)
+
         # Buscar "válido hasta DD/MM" o "hasta DD/MM"
         until_match = re.search(r'hasta\s+(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?', text, re.IGNORECASE)
         if until_match:
             day = until_match.group(1).zfill(2)
             month = until_match.group(2).zfill(2)
-            year = until_match.group(3) if until_match.group(3) else '2025'
+            year = until_match.group(3) if until_match.group(3) else current_year
             if len(year) == 2:
                 year = f"20{year}"
             dates['valid_until'] = f"{year}-{month}-{day}"
-        
+
         # Buscar "desde DD/MM" o "del DD/MM"
         from_match = re.search(r'(?:desde|del)\s+(\d{1,2})[/-](\d{1,2})(?:[/-](\d{2,4}))?', text, re.IGNORECASE)
         if from_match:
             day = from_match.group(1).zfill(2)
             month = from_match.group(2).zfill(2)
-            year = from_match.group(3) if from_match.group(3) else '2025'
+            year = from_match.group(3) if from_match.group(3) else current_year
             if len(year) == 2:
                 year = f"20{year}"
             dates['valid_from'] = f"{year}-{month}-{day}"
-        
+
         return dates
     
     def clean_text(self, text: str) -> str:

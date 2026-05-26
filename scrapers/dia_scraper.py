@@ -519,8 +519,8 @@ class DiaScraper:
                     promo['valid_from'] = match.group(1)
                     promo['valid_until'] = match.group(2)
                 else:
-                    # Solo una fecha, puede ser fecha específica
-                    promo['valid_dates'] = match.group(1)
+                    # Fecha única: usarla como valid_until (la promo termina ese día)
+                    promo['valid_until'] = match.group(1)
                 break
         
         # 7. Extraer días específicos de la promoción

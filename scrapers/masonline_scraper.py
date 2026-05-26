@@ -551,17 +551,25 @@ class MasOnlineScraper:
                 mes = mes_vigencia.group(1).title()
                 # Evitar capturar palabras que no son meses (como "la", "el", etc.)
                 if mes.lower() in meses_map:
-                    anio = mes_vigencia.group(2) or '2026'
-                    promo['valid_from'] = f"{mes} {anio}"
-                    promo['valid_until'] = f"{mes} {anio}"
-            
+                    anio = mes_vigencia.group(2) or str(__import__('datetime').date.today().year)
+                    mo = meses_map[mes.lower()]
+                    # Primer día del mes como from, último como until
+                    import calendar as _cal
+                    last_day = _cal.monthrange(int(anio), int(mo))[1]
+                    promo['valid_from'] = f"{anio}-{mo}-01"
+                    promo['valid_until'] = f"{anio}-{mo}-{last_day:02d}"
+
             # Buscar "todos los [días] de [mes]"
             todos_dias_mes = re.search(r'todos\s+los\s+(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)\s+de\s+(\w+)', text, re.I)
             if todos_dias_mes:
-                mes = todos_dias_mes.group(1).title()
-                if mes.lower() in meses_map:
-                    promo['valid_from'] = f"{mes}"
-                    promo['valid_until'] = f"{mes}"
+                mes = todos_dias_mes.group(1).lower()
+                if mes in meses_map:
+                    import calendar as _cal
+                    anio = str(__import__('datetime').date.today().year)
+                    mo = meses_map[mes]
+                    last_day = _cal.monthrange(int(anio), int(mo))[1]
+                    promo['valid_from'] = f"{anio}-{mo}-01"
+                    promo['valid_until'] = f"{anio}-{mo}-{last_day:02d}"
         
         # 9. Extraer tarjetas aceptadas (mejorado para "Ver legal")
         tarjetas = []
