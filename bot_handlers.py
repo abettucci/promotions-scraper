@@ -33,6 +33,19 @@ def _promos_conn() -> sqlite3.Connection:
     return conn
 
 
+def _has_supermarket_category() -> bool:
+    try:
+        conn = _promos_conn()
+        rows = conn.execute("PRAGMA table_info(supermarkets)").fetchall()
+        conn.close()
+        return any(row["name"] == "category" for row in rows)
+    except Exception:
+        return False
+
+
+_HAS_SUPERMARKET_CATEGORY = _has_supermarket_category()
+
+
 def _query_promotions(
     *,
     today_only: bool = False,
@@ -54,8 +67,11 @@ def _query_promotions(
     params: list = [today_iso, today_iso]
 
     if category:
-        where.append("LOWER(COALESCE(s.category, 'supermarket')) = ?")
-        params.append(category.lower())
+        if _HAS_SUPERMARKET_CATEGORY:
+            where.append("LOWER(COALESCE(s.category, 'supermarket')) = ?")
+            params.append(category.lower())
+        elif category.lower() != "supermarket":
+            where.append("1 = 0")
 
     if bank_filter:
         where.append(
@@ -109,7 +125,7 @@ def _query_promotions(
                p.payment_method, p.store_types, p.valid_days,
                p.valid_from, p.valid_until, p.tope, p.min_purchase,
                s.name AS supermarket_name,
-               COALESCE(s.category, 'supermarket') AS category
+               {"COALESCE(s.category, 'supermarket')" if _HAS_SUPERMARKET_CATEGORY else "'supermarket'"} AS category
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE {' AND '.join(where)}
@@ -331,8 +347,9 @@ def cmd_stats(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         f"SELECT COUNT(*) FROM promotions p WHERE {active_clause}",
         (today_iso, today_iso),
     ).fetchone()[0]
+    category_expr = "COALESCE(s.category, 'supermarket')" if _HAS_SUPERMARKET_CATEGORY else "'supermarket'"
     by_cat = conn.execute(f"""
-        SELECT COALESCE(s.category, 'supermarket') AS cat, COUNT(p.id) AS n
+        SELECT {category_expr} AS cat, COUNT(p.id) AS n
         FROM promotions p JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE {active_clause} GROUP BY cat
     """, (today_iso, today_iso)).fetchall()

@@ -22,7 +22,7 @@ def _strip_accents(s: str) -> str:
 
 sys.path.insert(0, str(Path(__file__).parent))
 import config
-from database import UserDatabase
+from database import Database, UserDatabase
 
 # ── Auth deps ─────────────────────────────────────────────────────────────────
 try:
@@ -76,6 +76,41 @@ def get_conn():
     conn.row_factory = sqlite3.Row
     return conn
 
+
+def _table_has_column(table: str, column: str) -> bool:
+    try:
+        conn = get_conn()
+        rows = conn.execute(f"PRAGMA table_info({table})").fetchall()
+        conn.close()
+        return any(row["name"] == column for row in rows)
+    except Exception:
+        return False
+
+
+def _ensure_promotions_db_schema() -> bool:
+    """Migra promotions.db si se puede y devuelve si existe supermarkets.category."""
+    try:
+        Database()
+    except Exception as e:
+        print(f"⚠️  No se pudo migrar promotions.db al iniciar API: {e}")
+    return _table_has_column("supermarkets", "category")
+
+
+def _append_category_filter(conditions: list[str], params: list, category: Optional[str]):
+    """Agrega filtro de categoría sin romper DBs viejas sin supermarkets.category."""
+    if not category:
+        return
+    cats = [c.strip().lower() for c in category.split(",") if c.strip()]
+    if not cats:
+        return
+    if _HAS_SUPERMARKET_CATEGORY:
+        placeholders = ",".join(["?"] * len(cats))
+        conditions.append(f"LOWER(COALESCE(s.category, 'supermarket')) IN ({placeholders})")
+        params.extend(cats)
+    elif "supermarket" not in cats:
+        conditions.append("1 = 0")
+
+
 def row_to_dict(row: sqlite3.Row) -> dict:
     d = dict(row)
     for field in ("exclusions", "requirements"):
@@ -95,6 +130,10 @@ def row_to_dict(row: sqlite3.Row) -> dict:
             d[field] = []
     return d
 
+# Inicializa/migra promotions.db al arrancar la API si es posible.
+# Railway puede conservar una DB vieja; si no se puede migrar, evitamos usar
+# columnas nuevas directamente en SQL.
+_HAS_SUPERMARKET_CATEGORY = _ensure_promotions_db_schema()
 _db = UserDatabase()
 
 # ── JWT helpers ───────────────────────────────────────────────────────────────
@@ -499,12 +538,7 @@ def get_promotions(
         conditions.append("(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)")
         params.extend([today_iso, today_iso])
 
-    if category:
-        cats = [c.strip().lower() for c in category.split(",") if c.strip()]
-        if cats:
-            placeholders = ",".join(["?"] * len(cats))
-            conditions.append(f"LOWER(COALESCE(s.category, 'supermarket')) IN ({placeholders})")
-            params.extend(cats)
+    _append_category_filter(conditions, params, category)
 
     if supermarket:
         conditions.append("LOWER(s.name) = ?")
@@ -739,12 +773,7 @@ def get_banks(
         conditions.append("(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)")
         params.extend([today_iso, today_iso])
 
-    if category:
-        cats = [c.strip().lower() for c in category.split(",") if c.strip()]
-        if cats:
-            placeholders = ",".join(["?"] * len(cats))
-            conditions.append(f"LOWER(COALESCE(s.category, 'supermarket')) IN ({placeholders})")
-            params.extend(cats)
+    _append_category_filter(conditions, params, category)
 
     if supermarket:
         conditions.append("LOWER(s.name) = ?")
@@ -831,13 +860,17 @@ def get_banks(
 def get_supermarkets(category: Optional[str] = Query(None)):
     conn = get_conn()
     today_iso = date.today().isoformat()
+    category_expr = "COALESCE(s.category, 'supermarket')" if _HAS_SUPERMARKET_CATEGORY else "'supermarket'"
     where = ""
     params: list = []
     if category:
-        where = "WHERE LOWER(COALESCE(s.category, 'supermarket')) = ?"
-        params.append(category.lower())
+        if _HAS_SUPERMARKET_CATEGORY:
+            where = "WHERE LOWER(COALESCE(s.category, 'supermarket')) = ?"
+            params.append(category.lower())
+        elif category.lower() != "supermarket":
+            where = "WHERE 1 = 0"
     rows = conn.execute(f"""
-        SELECT s.id, s.name, s.url, COALESCE(s.category, 'supermarket') AS category,
+        SELECT s.id, s.name, s.url, {category_expr} AS category,
                s.last_scraped, s.scrape_count,
                COUNT(p.id) AS active_promotions
         FROM supermarkets s
