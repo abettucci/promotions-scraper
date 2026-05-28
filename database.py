@@ -395,10 +395,13 @@ class Database:
             FROM promotions p
             JOIN supermarkets s ON p.supermarket_id = s.id
             WHERE p.is_active = 1 AND ({entity_conditions}) {day_clause}
+              AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+              AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
             ORDER BY s.name, p.discount DESC
         """
+        today_iso = datetime.now().date().isoformat()
         conn = self.get_connection()
-        rows = conn.execute(query, entity_params + day_params).fetchall()
+        rows = conn.execute(query, entity_params + day_params + [today_iso, today_iso]).fetchall()
         conn.close()
         return [dict(r) for r in rows]
 
@@ -582,9 +585,12 @@ class Database:
             JOIN supermarkets s ON p.supermarket_id = s.id
             LEFT JOIN terms_conditions t ON p.id = t.promotion_id
             WHERE p.is_active = 1
+              AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+              AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
         """
         
-        params = []
+        today_iso = datetime.now().date().isoformat()
+        params = [today_iso, today_iso]
         if supermarket_name:
             query += " AND s.name = ?"
             params.append(supermarket_name)
@@ -635,10 +641,13 @@ class Database:
                 s.scrape_count,
                 COUNT(p.id) as active_promotions
             FROM supermarkets s
-            LEFT JOIN promotions p ON s.id = p.supermarket_id AND p.is_active = 1
+            LEFT JOIN promotions p ON s.id = p.supermarket_id
+                AND p.is_active = 1
+                AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+                AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
             GROUP BY s.id
             ORDER BY active_promotions DESC
-        """)
+        """, (datetime.now().date().isoformat(), datetime.now().date().isoformat()))
         
         stats = [dict(row) for row in cursor.fetchall()]
         conn.close()
@@ -950,4 +959,3 @@ class UserDatabase:
 if __name__ == "__main__":
     db = Database()
     print("Base de datos inicializada correctamente")
-

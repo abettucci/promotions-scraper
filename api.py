@@ -830,6 +830,7 @@ def get_banks(
 @app.get("/api/supermarkets")
 def get_supermarkets(category: Optional[str] = Query(None)):
     conn = get_conn()
+    today_iso = date.today().isoformat()
     where = ""
     params: list = []
     if category:
@@ -840,12 +841,15 @@ def get_supermarkets(category: Optional[str] = Query(None)):
                s.last_scraped, s.scrape_count,
                COUNT(p.id) AS active_promotions
         FROM supermarkets s
-        LEFT JOIN promotions p ON s.id = p.supermarket_id AND p.is_active = 1
+        LEFT JOIN promotions p ON s.id = p.supermarket_id
+            AND p.is_active = 1
+            AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+            AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
         {where}
         GROUP BY s.id
         HAVING active_promotions > 0
         ORDER BY active_promotions DESC
-    """, params).fetchall()
+    """, [today_iso, today_iso] + params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 
@@ -856,20 +860,40 @@ def get_supermarkets(category: Optional[str] = Query(None)):
 @app.get("/api/stats")
 def get_stats():
     conn = get_conn()
-    total_promos = conn.execute("SELECT COUNT(*) FROM promotions WHERE is_active = 1").fetchone()[0]
-    total_banks = conn.execute("SELECT COUNT(DISTINCT bank) FROM promotions WHERE is_active = 1 AND bank != ''").fetchone()[0]
+    today_iso = date.today().isoformat()
+    active_clause = (
+        "p.is_active = 1 "
+        "AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?) "
+        "AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)"
+    )
+    active_params = (today_iso, today_iso)
+    total_promos = conn.execute(
+        f"SELECT COUNT(*) FROM promotions p WHERE {active_clause}",
+        active_params,
+    ).fetchone()[0]
+    total_banks = conn.execute(
+        f"SELECT COUNT(DISTINCT bank) FROM promotions p WHERE {active_clause} "
+        "AND bank != ''",
+        active_params,
+    ).fetchone()[0]
     total_supermarkets = conn.execute("SELECT COUNT(*) FROM supermarkets WHERE enabled = 1").fetchone()[0]
-    last_updated = conn.execute("SELECT MAX(scraped_at) FROM promotions WHERE is_active = 1").fetchone()[0]
-    top_banks = conn.execute("""
-        SELECT bank AS name, COUNT(*) AS count FROM promotions
-        WHERE is_active = 1 AND bank IS NOT NULL AND bank != ''
+    last_updated = conn.execute(
+        f"SELECT MAX(scraped_at) FROM promotions p WHERE {active_clause}",
+        active_params,
+    ).fetchone()[0]
+    top_banks = conn.execute(f"""
+        SELECT bank AS name, COUNT(*) AS count FROM promotions p
+        WHERE {active_clause} AND bank IS NOT NULL AND bank != ''
         GROUP BY bank ORDER BY count DESC LIMIT 5
-    """).fetchall()
+    """, active_params).fetchall()
     by_supermarket = conn.execute("""
         SELECT s.name, COUNT(p.id) AS count FROM supermarkets s
-        LEFT JOIN promotions p ON s.id = p.supermarket_id AND p.is_active = 1
+        LEFT JOIN promotions p ON s.id = p.supermarket_id
+            AND p.is_active = 1
+            AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+            AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
         GROUP BY s.id ORDER BY count DESC
-    """).fetchall()
+    """, active_params).fetchall()
     conn.close()
 
     return {
@@ -891,7 +915,7 @@ def get_stats():
 def get_scrape_history(limit: int = Query(50, ge=1, le=500)):
     conn = get_conn()
     rows = conn.execute("""
-        SELECT s.name, h.scraped_at, h.status, h.promotions_found, h.notes
+        SELECT s.name, h.scraped_at, h.status, h.promotions_found, h.error_message
         FROM scrape_history h
         JOIN supermarkets s ON h.supermarket_id = s.id
         ORDER BY h.scraped_at DESC

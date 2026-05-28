@@ -12,7 +12,7 @@ import requests
 import sqlite3
 import argparse
 import unicodedata
-from datetime import datetime
+from datetime import date, datetime
 from pathlib import Path
 import config
 
@@ -72,6 +72,18 @@ def _promo_is_today(valid_days: str) -> bool:
     return today in vd
 
 
+def _promo_is_current(promo: dict) -> bool:
+    """True si la promo esta vigente por rango de fechas."""
+    today = date.today().isoformat()
+    valid_from = promo.get('valid_from') or ''
+    valid_until = promo.get('valid_until') or ''
+    if valid_from and valid_from > today:
+        return False
+    if valid_until and valid_until < today:
+        return False
+    return True
+
+
 def _entity_emoji(bank: str, wallet: str) -> str:
     combined = (bank or wallet or '').lower()
     for key, emoji in ENTITY_EMOJI.items():
@@ -110,9 +122,12 @@ def _build_supermarket_message(supermarket_name: str, promotions: list, today_on
     Retorna string vacío si no hay promos para enviar.
     """
     if today_only:
-        promos = [p for p in promotions if _promo_is_today(p.get('valid_days', ''))]
+        promos = [
+            p for p in promotions
+            if _promo_is_current(p) and _promo_is_today(p.get('valid_days', ''))
+        ]
     else:
-        promos = promotions
+        promos = [p for p in promotions if _promo_is_current(p)]
 
     if not promos:
         return ''
@@ -208,13 +223,16 @@ class TelegramNotifier:
         conn.row_factory = sqlite3.Row
 
         try:
+            today_iso = date.today().isoformat()
             query = """
                 SELECT p.*, s.name as supermarket_name
                 FROM promotions p
                 JOIN supermarkets s ON p.supermarket_id = s.id
                 WHERE p.is_active = 1
+                  AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+                  AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
             """
-            params = []
+            params = [today_iso, today_iso]
             if supermarket_filter:
                 query += " AND LOWER(s.name) LIKE ?"
                 params.append(f"%{supermarket_filter.lower()}%")

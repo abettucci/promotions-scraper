@@ -21,7 +21,7 @@ from typing import Optional
 
 import config
 from database import UserDatabase
-from notifier import TelegramNotifier, _today_name, DAY_NAMES_ES
+from notifier import TelegramNotifier, _strip_accents, _today_name, DAY_NAMES_ES
 
 PAGE_SIZE = 8  # promos por página (Telegram tiene 4096 chars/msg)
 
@@ -58,8 +58,12 @@ def _query_promotions(
         params.append(category.lower())
 
     if bank_filter:
-        where.append("(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ?)")
-        params.extend([f"%{bank_filter.lower()}%"] * 2)
+        where.append(
+            "(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? "
+            "OR LOWER(COALESCE(p.payment_method,'')) LIKE ? "
+            "OR LOWER(COALESCE(p.title,'')) LIKE ?)"
+        )
+        params.extend([f"%{bank_filter.lower()}%"] * 4)
 
     if supermarket_filter:
         where.append("LOWER(s.name) LIKE ?")
@@ -71,20 +75,32 @@ def _query_promotions(
 
     if today_only:
         today_es = _today_name()
-        where.append(
-            "(p.valid_days IS NULL OR p.valid_days = '' "
-            "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE '%todos los d%')"
-        )
-        params.append(f"%{today_es}%")
+        today_norm = _strip_accents(today_es).lower()
+        if today_norm != today_es:
+            where.append(
+                "(p.valid_days IS NULL OR p.valid_days = '' "
+                "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ? "
+                "OR LOWER(p.valid_days) LIKE '%todos los d%')"
+            )
+            params.extend([f"%{today_es}%", f"%{today_norm}%"])
+        else:
+            where.append(
+                "(p.valid_days IS NULL OR p.valid_days = '' "
+                "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE '%todos los d%')"
+            )
+            params.append(f"%{today_es}%")
 
     if payment_methods:
         method_clauses = []
         for m in payment_methods:
             name = (m.get("name") or "").lower()
             if name:
-                method_clauses.append("LOWER(p.bank) LIKE ?")
-                method_clauses.append("LOWER(p.wallet) LIKE ?")
-                params.extend([f"%{name}%", f"%{name}%"])
+                method_clauses.append(
+                    "(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? "
+                    "OR LOWER(COALESCE(p.payment_method,'')) LIKE ? "
+                    "OR LOWER(COALESCE(p.title,'')) LIKE ?)"
+                )
+                params.extend([f"%{name}%"] * 4)
         if method_clauses:
             where.append("(" + " OR ".join(method_clauses) + ")")
 
@@ -306,22 +322,29 @@ def cmd_combustible(chat_id: str, args: str, user_db: UserDatabase, page: int = 
 def cmd_stats(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
     conn = _promos_conn()
     today_iso = date.today().isoformat()
+    active_clause = (
+        "p.is_active = 1 "
+        "AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?) "
+        "AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)"
+    )
     total = conn.execute(
-        "SELECT COUNT(*) FROM promotions p WHERE p.is_active = 1 "
-        "AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)",
-        (today_iso,),
+        f"SELECT COUNT(*) FROM promotions p WHERE {active_clause}",
+        (today_iso, today_iso),
     ).fetchone()[0]
-    by_cat = conn.execute("""
+    by_cat = conn.execute(f"""
         SELECT COALESCE(s.category, 'supermarket') AS cat, COUNT(p.id) AS n
         FROM promotions p JOIN supermarkets s ON p.supermarket_id = s.id
-        WHERE p.is_active = 1 GROUP BY cat
-    """).fetchall()
+        WHERE {active_clause} GROUP BY cat
+    """, (today_iso, today_iso)).fetchall()
     super_n = conn.execute(
         "SELECT COUNT(DISTINCT s.id) FROM supermarkets s "
-        "JOIN promotions p ON p.supermarket_id = s.id WHERE p.is_active = 1"
+        f"JOIN promotions p ON p.supermarket_id = s.id WHERE {active_clause}",
+        (today_iso, today_iso),
     ).fetchone()[0]
     bank_n = conn.execute(
-        "SELECT COUNT(DISTINCT bank) FROM promotions WHERE is_active = 1 AND bank IS NOT NULL AND bank != ''"
+        f"SELECT COUNT(DISTINCT bank) FROM promotions p WHERE {active_clause} "
+        "AND bank IS NOT NULL AND bank != ''",
+        (today_iso, today_iso),
     ).fetchone()[0]
     conn.close()
 
