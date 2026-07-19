@@ -244,10 +244,21 @@ class MasOnlineScraper:
                 continue
             
             # Extraer información
-            promo = self._parse_promo(card, text, dia_nombre, url)
-            
-            if promo and promo.get('discount'):
-                promotions.append(promo)
+            # Si el card tiene múltiples billeteras (ej: "BILLETERAS VIRTUALES"), fan-out por wallet
+            all_wallets = self._detect_all_wallets(text)
+            if len(all_wallets) > 1:
+                for wallet_name in all_wallets:
+                    promo = self._parse_promo(card, text, dia_nombre, url)
+                    if promo and promo.get('discount'):
+                        promo['bank'] = wallet_name
+                        promo['wallet'] = None
+                        # Ajustar título para esta wallet específica
+                        promo['title'] = f"{wallet_name} {promo.get('discount', '')} - {promo.get('valid_days', dia_nombre)}"
+                        promotions.append(promo)
+            else:
+                promo = self._parse_promo(card, text, dia_nombre, url)
+                if promo and promo.get('discount'):
+                    promotions.append(promo)
         
         return promotions
     
@@ -288,7 +299,7 @@ class MasOnlineScraper:
         if len(text_stripped) < 100:
             # Verificar si tiene estructura mínima de promoción
             has_main_discount = bool(re.search(r'(\d{2})\s*%\s*(de\s+)?(descuento|ahorro|reintegro|off)', text_stripped, re.I))
-            has_bank_or_wallet = bool(re.search(r'MODO|[Bb]anco|Supervielle|Galicia|Macro|HSBC|BBVA|Santander|Patagonia|M[aá]sClub', text_stripped))
+            has_bank_or_wallet = bool(re.search(r'MODO|[Bb]anco|Supervielle|Galicia|Macro|HSBC|BBVA|Santander|Patagonia|M[aá]sClub|[Mm]ercado\s*[Pp]ago|[Bb]illeteras?\s*[Vv]irtuales?|[Cc]uenta\s*DNI|[Nn]aranja\s*X|[Pp]ersonal\s*[Pp]ay|[Uu]al[aá]', text_stripped))
             
             # Si es corto y no tiene estructura, es fragmento
             if not has_main_discount and not has_bank_or_wallet:
@@ -883,6 +894,41 @@ class MasOnlineScraper:
         # Si no encontramos nada, devolver el día de la solapa
         return default_day
     
+    def _detect_all_wallets(self, text: str) -> list:
+        """
+        Detecta TODAS las billeteras virtuales mencionadas en un card.
+        Se usa para cards "BILLETERAS VIRTUALES" que aplican a múltiples wallets.
+        Retorna lista vacía si hay 0 o 1 wallet (caso normal — no hay fan-out).
+        """
+        text_upper = text.upper()
+
+        # Solo hacer fan-out si el card explícitamente dice "BILLETERAS VIRTUALES"
+        # o tiene 3+ wallets conocidas (evitar falsos positivos en T&C que mencionan varias)
+        is_multi_wallet_card = bool(re.search(r'BILLETERAS?\s+VIRTUALES?', text_upper))
+
+        if not is_multi_wallet_card:
+            return []
+
+        wallet_patterns = [
+            (r'MERCADO\s*PAGO', 'Mercado Pago'),
+            (r'CUENTA\s*DNI', 'Cuenta DNI'),
+            (r'PERSONAL\s*PAY', 'Personal Pay'),
+            (r'NARANJA\s*X', 'Naranja X'),
+            (r'\bUAL[AÁ]\b', 'Ualá'),
+            (r'\bPREX\b', 'Prex'),
+            (r'\bMODO\b', 'MODO'),
+            (r'\bYAPE\b', 'Yape'),
+            (r'\bBNA\+\b|\bBNA\s*MAS\b', 'BNA+'),
+        ]
+
+        found = []
+        for pattern, name in wallet_patterns:
+            if re.search(pattern, text_upper):
+                found.append(name)
+
+        # Solo retornar si hay 2+ wallets (si hay solo 1, el flujo normal ya la maneja)
+        return found if len(found) >= 2 else []
+
     def _identify_bank_and_wallet(self, text: str, img_alt: str = '') -> tuple:
         """Identifica el banco Y la billetera virtual del texto y/o de la imagen.
         

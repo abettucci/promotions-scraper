@@ -100,7 +100,7 @@ class CotoScraper:
         for block in all_text_blocks:
             text = block.get_text(' ', strip=True)
             # Un bloque de promoción típicamente tiene: banco + descuento/cuotas + vigencia
-            has_bank = bool(re.search(r'banco|macro|nacion|ciudad|galicia|provincia|santander|hsbc|bbva|icbc|naranja', text, re.I))
+            has_bank = bool(re.search(r'banco|macro|nacion|ciudad|galicia|provincia|santander|hsbc|bbva|icbc|naranja|mercado\s*pago|modo\b|patagonia|supervielle|credicoop|hipotecario|comafi|uala|personal\s*pay|cuenta\s*dni', text, re.I))
             has_discount = bool(re.search(r'\d+\s*%|cuotas?\s*sin\s*inter[eé]s|reintegro|descuento', text, re.I))
             
             # Si tiene al menos banco + descuento, es candidato
@@ -258,6 +258,20 @@ class CotoScraper:
                 day1, month1, year1, day2, month2, year2 = simple_date_match.groups()
                 promo['valid_from'] = f"{day1} de {month1}" + (f" de {year1}" if year1 else "")
                 promo['valid_until'] = f"{day2} de {month2}" + (f" de {year2}" if year2 else "")
+
+        # Patrón especial: "DESDE EL 18 HASTA EL 19 DE JULIO DE 2026" (mismo mes, sin repetir el mes)
+        if not promo.get('valid_from'):
+            same_month_match = re.search(
+                r'DESDE\s+(?:EL\s+)?(\d{1,2})\s+HASTA\s+(?:EL\s+)?(\d{1,2})\s+DE\s+(\w+)(?:\s+DE\s+(\d{4}))?',
+                text, re.I
+            )
+            if same_month_match:
+                day1, day2, month_name, year = same_month_match.groups()
+                mo = _MONTHS_ES.get(month_name.lower())
+                yr = year or str(__import__('datetime').date.today().year)
+                if mo:
+                    promo['valid_from'] = f"{yr}-{mo}-{int(day1):02d}"
+                    promo['valid_until'] = f"{yr}-{mo}-{int(day2):02d}"
         
         # 5. Extraer tope de reintegro/devolución - MEJORADO
         tope_patterns = [
@@ -286,6 +300,24 @@ class CotoScraper:
                     promo['tope'] = f"${match.group(1)}"
                 break
         
+        # 5b. Extraer compra mínima (tope inferior)
+        min_purchase_patterns = [
+            r'VALID[OA]\s+EN\s+COMPRAS?\s+A\s+PARTIR\s+DE\s+\$\s*([\d.,]+)',
+            r'(?:COMPRAS?\s+)?A\s+PARTIR\s+DE\s+\$\s*([\d.,]+)',
+            r'COMPRA\s+M[ÍI]NIMA\s+(?:DE\s+)?\$\s*([\d.,]+)',
+            r'PAGANDO\s+CON\s+[A-Z\s]+\s+DESDE\s+\$\s*([\d.,]+)',
+        ]
+        for pattern in min_purchase_patterns:
+            match = re.search(pattern, text, re.I)
+            if match:
+                amount = match.group(1).replace('.', '').replace(',', '.')
+                try:
+                    amount_num = float(amount)
+                    promo['min_purchase'] = f"${amount_num:,.0f}".replace(',', '.')
+                except Exception:
+                    promo['min_purchase'] = f"${match.group(1)}"
+                break
+
         # 6. Extraer tarjetas aceptadas - MEJORADO
         tarjetas = []
         # Buscar en contexto de "CON TARJETAS" o "EMITIDAS POR"
