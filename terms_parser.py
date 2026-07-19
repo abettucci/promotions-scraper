@@ -111,8 +111,8 @@ class TermsParser:
         valid_from = None
         valid_until = None
         
-        # Patrón 1: "DESDE EL DD AL DD DE MES DE YYYY"
-        pattern1 = r'DESDE\s+EL\s+(\d{1,2})\s+AL\s+(\d{1,2})\s+DE\s+(' + '|'.join(self.meses.keys()) + r')\s+DE\s+(\d{4})'
+        # Patrón 1: "DESDE EL DD AL/HASTA EL DD DE MES DE YYYY" (mismo mes)
+        pattern1 = r'DESDE\s+EL\s+(\d{1,2})\s+(?:AL|HASTA\s+EL)\s+(\d{1,2})\s+DE\s+(' + '|'.join(self.meses.keys()) + r')\s+DE\s+(\d{4})'
         match = re.search(pattern1, text)
         if match:
             day_from = int(match.group(1))
@@ -120,7 +120,7 @@ class TermsParser:
             month_name = match.group(3)
             year = int(match.group(4))
             month = self.meses[month_name]
-            
+
             valid_from = f"{year}-{month:02d}-{day_from:02d}"
             valid_until = f"{year}-{month:02d}-{day_until:02d}"
             return (valid_from, valid_until)
@@ -172,8 +172,21 @@ class TermsParser:
             valid_until = f"{year}-{month:02d}-{last_day:02d}"
             return (valid_from, valid_until)
         
+        # Patrón 5: "DESDE EL DD HASTA EL DD DE MES DE YYYY" (sin mes en primera fecha)
+        pattern5 = r'DESDE\s+EL\s+(\d{1,2})\s+HASTA\s+EL\s+(\d{1,2})\s+DE\s+(' + '|'.join(self.meses.keys()) + r')\s+DE\s+(\d{4})'
+        match = re.search(pattern5, text)
+        if match:
+            day_from = int(match.group(1))
+            day_until = int(match.group(2))
+            month_name = match.group(3)
+            year = int(match.group(4))
+            month = self.meses[month_name]
+            valid_from = f"{year}-{month:02d}-{day_from:02d}"
+            valid_until = f"{year}-{month:02d}-{day_until:02d}"
+            return (valid_from, valid_until)
+
         return (valid_from, valid_until)
-    
+
     def extract_exclusions_improved(self, text: str) -> str:
         """
         Extrae productos/categorías excluidas de forma mejorada
@@ -221,11 +234,16 @@ class TermsParser:
         if re.search(r'(?:SOLO|EXCLUSIVO)\s+PARA\s+CONSUMO\s+FAMILIAR', text):
             requirements.append('CONSUMO FAMILIAR')
         
-        # 3. "COMPRA MÍNIMA"
-        min_purchase = re.search(r'COMPRA\s+MÍNIMA\s+(?:DE\s+)?\$?\s*(\d+[.,\d]*)', text)
+        # 3. "COMPRA MÍNIMA" o "A PARTIR DE $X"
+        min_purchase = re.search(r'COMPRA\s+M[ÍI]NIMA\s+(?:DE\s+)?\$?\s*(\d+[.,\d]*)', text)
         if min_purchase:
             amount = min_purchase.group(1).replace('.', '').replace(',', '.')
             requirements.append(f'COMPRA MÍNIMA ${amount}')
+        else:
+            a_partir = re.search(r'(?:COMPRAS?\s+)?A\s+PARTIR\s+DE\s+\$\s*([\d.,]+)', text)
+            if a_partir:
+                amount = a_partir.group(1).replace('.', '').replace(',', '.')
+                requirements.append(f'COMPRA MÍNIMA ${amount}')
         
         # 4. Otros requisitos específicos (pero evitando exclusiones)
         specific_patterns = [
