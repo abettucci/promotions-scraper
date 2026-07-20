@@ -1,0 +1,64 @@
+name: Run Promo Scraper
+
+on:
+  schedule:
+    # 9:00 y 21:00 ART (12:00 y 00:00 UTC)
+    - cron: '0 12 * * *'
+    - cron: '0 0 * * *'
+
+  # Ejecución manual desde la UI de GitHub
+  workflow_dispatch:
+
+jobs:
+  scrape:
+    runs-on: ubuntu-latest
+    permissions:
+      contents: write
+
+    steps:
+      - name: Checkout repository
+        uses: actions/checkout@v4
+        with:
+          # Necesario para que el push posterior funcione con el token por defecto
+          token: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Set up Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: '3.11'
+          cache: 'pip'
+
+      - name: Install Python dependencies
+        run: |
+          pip install --upgrade pip
+          pip install -r requirements.txt
+
+      - name: Install Playwright browsers
+        run: |
+          playwright install chromium --with-deps
+
+      - name: Run scraper
+        env:
+          HEADLESS: 'true'
+          GEMINI_API_KEY: ${{ secrets.GEMINI_API_KEY }}
+          ANTHROPIC_API_KEY: ${{ secrets.ANTHROPIC_API_KEY }}
+        run: python scraper.py
+
+      - name: Commit and push updated database
+        if: success()
+        run: |
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "github-actions[bot]"
+          git add data/promotions.db
+          git diff --staged --quiet && echo "DB sin cambios, nada que pushear." && exit 0
+          git commit -m "chore: update promotions database [skip ci]"
+          git push
+        env:
+          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      - name: Trigger Railway redeploy
+        if: success()
+        run: |
+          curl -s -o /dev/null -w "%{http_code}" \
+            -X POST "${{ secrets.RAILWAY_DEPLOY_WEBHOOK }}" \
+          | grep -qE '^2' && echo "Railway redeploy triggered." || echo "Webhook falló o no configurado."
