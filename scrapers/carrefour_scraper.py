@@ -90,7 +90,6 @@ class CarrefourScraper(BaseScraper):
             await self.random_delay(2, 3)
             
             # DEBUG: Guardar screenshot si está en modo debug
-            import os
             if os.environ.get('DEBUG_SCRAPER'):
                 try:
                     await page.screenshot(path='debug_carrefour.png')
