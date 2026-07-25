@@ -183,9 +183,9 @@ RETRY_DELAY = 5  # segundos
 GEMINI_API_KEY = os.getenv("GEMINI_API_KEY")
 ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 
-# Modelos por proveedor
-# Gemini: gemini-2.0-flash (gratis, recomendado), gemini-1.5-flash
-# Claude: claude-haiku-4-5-20251001, claude-sonnet-4-5
+# Modelo preferido; ai_extractor verifica disponibilidad y cae al mejor disponible
+# si este ya no existe. Lista de prioridad: gemini-2.5-flash > gemini-2.0-flash > gemini-1.5-flash
+# Claude fallback: claude-haiku-4-5-20251001
 AI_MODEL = os.getenv("AI_MODEL", "gemini-2.0-flash")
 
 # Máximo de tokens en la respuesta
