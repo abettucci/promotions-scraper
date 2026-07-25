@@ -19,6 +19,45 @@ try:
 except ImportError:
     GEMINI_AVAILABLE = False
 
+# Ordered preference list — first available wins
+_GEMINI_PRIORITY = [
+    "gemini-2.5-flash",
+    "gemini-2.5-pro",
+    "gemini-2.0-flash",
+    "gemini-1.5-flash",
+    "gemini-1.5-pro",
+]
+
+
+def _resolve_gemini_model(preferred: str) -> str:
+    """
+    Query the Gemini API for available models and return the best one.
+    Honours `preferred` if it's available; otherwise picks from _GEMINI_PRIORITY.
+    Falls back to `preferred` unchanged if the API call fails.
+    """
+    if not GEMINI_AVAILABLE:
+        return preferred
+    try:
+        available = {
+            m.name.removeprefix("models/")
+            for m in genai.list_models()
+            if "generateContent" in (m.supported_generation_methods or [])
+        }
+        if preferred in available:
+            return preferred
+        for candidate in _GEMINI_PRIORITY:
+            if candidate in available:
+                print(f"   ⚠️ Modelo '{preferred}' no disponible → usando '{candidate}'")
+                return candidate
+        # Last resort: any flash/pro that supports generateContent
+        for candidate in sorted(available):
+            if "flash" in candidate or "pro" in candidate:
+                print(f"   ⚠️ Usando modelo de fallback: '{candidate}'")
+                return candidate
+    except Exception as e:
+        print(f"   ⚠️ No se pudo listar modelos Gemini ({e}), usando '{preferred}'")
+    return preferred
+
 try:
     import anthropic as _anthropic
     ANTHROPIC_AVAILABLE = True
@@ -74,7 +113,8 @@ class AIExtractor:
         if gemini_key and GEMINI_AVAILABLE:
             self.provider = "gemini"
             genai.configure(api_key=gemini_key)
-            self.model_name = model or os.getenv("AI_MODEL", "gemini-2.0-flash")
+            preferred = model or os.getenv("AI_MODEL", "gemini-2.0-flash")
+            self.model_name = _resolve_gemini_model(preferred)
             self._gemini_model = genai.GenerativeModel(
                 model_name=self.model_name,
                 system_instruction=_SYSTEM_PROMPT,
