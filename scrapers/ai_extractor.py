@@ -19,20 +19,23 @@ try:
 except ImportError:
     GEMINI_AVAILABLE = False
 
-# Ordered preference list — first available wins
+# gemini-2.0-flash is removed/deprecated as of mid-2026; omit it from the priority list
+# so dynamic discovery immediately skips it.
 _GEMINI_PRIORITY = [
     "gemini-2.5-flash",
     "gemini-2.5-pro",
-    "gemini-2.0-flash",
     "gemini-1.5-flash",
     "gemini-1.5-pro",
 ]
+
+# Sentinel: models that list_models() may still report but are actually dead at runtime
+_GEMINI_KNOWN_DEAD = {"gemini-2.0-flash"}
 
 
 def _resolve_gemini_model(preferred: str) -> str:
     """
     Query the Gemini API for available models and return the best one.
-    Honours `preferred` if it's available; otherwise picks from _GEMINI_PRIORITY.
+    Skips models in _GEMINI_KNOWN_DEAD even if list_models() lists them.
     Falls back to `preferred` unchanged if the API call fails.
     """
     if not GEMINI_AVAILABLE:
@@ -42,7 +45,8 @@ def _resolve_gemini_model(preferred: str) -> str:
             m.name.removeprefix("models/")
             for m in genai.list_models()
             if "generateContent" in (m.supported_generation_methods or [])
-        }
+        } - _GEMINI_KNOWN_DEAD  # exclude known-dead models
+
         if preferred in available:
             return preferred
         for candidate in _GEMINI_PRIORITY:
@@ -55,8 +59,10 @@ def _resolve_gemini_model(preferred: str) -> str:
                 print(f"   ⚠️ Usando modelo de fallback: '{candidate}'")
                 return candidate
     except Exception as e:
-        print(f"   ⚠️ No se pudo listar modelos Gemini ({e}), usando '{preferred}'")
-    return preferred
+        print(f"   ⚠️ No se pudo listar modelos Gemini ({e})")
+    # Final fallback: first entry in priority list
+    print(f"   ⚠️ Usando modelo de prioridad: '{_GEMINI_PRIORITY[0]}'")
+    return _GEMINI_PRIORITY[0]
 
 try:
     import anthropic as _anthropic
@@ -184,17 +190,65 @@ class AIExtractor:
             return await self._extract_gemini(image_bytes, user_message)
         return await self._extract_anthropic(image_bytes, user_message)
 
-    async def _extract_gemini(self, image_bytes: bytes, user_message: str) -> List[Dict]:
+    def _try_switch_gemini_model(self) -> Optional[str]:
+        """Switch to the next available Gemini model after a runtime 404."""
+        current = self.model_name
         try:
-            image_part = {"mime_type": "image/png", "data": image_bytes}
-            response = await asyncio.to_thread(
-                self._gemini_model.generate_content,
-                [user_message, image_part],
-            )
-            return self._parse_response(response.text)
-        except Exception as e:
-            print(f"      ⚠️ Error Gemini: {e}")
-            return []
+            current_idx = _GEMINI_PRIORITY.index(current)
+            candidates = _GEMINI_PRIORITY[current_idx + 1:]
+        except ValueError:
+            candidates = _GEMINI_PRIORITY[:]
+
+        # Try to list available models, skipping known-dead ones
+        try:
+            available = {
+                m.name.removeprefix("models/")
+                for m in genai.list_models()
+                if "generateContent" in (m.supported_generation_methods or [])
+            } - _GEMINI_KNOWN_DEAD
+            for candidate in candidates:
+                if candidate in available:
+                    self._switch_to(candidate)
+                    return candidate
+        except Exception:
+            pass
+
+        # list_models failed — try candidates blindly
+        for candidate in candidates:
+            self._switch_to(candidate)
+            return candidate
+
+        return None
+
+    def _switch_to(self, model_name: str) -> None:
+        self.model_name = model_name
+        self._gemini_model = genai.GenerativeModel(
+            model_name=model_name,
+            system_instruction=_SYSTEM_PROMPT,
+        )
+        print(f"      🔄 Cambiando a modelo Gemini: '{model_name}'")
+
+    async def _extract_gemini(self, image_bytes: bytes, user_message: str) -> List[Dict]:
+        image_part = {"mime_type": "image/png", "data": image_bytes}
+        for attempt in range(2):  # original model + one fallback
+            try:
+                response = await asyncio.to_thread(
+                    self._gemini_model.generate_content,
+                    [user_message, image_part],
+                )
+                return self._parse_response(response.text)
+            except Exception as e:
+                err = str(e)
+                is_deprecated = "404" in err or "no longer available" in err or "deprecated" in err.lower()
+                if attempt == 0 and is_deprecated:
+                    _GEMINI_KNOWN_DEAD.add(self.model_name)
+                    next_model = self._try_switch_gemini_model()
+                    if next_model:
+                        print(f"      ⚠️ Modelo deprecado, reintentando con '{next_model}'...")
+                        continue
+                print(f"      ⚠️ Error Gemini: {e}")
+                return []
+        return []
 
     async def _extract_anthropic(self, image_bytes: bytes, user_message: str) -> List[Dict]:
         try:
