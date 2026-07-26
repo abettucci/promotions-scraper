@@ -186,7 +186,7 @@ ANTHROPIC_API_KEY = os.getenv("ANTHROPIC_API_KEY")
 # Modelo preferido; ai_extractor verifica disponibilidad y cae al mejor disponible
 # si este ya no existe. Lista de prioridad: gemini-2.5-flash > gemini-2.0-flash > gemini-1.5-flash
 # Claude fallback: claude-haiku-4-5-20251001
-AI_MODEL = os.getenv("AI_MODEL", "gemini-2.0-flash")
+AI_MODEL = os.getenv("AI_MODEL", "gemini-1.5-flash")
 
 # Máximo de tokens en la respuesta
 AI_MAX_TOKENS = int(os.getenv("AI_MAX_TOKENS", "4096"))
