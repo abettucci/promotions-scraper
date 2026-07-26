@@ -156,17 +156,23 @@ class CarrefourScraper(BaseScraper):
                         // Buscar elementos que contengan texto de promoción
                         const allElements = document.querySelectorAll('div, section, article');
                         const promoElements = [];
+                        const bankRe = /banco|cuenta.?digital|santander|galicia|bbva|macro|icbc|hsbc|credicoop|supervielle|patagonia|naci[oó]n|provincia|frances|itau|comafi|mercado.?pago|cuenta.?dni|personal.?pay|naranja|ual[aá]|modo|anses/i;
 
                         allElements.forEach(el => {
                             try {
                                 const text = el.textContent || '';
                                 const hasDiscount = /\\d+\\s*%/.test(text);
-                                // Require explicit bank/wallet info — "carrefour" alone is NOT enough
-                                // since every element on carrefour.com.ar contains the word "carrefour"
-                                const hasBankInfo = /banco|cuenta digital|santander|galicia|bbva|macro|icbc|hsbc|credicoop|supervielle|patagonia|naci[oó]n|provincia|frances|itau|comafi|mercado pago|cuenta dni|personal pay|naranja|ual[aá]|modo|anses/i.test(text);
+                                if (!hasDiscount || text.length < 50 || text.length > 5000) return;
 
-                                // Require both discount AND bank info; keep only reasonably-sized containers
-                                if (hasDiscount && hasBankInfo && text.length > 50 && text.length < 5000) {
+                                // Check bank info in text OR in img src/alt (many sites use logo images)
+                                const hasBankInText = bankRe.test(text);
+                                const imgText = Array.from(el.querySelectorAll('img'))
+                                    .map(img => (img.src || '') + ' ' + (img.getAttribute('data-src') || '') + ' ' + (img.alt || ''))
+                                    .join(' ');
+                                const hasBankInImg = bankRe.test(imgText);
+                                const hasBankInfo = hasBankInText || hasBankInImg;
+
+                                if (hasBankInfo) {
                                     promoElements.push(el);
                                 }
                             } catch (e) {
@@ -300,6 +306,11 @@ class CarrefourScraper(BaseScraper):
                     print(f"   ❌ Error en método alternativo: {e2}")
             
             print(f"   📊 Extraídos {len(promo_data)} elementos de promoción")
+
+            # If JS extraction found nothing, try simple scraper before giving up
+            if not promo_data:
+                print(f"   ⚠️ JS encontró 0 elementos — fallback a scraper simple...")
+                return await self._scrape_simple()
 
             # Procesar cada promoción
             for idx, promo in enumerate(promo_data):

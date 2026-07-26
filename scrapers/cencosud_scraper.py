@@ -87,8 +87,8 @@ class CencosudScraper:
         promotions = []
         
         try:
-            await page.goto(url, wait_until='networkidle', timeout=30000)
-            await asyncio.sleep(2)
+            await page.goto(url, wait_until='domcontentloaded', timeout=60000)
+            await asyncio.sleep(4)
             
             # Scroll para cargar todo el contenido
             await self._full_scroll_page(page)

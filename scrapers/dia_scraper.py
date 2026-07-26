@@ -42,7 +42,8 @@ class DiaScraper:
                 
                 # Navegar a la página
                 print(f"\n   📡 Navegando a la página...")
-                await page.goto(self.base_url, wait_until='networkidle', timeout=60000)
+                await page.goto(self.base_url, wait_until='domcontentloaded', timeout=60000)
+                await asyncio.sleep(4)
                 await asyncio.sleep(3)
                 
                 # Hacer click en "Promociones Bancarias" si existe
@@ -376,17 +377,18 @@ class DiaScraper:
         # Buscar divs que contengan estructura de promoción
         for div in soup.find_all('div'):
             text = div.get_text(' ', strip=True)
-            
-            # Debe tener descuento
-            has_discount = bool(re.search(r'\d+\s*%\s*[Dd]to|\d+\s*%\s*[Dd]escuento|\d+\s*cuotas', text, re.I))
-            
-            # Debe tener tope o "Sin tope" o info de pago
+
+            # Debe tener descuento (cualquier formato: N%, N cuotas, N% Dto, etc.)
+            has_discount = bool(re.search(r'\d+\s*%|\d+\s*cuotas?\s*sin\s*inter[eé]s', text, re.I))
+
+            # Opcionalmente: tope o banco — al menos uno de los dos para filtrar ruido
             has_tope = bool(re.search(r'[Tt]ope|[Ss]in\s+tope|inter[eé]s', text, re.I))
-            
+            has_bank = bool(re.search(r'banco|galicia|santander|bbva|macro|icbc|hsbc|credicoop|supervielle|patagonia|naci[oó]n|comafi|mercado\s*pago|naranja|modo|personal\s*pay|cuenta\s*dni|ual[aá]|anses', text, re.I))
+
             # Longitud razonable
             good_length = 50 < len(text) < 1500
-            
-            if has_discount and has_tope and good_length:
+
+            if has_discount and (has_tope or has_bank) and good_length:
                 # Verificar que no sea contenedor padre
                 child_divs = div.find_all('div', recursive=False)
                 is_parent = False
