@@ -24,7 +24,6 @@ venv/
 ENV/
 env/
 .venv/
-.env
 
 # IDE
 .idea/
@@ -54,6 +53,18 @@ debug_*.png
 debug_*.json
 *.log
 logs.txt
+loggg.txt
+
+# Test outputs
+test_result_*.json
+preview.html
+
+# pip install typo artifacts (=version files)
+=*/
+=*.*
+
+# Additional virtual envs
+.venv_test/
 
 # Database (local development)
 # Uncomment if you don't want to track the DB

@@ -1,126 +1,158 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
+import { useQuery } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
+import { PromoCard } from "@/components/PromoCard"
 import { Button } from "@/components/ui/button"
-import { Input } from "@/components/ui/input"
-import { AlertCircle, Loader2, CheckCircle2 } from "lucide-react"
+import {
+  ArrowLeft, Settings, CalendarDays, ListFilter, Loader2, CreditCard,
+} from "lucide-react"
 
-export default function RegisterPage() {
+export default function MyPromotionsPage() {
   const router = useRouter()
-  const setAuth = useAuthStore((s) => s.setAuth)
+  const { user, token } = useAuthStore()
+  const [todayOnly, setTodayOnly] = useState(true)
 
-  const [email, setEmail] = useState("")
-  const [password, setPassword] = useState("")
-  const [confirm, setConfirm] = useState("")
-  const [error, setError] = useState("")
-  const [loading, setLoading] = useState(false)
+  useEffect(() => {
+    if (!token) router.push("/login")
+  }, [token, router])
 
-  const handleSubmit = async (e: React.FormEvent) => {
-    e.preventDefault()
-    setError("")
-    if (password !== confirm) { setError("Las contraseñas no coinciden"); return }
-    if (password.length < 6)  { setError("La contraseña debe tener al menos 6 caracteres"); return }
+  const { data, isLoading, error } = useQuery({
+    queryKey: ["my-promotions", todayOnly],
+    queryFn: () => api.getMyPromotions(token!, todayOnly),
+    enabled: !!token,
+  })
 
-    setLoading(true)
-    try {
-      const { token, user } = await api.register(email, password)
-      setAuth(token, user)
-      router.push("/profile")   // ir al perfil para configurar métodos de pago
-    } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : "Error al registrarse")
-    } finally {
-      setLoading(false)
-    }
-  }
+  if (!token || !user) return null
 
-  const benefits = [
-    "Promociones filtradas para tus tarjetas",
-    "Notificación diaria por Telegram",
-    "Alertas de descuentos especiales",
-  ]
+  const todayLabel = new Date().toLocaleDateString("es-AR", { weekday: "long" })
+  const hasNoMethods = (user.payment_methods?.length ?? 0) === 0
 
   return (
-    <div className="min-h-screen bg-slate-50 flex flex-col">
-      <header className="bg-white border-b border-slate-200">
-        <div className="max-w-7xl mx-auto px-4 py-3">
-          <Link href="/" className="text-xl font-black text-slate-900 tracking-tight">PromoAR</Link>
+    <div className="min-h-screen bg-slate-50">
+      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+        <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
+          <div className="flex items-center gap-3">
+            <Link href="/" className="text-slate-400 hover:text-slate-600 transition-colors">
+              <ArrowLeft className="w-5 h-5" />
+            </Link>
+            <span className="text-xl font-black text-slate-900 tracking-tight">PromoAR</span>
+            <span className="text-slate-300 hidden sm:block">/</span>
+            <span className="text-sm text-slate-500 hidden sm:block">Mis promociones</span>
+          </div>
+          <div className="flex items-center gap-2">
+            <Button
+              variant={todayOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTodayOnly(true)}
+              className="gap-1.5 text-sm"
+            >
+              <CalendarDays className="w-4 h-4" />
+              Hoy
+            </Button>
+            <Button
+              variant={!todayOnly ? "default" : "outline"}
+              size="sm"
+              onClick={() => setTodayOnly(false)}
+              className="gap-1.5 text-sm"
+            >
+              <ListFilter className="w-4 h-4" />
+              Todas
+            </Button>
+            <Button variant="ghost" size="sm" asChild>
+              <Link href="/profile"><Settings className="w-4 h-4" /></Link>
+            </Button>
+          </div>
         </div>
       </header>
 
-      <div className="flex-1 flex items-center justify-center px-4 py-12">
-        <div className="w-full max-w-sm">
-          <div className="bg-white rounded-2xl border border-slate-200 shadow-sm p-8">
-            <h1 className="text-2xl font-bold text-slate-900 mb-1">Crear cuenta</h1>
-            <p className="text-sm text-slate-500 mb-4">Gratis, sin publicidad</p>
-
-            <ul className="space-y-1.5 mb-6">
-              {benefits.map((b) => (
-                <li key={b} className="flex items-center gap-2 text-sm text-slate-600">
-                  <CheckCircle2 className="w-4 h-4 text-emerald-500 shrink-0" />
-                  {b}
-                </li>
-              ))}
-            </ul>
-
-            {error && (
-              <div className="flex items-center gap-2 text-red-600 bg-red-50 border border-red-200 rounded-lg px-3 py-2 text-sm mb-4">
-                <AlertCircle className="w-4 h-4 shrink-0" />
-                {error}
-              </div>
-            )}
-
-            <form onSubmit={handleSubmit} className="space-y-4">
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Email</label>
-                <Input
-                  type="email"
-                  placeholder="tu@email.com"
-                  value={email}
-                  onChange={(e) => setEmail(e.target.value)}
-                  required
-                  autoComplete="email"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Contraseña</label>
-                <Input
-                  type="password"
-                  placeholder="Mínimo 6 caracteres"
-                  value={password}
-                  onChange={(e) => setPassword(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
-              <div>
-                <label className="text-sm font-medium text-slate-700 block mb-1.5">Confirmar contraseña</label>
-                <Input
-                  type="password"
-                  placeholder="••••••••"
-                  value={confirm}
-                  onChange={(e) => setConfirm(e.target.value)}
-                  required
-                  autoComplete="new-password"
-                />
-              </div>
-              <Button type="submit" className="w-full" disabled={loading}>
-                {loading ? <><Loader2 className="w-4 h-4 animate-spin" /> Creando cuenta...</> : "Crear cuenta"}
-              </Button>
-            </form>
-
-            <p className="text-center text-sm text-slate-500 mt-6">
-              ¿Ya tenés cuenta?{" "}
-              <Link href="/login" className="text-blue-600 hover:underline font-medium">
-                Iniciá sesión
-              </Link>
+      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
+        {/* No methods configured */}
+        {hasNoMethods && (
+          <div className="bg-amber-50 border border-amber-200 rounded-2xl p-6 text-center">
+            <CreditCard className="w-10 h-10 text-amber-400 mx-auto mb-3" />
+            <h3 className="font-semibold text-amber-800 mb-1">No tenés métodos de pago configurados</h3>
+            <p className="text-sm text-amber-700 mb-4">
+              Configurá tus tarjetas y billeteras para ver las promos que aplican para vos.
             </p>
+            <Button asChild size="sm">
+              <Link href="/profile">Configurar ahora</Link>
+            </Button>
           </div>
-        </div>
-      </div>
+        )}
+
+        {/* Header info */}
+        {!hasNoMethods && (
+          <div className="flex items-center justify-between">
+            <div>
+              <h1 className="text-xl font-bold text-slate-900">
+                {todayOnly ? `Promos de hoy — ${todayLabel}` : "Todas mis promociones"}
+              </h1>
+              <p className="text-sm text-slate-500 mt-0.5">
+                Para tus {user.payment_methods.length} método{user.payment_methods.length !== 1 ? "s" : ""} de pago
+              </p>
+            </div>
+            {data && (
+              <span className="text-sm text-slate-500 bg-white border border-slate-200 px-3 py-1 rounded-full">
+                {data.total} promo{data.total !== 1 ? "s" : ""}
+              </span>
+            )}
+          </div>
+        )}
+
+        {/* Loading */}
+        {isLoading && (
+          <div className="flex items-center justify-center py-16 gap-2 text-slate-400">
+            <Loader2 className="w-5 h-5 animate-spin" />
+            <span className="text-sm">Buscando tus promociones...</span>
+          </div>
+        )}
+
+        {/* Error */}
+        {error && (
+          <div className="text-red-600 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-sm">
+            Error cargando promociones: {(error as Error).message}
+          </div>
+        )}
+
+        {/* No results */}
+        {!isLoading && !error && data && data.total === 0 && !hasNoMethods && (
+          <div className="text-center py-16 text-slate-400">
+            <CalendarDays className="w-10 h-10 mx-auto mb-3 opacity-40" />
+            <p className="font-medium text-slate-600">
+              {todayOnly
+                ? `Hoy (${todayLabel}) no hay promos para tus métodos de pago`
+                : "No hay promos activas para tus métodos de pago"}
+            </p>
+            {todayOnly && (
+              <Button variant="ghost" size="sm" className="mt-3" onClick={() => setTodayOnly(false)}>
+                Ver todas las promos activas
+              </Button>
+            )}
+          </div>
+        )}
+
+        {/* Results by supermarket */}
+        {data?.by_supermarket.map(({ supermarket, promotions }) => (
+          <section key={supermarket}>
+            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+              {supermarket}
+              <span className="ml-2 text-slate-300 font-normal normal-case tracking-normal">
+                {promotions.length} promo{promotions.length !== 1 ? "s" : ""}
+              </span>
+            </h2>
+            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+              {promotions.map((promo) => (
+                <PromoCard key={promo.id} promo={promo} />
+              ))}
+            </div>
+          </section>
+        ))}
+      </main>
     </div>
   )
 }

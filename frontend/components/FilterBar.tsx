@@ -72,7 +72,7 @@ export function FilterBar({
   loading,
 }: Props) {
   const isFuel = category === "fuel"
-  const merchantLabel = isFuel ? "Empresa" : "Supermercado"
+  const merchantLabel = isFuel ? "Empresa o marca" : "Supermercado"
   const merchantAllLabel = isFuel ? "Todas las empresas" : "Todos los super"
 
   const hasActiveFilters =

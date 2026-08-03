@@ -9,7 +9,6 @@ import asyncio
 import re
 from typing import List, Dict, Set
 
-from playwright.async_api import async_playwright
 from bs4 import BeautifulSoup
 
 
@@ -30,153 +29,82 @@ class MasOnlineScraper:
         }
         
     async def scrape(self) -> List[Dict]:
-        """Scraping de promociones de Más Online"""
+        """Scraping de promociones de Más Online usando Crawl4AI"""
+        try:
+            from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
+        except ImportError:
+            print("   ⚠️ crawl4ai no instalado — instalá con: pip install crawl4ai && crawl4ai-setup")
+            return []
+
         print(f"\n🔍 Scraping {self.name} - Promociones Bancarias...")
         print(f"   🌐 URL Base: {self.base_url}")
-        
+
         all_promotions = []
         seen_promos: Set[str] = set()
-        
-        async with async_playwright() as p:
-            browser = await p.chromium.launch(headless=True)
-            
-            try:
-                context = await browser.new_context(
-                    viewport={'width': 1920, 'height': 1080},
-                    user_agent='Mozilla/5.0 (Windows NT 10.0; Win64; x64) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36'
-                )
-                
-                page = await context.new_page()
-                
-                # Iterar por cada día
+
+        _JS_EXPAND_VER_LEGAL = (
+            "document.querySelectorAll('button, span, a').forEach(el => {"
+            "    if (/ver\\s*legal/i.test(el.textContent) && el.offsetParent !== null) {"
+            "        try { el.click(); } catch(e) {}"
+            "    }"
+            "});"
+        )
+
+        browser_cfg = BrowserConfig(headless=True, verbose=False)
+
+        try:
+            async with AsyncWebCrawler(config=browser_cfg) as crawler:
                 print(f"\n   📅 Scrapeando por DÍAS...")
-                
+
                 for dia_param, dia_nombre in self.dias.items():
                     url = f"{self.base_url}?dia={dia_param}"
                     print(f"\n      📆 {dia_nombre}")
                     print(f"         URL: {url}")
-                    
-                    promos = await self._scrape_day(page, url, dia_nombre)
-                    
+
+                    run_cfg = CrawlerRunConfig(
+                        session_id='masonline_session',
+                        wait_for=(
+                            "js:() => document.querySelectorAll('[class*=\"card\"]').length > 0"
+                            " || document.body.innerText.length > 500"
+                        ),
+                        js_code=_JS_EXPAND_VER_LEGAL,
+                        delay_before_return_html=2.5,
+                        page_timeout=60000,
+                        cache_mode=CacheMode.BYPASS,
+                    )
+
+                    try:
+                        result = await crawler.arun(url, config=run_cfg)
+                    except Exception as e:
+                        print(f"         ⚠️  Error: {e}")
+                        import traceback
+                        traceback.print_exc()
+                        continue
+
+                    if not result.success:
+                        print(f"         ❌ Crawl4AI falló: {result.error_message}")
+                        continue
+
+                    promos = self._extract_promotions(result.html, dia_nombre, url)
+
                     new_count = 0
                     for promo in promos:
-                        # Key única para evitar duplicados
-                        promo_key = f"{promo.get('bank', '')}-{promo.get('discount', '')}-{promo.get('tope', '')}"
+                        qr_suffix = '-QR' if promo.get('aplica_en') == 'QR' else ''
+                        promo_key = f"{promo.get('bank', '')}-{promo.get('discount', '')}-{promo.get('tope', '')}{qr_suffix}"
                         if promo_key not in seen_promos:
                             seen_promos.add(promo_key)
                             all_promotions.append(promo)
                             new_count += 1
-                    
+
                     print(f"         ✅ {new_count} promociones nuevas encontradas")
-                    await asyncio.sleep(1)
-                
-                # Guardar debug
-                html = await page.content()
-                with open('debug_masonline.html', 'w', encoding='utf-8') as f:
-                    f.write(html)
-                await page.screenshot(path='debug_masonline.png', full_page=True)
-                print(f"\n   📸 Debug: debug_masonline.html, debug_masonline.png")
-                
-                print(f"\n✅ {self.name}: {len(all_promotions)} promociones únicas encontradas")
-                
-                return all_promotions
-                
-            except Exception as e:
-                print(f"\n   ❌ Error: {e}")
-                import traceback
-                traceback.print_exc()
-                return all_promotions
-            finally:
-                await browser.close()
-    
-    async def _scrape_day(self, page, url: str, dia_nombre: str) -> List[Dict]:
-        """Scrapea las promociones de un día específico"""
-        promotions = []
-        
-        try:
-            await page.goto(url, wait_until='networkidle', timeout=60000)
-            await asyncio.sleep(2)
-            
-            # Hacer click en "POR DÍA" si existe
-            try:
-                por_dia_btn = page.locator('text=POR DÍA, button:has-text("POR DÍA")').first
-                if await por_dia_btn.is_visible():
-                    await por_dia_btn.click()
-                    await asyncio.sleep(1)
-            except:
-                pass
-            
-            # Scroll para cargar contenido
-            await self._scroll_page(page)
-            
-            # Expandir todos los "Ver legal"
-            expanded = await self._expand_ver_legal(page)
-            print(f"         📖 Expandidos {expanded} 'Ver legal'")
-            
-            # Esperar contenido expandido
-            await asyncio.sleep(1)
-            
-            # Obtener HTML
-            html = await page.content()
-            
-            # Extraer promociones
-            promotions = self._extract_promotions(html, dia_nombre, url)
-            
+
         except Exception as e:
-            print(f"         ⚠️  Error: {e}")
+            print(f"\n   ❌ Error: {e}")
             import traceback
             traceback.print_exc()
-        
-        return promotions
-    
-    async def _scroll_page(self, page):
-        """Hace scroll para cargar contenido"""
-        for i in range(5):
-            await page.evaluate(f'window.scrollBy(0, 400)')
-            await asyncio.sleep(0.3)
-        await page.evaluate('window.scrollTo(0, document.body.scrollHeight)')
-        await asyncio.sleep(0.5)
-        await page.evaluate('window.scrollTo(0, 0)')
-        await asyncio.sleep(0.3)
-    
-    async def _expand_ver_legal(self, page) -> int:
-        """Expande todos los botones 'Ver legal'"""
-        expanded = 0
-        
-        try:
-            selectors = [
-                'text=Ver legal',
-                'text=Ver Legal',
-                'text=ver legal',
-                'button:has-text("legal")',
-                'span:has-text("Ver legal")',
-                'div:has-text("Ver legal")',
-                '[class*="legal"]',
-                '[class*="expand"]',
-                '[class*="toggle"]',
-            ]
-            
-            for selector in selectors:
-                try:
-                    buttons = page.locator(selector)
-                    count = await buttons.count()
-                    
-                    for i in range(count):
-                        try:
-                            button = buttons.nth(i)
-                            if await button.is_visible():
-                                await button.click(timeout=2000)
-                                expanded += 1
-                                await asyncio.sleep(0.3)
-                        except:
-                            pass
-                except:
-                    pass
-                    
-        except Exception as e:
-            print(f"         ⚠️  Error expandiendo: {e}")
-        
-        return expanded
+
+        print(f"\n✅ {self.name}: {len(all_promotions)} promociones únicas encontradas")
+        return all_promotions
     
     def _extract_promotions(self, html: str, dia_nombre: str, url: str) -> List[Dict]:
         """Extrae promociones del HTML"""
@@ -202,7 +130,10 @@ class MasOnlineScraper:
             has_discount = bool(re.search(r'\d+\s*%|cuotas?\s*sin\s*inter|reintegro', text, re.I))
             
             # Debe tener información de tope o banco/billetera
-            has_promo_info = bool(re.search(r'[Tt]ope|MODO|[Bb]anco|[Cc]r[eé]dito|[Dd][eé]bito|[Mm][ií]nimo', text))
+            has_promo_info = bool(re.search(
+                r'tope|modo|banco|cr[eé]dito|d[eé]bito|m[ií]nimo|tarjeta|pagando|reintegro|aplica|sucursal|acumulable|billetera',
+                text, re.I
+            ))
             
             # Longitud razonable
             good_length = 50 < len(text) < 2000
@@ -217,14 +148,15 @@ class MasOnlineScraper:
                 is_parent = False
                 for child in child_divs:
                     child_text = child.get_text(' ', strip=True)
-                    if re.search(r'\d+\s*%.*[Tt]ope', child_text) and len(child_text) > 40:
+                    if re.search(r'\d+\s*%.*tope', child_text, re.I) and len(child_text) > 40:
                         is_parent = True
                         break
                 
                 if not is_parent:
                     all_cards.append(div)
-        
+
         print(f"         🔍 Cards encontradas: {len(all_cards)}")
+
         
         # Procesar cards
         seen_texts = set()
@@ -252,6 +184,7 @@ class MasOnlineScraper:
                     if promo and promo.get('discount'):
                         promo['bank'] = wallet_name
                         promo['wallet'] = None
+                        promo['aplica_en'] = 'QR'
                         # Ajustar título para esta wallet específica
                         promo['title'] = f"{wallet_name} {promo.get('discount', '')} - {promo.get('valid_days', dia_nombre)}"
                         promotions.append(promo)
@@ -444,21 +377,27 @@ class MasOnlineScraper:
                 break
         
         # 6. Extraer tope - mejorado para "Ver legal"
+        # Primero: detectar "sin tope" explícito (billeteras virtuales, etc.)
+        if re.search(r'sin\s+tope', text, re.I):
+            promo['tope'] = 'Sin tope'
+        else:
+            pass  # se sobreescribe abajo si hay un monto específico
+
         tope_patterns = [
-            # Tope: $20.000 por usuario
-            r'[Tt]ope[:\s]*\$?\s*([\d.,]+)(?:\s*(por\s+usuario|mensual|semanal|diario|por\s+transacci[oó]n|por\s+d[ií]a|por\s+semana|por\s+mes))?',
+            # Tope mensual/semanal: $20.000 (allows words between "tope" and "$X")
+            r'[Tt]ope\b[^.$\n]{0,25}\$\s*(\d[\d.,]*)(?:\s*(por\s+usuario|mensual|semanal|diario|por\s+transacci[oó]n|por\s+d[ií]a|por\s+semana|por\s+mes))?',
             # Máximo de reintegro/descuento: $20.000
-            r'[Mm][aá]ximo\s+(?:de\s+)?(?:reintegro|descuento|beneficio)[:\s]*\$?\s*([\d.,]+)',
+            r'[Mm][aá]ximo\s+(?:de\s+)?(?:reintegro|descuento|beneficio)[:\s]*\$?\s*(\d[\d.,]*)',
             # Reintegro máximo: $20.000
-            r'(?:reintegro|descuento|beneficio)\s+m[aá]ximo[:\s]*\$?\s*([\d.,]+)',
+            r'(?:reintegro|descuento|beneficio)\s+m[aá]ximo[:\s]*\$?\s*(\d[\d.,]*)',
             # Hasta $20.000 de reintegro
-            r'[Hh]asta\s+\$?\s*([\d.,]+)\s+(?:de\s+)?(?:reintegro|descuento|beneficio)',
+            r'[Hh]asta\s+\$?\s*(\d[\d.,]*)\s+(?:de\s+)?(?:reintegro|descuento|beneficio)',
             # Máximo $20.000
-            r'[Mm][aá]ximo[:\s]*\$?\s*([\d.,]+)',
+            r'[Mm][aá]ximo[:\s]*\$?\s*(\d[\d.,]*)',
             # Límite de $20.000
-            r'[Ll][ií]mite\s+(?:de\s+)?\$?\s*([\d.,]+)',
+            r'[Ll][ií]mite\s+(?:de\s+)?\$?\s*(\d[\d.,]*)',
         ]
-        
+
         for pattern in tope_patterns:
             match = re.search(pattern, text, re.I)
             if match:
@@ -466,16 +405,17 @@ class MasOnlineScraper:
                 period = match.group(2) if match.lastindex >= 2 and match.group(2) else ''
                 try:
                     amount_num = float(amount)
-                    tope_str = f"${amount_num:,.0f}".replace(',', '.')
-                    if period:
-                        tope_str += f" {period.lower()}"
-                    promo['tope'] = tope_str
-                except:
-                    promo['tope'] = f"${match.group(1)}"
-                break
-        
+                    if amount_num > 0:
+                        tope_str = f"${amount_num:,.0f}".replace(',', '.')
+                        if period:
+                            tope_str += f" {period.lower()}"
+                        promo['tope'] = tope_str
+                        break
+                except (ValueError, TypeError):
+                    pass
+
         # Buscar frecuencia del tope si no se encontró
-        if promo.get('tope') and not any(x in promo['tope'].lower() for x in ['usuario', 'mensual', 'semanal', 'diario']):
+        if promo.get('tope') and not any(x in promo['tope'].lower() for x in ['usuario', 'mensual', 'semanal', 'diario', 'transacci']):
             freq_match = re.search(r'(?:por|cada)\s+(usuario|mes|semana|d[ií]a|transacci[oó]n)', text, re.I)
             if freq_match:
                 freq = freq_match.group(1).lower()
@@ -903,8 +843,17 @@ class MasOnlineScraper:
         text_upper = text.upper()
 
         # Solo hacer fan-out si el card explícitamente dice "BILLETERAS VIRTUALES"
-        # o tiene 3+ wallets conocidas (evitar falsos positivos en T&C que mencionan varias)
+        # como entidad principal (no como exclusión en T&C)
         is_multi_wallet_card = bool(re.search(r'BILLETERAS?\s+VIRTUALES?', text_upper))
+        if is_multi_wallet_card:
+            # False positive: "billeteras virtuales" aparece solo como exclusión, no como entidad principal
+            # Ej: "No aplica con billeteras virtuales", "Excluidos pagos con billeteras virtuales"
+            is_exclusion = bool(re.search(
+                r'(?:EXCLU[IÍ]D[AO]S?|NO\s+APLICA|QUEDAN?\s+EXCLUIDOS?|NO\s+V[AÁ]LID)[^.]{0,100}BILLETERAS?\s+VIRTUALES?',
+                text_upper
+            ))
+            if is_exclusion:
+                is_multi_wallet_card = False
 
         if not is_multi_wallet_card:
             return []
@@ -926,12 +875,21 @@ class MasOnlineScraper:
             if re.search(pattern, text_upper):
                 found.append(name)
 
-        # Solo retornar si hay 2+ wallets (si hay solo 1, el flujo normal ya la maneja)
-        return found if len(found) >= 2 else []
+        if len(found) >= 2:
+            return found
+        # Short card says "billeteras virtuales" but doesn't list them individually —
+        # use the standard set that MásOnline supports for QR promotions
+        if not found:
+            return ['Mercado Pago', 'MODO', 'Naranja X', 'Ualá', 'Personal Pay', 'Prex', 'Cuenta DNI']
+        return []
 
     def _identify_bank_and_wallet(self, text: str, img_alt: str = '') -> tuple:
         """Identifica el banco Y la billetera virtual del texto y/o de la imagen.
-        
+
+        NOTE: img_alt filenames from the page may be NFD-encoded (combining accents).
+        We normalize to NFC before any upper/comparison so patterns with precomposed
+        accented chars (e.g. Ú U+00DA) match correctly.
+
         Args:
             text: Texto de la promoción (incluyendo "Ver legal")
             img_alt: Texto alternativo de la imagen del logo
@@ -939,6 +897,8 @@ class MasOnlineScraper:
         Returns:
             tuple: (banco, billetera_virtual) - billetera puede ser None
         """
+        import unicodedata as _ud
+        img_alt = _ud.normalize('NFC', img_alt)
         combined_text = f"{text} {img_alt}"
         text_upper = combined_text.upper()
         
@@ -1024,7 +984,10 @@ class MasOnlineScraper:
             (r'TARJETA\s+NATIVA|NATIVA', 'Tarjeta Nativa'),
             (r'CMR\s*FALABELLA|CMR', 'CMR Falabella'),
             (r'CENCOSUD', 'Tarjeta Cencosud'),
-            (r'\bYOY\b', 'YOY'),
+            (r'BANCO\s+NARANJA', 'Naranja X'),
+            (r'YOY', 'YOY'),
+            (r'CREDICUOTAS?', 'Credicuotas'),
+            (r'TARJETA\s+TUYA|\bTUYA\b', 'Tarjeta Tuya'),
         ]
         
         # 0. PRIMERO: Buscar programas de fidelidad (MásClub, Club Día, etc.)
@@ -1045,7 +1008,7 @@ class MasOnlineScraper:
         beneficiary = None
         search_text = text_upper
         if img_alt:
-            search_text = f"{text_upper} {img_alt.upper()}"
+            search_text = f"{text_upper} {img_alt.upper()}"  # img_alt already NFC-normalized above
         
         for pattern, name in beneficiary_patterns:
             if re.search(pattern, search_text):
@@ -1059,21 +1022,28 @@ class MasOnlineScraper:
         # 1. Buscar en el alt de la imagen (más confiable para el banco principal)
         if img_alt:
             img_alt_upper = img_alt.upper()
-            
+            # Normalizar separadores de filename (_/-/.) para que los patrones con \b funcionen
+            img_alt_norm = re.sub(r'[_\-]', ' ', img_alt_upper)
+
             # Buscar programa de fidelidad en imagen primero
             for pattern, name in loyalty_patterns:
-                if re.search(pattern, img_alt_upper):
+                if re.search(pattern, img_alt_norm):
                     return (name, None)
-            
+
+            # Buscar beneficiario en imagen
+            for pattern, name in beneficiary_patterns:
+                if re.search(pattern, img_alt_norm):
+                    return (name, None)
+
             # Buscar banco en imagen
             for pattern, name in bank_patterns:
-                if re.search(pattern, img_alt_upper):
+                if re.search(pattern, img_alt_norm):
                     bank = name
                     break
-            
+
             # Buscar billetera en imagen
             for pattern, name in wallet_patterns:
-                if re.search(pattern, img_alt_upper):
+                if re.search(pattern, img_alt_norm):
                     wallet = name
                     break
         
@@ -1091,23 +1061,14 @@ class MasOnlineScraper:
                     wallet = name
                     break
         
-        # 4. Si hay MODO mencionado en cualquier lado, registrarlo como billetera
-        if not wallet and re.search(r'\bMODO\b', text_upper):
-            wallet = 'MODO'
-        
         # 5. Si no encontramos banco pero sí billetera, la billetera puede ser el "banco"
         #    Solo si es una billetera que actúa como entidad financiera (ej: Mercado Pago, Ualá)
         if not bank and wallet:
             # Estas billeteras pueden ser la entidad principal
-            standalone_wallets = ['Mercado Pago', 'Ualá', 'Naranja X', 'Prex', 'Personal Pay', 'Cuenta DNI']
+            standalone_wallets = ['Mercado Pago', 'Ualá', 'Naranja X', 'Prex', 'Personal Pay', 'Cuenta DNI', 'MODO']
             if wallet in standalone_wallets:
                 bank = wallet
                 wallet = None
-            # Si es MODO con múltiples bancos, MODO es la billetera y el banco queda genérico
-            elif wallet == 'MODO':
-                num_bancos = len(re.findall(r'BANCO\s+\w+', text_upper))
-                if num_bancos > 2:
-                    bank = 'Bancos participantes'
         
         # 6. Si aún no hay banco, buscar Visa/Mastercard genérico
         if not bank:

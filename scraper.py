@@ -110,22 +110,18 @@ class PromoScraper:
     
     def get_scraper(self, supermarket_key: str, supermarket_data: dict):
         """Retorna el scraper apropiado para cada supermercado"""
-        # Scrapers específicos que usan page compartido (heredan de BaseScraper)
-        if supermarket_key == 'carrefour':
-            return CarrefourScraper()
-        
-        # Para el resto, usar scraper genérico
         return GenericScraper(
             name=supermarket_data['name'],
             url=supermarket_data['url']
         )
-    
+
     def get_standalone_scraper(self, supermarket_key: str):
         """
         Retorna scrapers que manejan su propio browser (standalone).
         Estos scrapers no reciben page como parámetro.
         """
         standalone_scrapers = {
+            'carrefour': CarrefourScraper,  # usa Crawl4AI, standalone
             'dia': DiaScraper,
             'coto': CotoScraper,
             'masonline': MasOnlineScraper,
