@@ -97,13 +97,15 @@ export function PromoCard({ promo }: Props) {
         </div>
 
         {/* Title */}
-        <p className="text-sm font-semibold text-slate-800 leading-snug line-clamp-2">
+        <p className="text-sm font-semibold text-slate-800 leading-snug">
           {promo.title}
         </p>
 
         {/* Bank / Wallet + Days on the same row */}
         <div className="flex items-center gap-2 flex-wrap">
-          {entity && <BankBadge name={entity} size="sm" showLabel={true} />}
+          {promo.bank && <BankBadge name={promo.bank} size="sm" showLabel={true} />}
+          {promo.wallet && <BankBadge name={promo.wallet} size="sm" showLabel={true} />}
+          {!promo.bank && !promo.wallet && entity && <BankBadge name={entity} size="sm" showLabel={true} />}
           <DaysBadge validDays={promo.valid_days} />
         </div>
 
@@ -138,18 +140,30 @@ export function PromoCard({ promo }: Props) {
           </div>
         )}
 
-        {/* Store types (online / presencial) */}
-        {promo.store_types && (
-          <p className="text-[11px] text-slate-500 truncate">
-            <span className="font-medium">Modalidad:</span> {promo.store_types}
-          </p>
-        )}
-
-        {/* Tope */}
-        {meaningfulTope && !expanded && (
-          <p className="text-[11px] text-slate-500">
-            <span className="font-medium">Tope:</span> {meaningfulTope}
-          </p>
+        {/* Tags: sucursales + tope + min compra + exclusiones */}
+        {(promo.store_types || meaningfulTope || promo.min_purchase || exclusions.length > 0) && (
+          <div className="flex flex-wrap gap-1">
+            {promo.store_types && promo.store_types.split(',').map(s => s.trim()).filter(Boolean).map((store, i) => (
+              <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
+                {store}
+              </Badge>
+            ))}
+            {meaningfulTope && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-amber-300 bg-amber-50 text-amber-700">
+                Tope: {meaningfulTope}
+              </Badge>
+            )}
+            {promo.min_purchase && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-slate-300 text-slate-600">
+                Min: {promo.min_purchase}
+              </Badge>
+            )}
+            {exclusions.length > 0 && (
+              <Badge variant="outline" className="text-[10px] px-1.5 py-0 h-5 border-rose-200 bg-rose-50 text-rose-600">
+                Excluye productos
+              </Badge>
+            )}
+          </div>
         )}
 
         {/* Expandable T&C section */}
