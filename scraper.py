@@ -13,7 +13,9 @@ if script_dir not in sys.path:
     sys.path.insert(0, script_dir)
 
 from playwright.async_api import async_playwright
-from playwright_stealth import stealth_async
+from playwright_stealth import Stealth as _Stealth
+_stealth_instance = _Stealth()
+async def stealth_async(page): await _stealth_instance.apply_stealth_async(page)
 import random
 
 import config
