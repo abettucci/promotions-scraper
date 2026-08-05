@@ -1,18 +1,17 @@
 # Browser automation
 playwright==1.56.0
-playwright-stealth==1.0.6
+playwright-stealth>=2.0.0
 setuptools>=65.0.0  # Requerido por playwright-stealth (pkg_resources)
 
 # AI-powered web crawling (Carrefour VTEX SPA)
-crawl4ai>=0.4.0
+crawl4ai>=0.9.1
 
-# Adaptive scraping (Scrapling) - requiere lxml>=6.0.2
+# Adaptive scraping (Scrapling)
 scrapling[fetchers]>=0.4.0
 
 # HTML parsing
-# NOTA: Scrapling requiere lxml>=6.0.2, así que no fijamos versión
 beautifulsoup4>=4.12.0
-lxml>=6.0.2
+lxml>=5.3
 
 # Environment & config
 python-dotenv==1.0.0
