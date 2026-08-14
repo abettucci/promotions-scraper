@@ -37,6 +37,10 @@ from scrapers.modo_scraper import ModoScraper
 from scrapers.macro_scraper import MacroScraper
 from scrapers.galicia_scraper import GaliciaScraper
 from scrapers.bna_scraper import BnaScraper
+from scrapers.brubank_scraper import BrubankScraper
+from scrapers.personalpay_scraper import PersonalPayScraper
+from scrapers.clublanacion_scraper import ClubLaNacionScraper
+from scrapers.buepp_scraper import BueppScraper
 
 # AI Extractor (opcional)
 try:
@@ -135,6 +139,10 @@ class PromoScraper:
             'macro': MacroScraper,
             'galicia': GaliciaScraper,
             'bna': BnaScraper,
+            'brubank': BrubankScraper,
+            'personalpay': PersonalPayScraper,
+            'clublanacion': ClubLaNacionScraper,
+            'buepp': BueppScraper,
         }
         
         if supermarket_key in standalone_scrapers:

@@ -80,6 +80,31 @@ SUPERMARKETS = {
         'url': 'https://www.masonline.com.ar/promociones-bancarias',
         'enabled': True
     },
+    # ── Billeteras / Beneficios bancarios ──────────────────────────────────
+    'brubank': {
+        'name': 'Brubank',
+        'url': 'https://www.brubank.com/beneficios',
+        'enabled': True,
+        'category': 'benefits',
+    },
+    'personalpay': {
+        'name': 'Personal Pay',
+        'url': 'https://www.personal.com.ar/pay/beneficios',
+        'enabled': True,
+        'category': 'benefits',
+    },
+    'clublanacion': {
+        'name': 'Club La Nación',
+        'url': 'https://club.lanacion.com.ar/beneficios',
+        'enabled': True,
+        'category': 'benefits',
+    },
+    'buepp': {
+        'name': 'Buepp',
+        'url': 'https://www.buepp.com.ar/beneficios',
+        'enabled': True,
+        'category': 'benefits',
+    },
     # ── Estaciones de servicio ──────────────────────────────────────────────
     'shell': {
         'name': 'Shell',
@@ -254,7 +279,7 @@ PAYMENT_METHODS_CATALOG = {
     ],
     "wallet": [
         "Mercado Pago", "Ualá", "Naranja X", "MODO", "Personal Pay",
-        "Cuenta DNI", "Claro Pay",
+        "Cuenta DNI", "Claro Pay", "Brubank", "Buepp",
     ],
     "club": [
         # Beneficios sociales del Estado

@@ -73,7 +73,7 @@ class Database:
         cursor = conn.cursor()
         
         # Tabla de supermercados / merchants
-        # category: 'supermarket' | 'fuel'
+        # category: 'supermarket' | 'fuel' | 'benefits'
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS supermarkets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -406,7 +406,7 @@ class Database:
         return [dict(r) for r in rows]
 
     def insert_supermarket(self, name: str, url: str, category: str = 'supermarket') -> int:
-        """Inserta o actualiza un supermercado / merchant. category: 'supermarket' | 'fuel'."""
+        """Inserta o actualiza un supermercado / merchant. category: 'supermarket' | 'fuel' | 'benefits'."""
         conn = self.get_connection()
         cursor = conn.cursor()
 
