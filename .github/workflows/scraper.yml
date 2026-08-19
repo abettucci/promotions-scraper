@@ -64,6 +64,7 @@ jobs:
           git add data/promotions.db
           git diff --staged --quiet && echo "DB sin cambios, nada que pushear." && exit 0
           git commit -m "chore: update promotions database [skip ci]"
+          git pull --rebase origin main
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
