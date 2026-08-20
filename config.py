@@ -105,6 +105,12 @@ SUPERMARKETS = {
         'enabled': True,
         'category': 'benefits',
     },
+    'cuentadni': {
+        'name': 'Cuenta DNI',
+        'url': 'https://www.bancoprovincia.com.ar/cuentadni/contenidos/cdniBeneficios/',
+        'enabled': True,
+        'category': 'benefits',
+    },
     # ── Estaciones de servicio ──────────────────────────────────────────────
     'shell': {
         'name': 'Shell',
@@ -276,6 +282,7 @@ PAYMENT_METHODS_CATALOG = {
         "Banco Nación", "Banco Galicia", "Santander", "BBVA", "Macro",
         "ICBC", "HSBC", "Banco Ciudad", "Banco Patagonia", "Credicoop",
         "Supervielle", "Banco Francés", "Itaú", "Comafi", "Carrefour Banco",
+        "Banco Provincia",
     ],
     "wallet": [
         "Mercado Pago", "Ualá", "Naranja X", "MODO", "Personal Pay",

@@ -41,6 +41,7 @@ from scrapers.brubank_scraper import BrubankScraper
 from scrapers.personalpay_scraper import PersonalPayScraper
 from scrapers.clublanacion_scraper import ClubLaNacionScraper
 from scrapers.buepp_scraper import BueppScraper
+from scrapers.cuentadni_scraper import CuentaDniScraper
 
 # AI Extractor (opcional)
 try:
@@ -143,6 +144,7 @@ class PromoScraper:
             'personalpay': PersonalPayScraper,
             'clublanacion': ClubLaNacionScraper,
             'buepp': BueppScraper,
+            'cuentadni': CuentaDniScraper,
         }
         
         if supermarket_key in standalone_scrapers:
