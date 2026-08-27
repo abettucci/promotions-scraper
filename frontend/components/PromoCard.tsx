@@ -6,7 +6,7 @@ import { Badge } from "@/components/ui/badge"
 import { BankBadge } from "./BankBadge"
 import { DiscountBadge } from "./DiscountBadge"
 import { DaysBadge } from "./DaysBadge"
-import { ChevronDown, ChevronUp } from "lucide-react"
+import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
 import type { Promotion } from "@/lib/types"
 import { clsx } from "clsx"
 import { SupermarketLogo } from "./SupermarketLogo"
@@ -166,24 +166,43 @@ export function PromoCard({ promo }: Props) {
           </div>
         )}
 
-        {/* Expandable T&C section */}
+        {/* Ver detalles toggle + link a la promoción */}
+        {(hasDetails || promo.url) && (
+          <div className="flex items-center justify-between gap-2 mt-1">
+            {hasDetails ? (
+              <button
+                onClick={() => setExpanded((v) => !v)}
+                className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-medium"
+              >
+                {expanded ? (
+                  <>
+                    <ChevronUp className="w-3 h-3" /> Ocultar detalles
+                  </>
+                ) : (
+                  <>
+                    <ChevronDown className="w-3 h-3" /> Ver detalles
+                  </>
+                )}
+              </button>
+            ) : (
+              <span />
+            )}
+
+            {promo.url && (
+              <a
+                href={promo.url}
+                target="_blank"
+                rel="noopener noreferrer"
+                className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
+              >
+                Ver promoción <ExternalLink className="w-3 h-3" />
+              </a>
+            )}
+          </div>
+        )}
+
         {hasDetails && (
           <>
-            <button
-              onClick={() => setExpanded((v) => !v)}
-              className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-medium mt-1"
-            >
-              {expanded ? (
-                <>
-                  <ChevronUp className="w-3 h-3" /> Ocultar detalles
-                </>
-              ) : (
-                <>
-                  <ChevronDown className="w-3 h-3" /> Ver detalles
-                </>
-              )}
-            </button>
-
             {expanded && (
               <div className="mt-2 space-y-2 text-[11px] text-slate-600 border-t pt-2">
                 {meaningfulTope && (
