@@ -10,6 +10,7 @@ export interface Promotion {
   valid_days: string | null
   valid_from: string | null
   valid_until: string | null
+  url: string | null
   image_url: string | null
   tope: string | null
   acumulable: boolean | null

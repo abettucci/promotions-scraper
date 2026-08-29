@@ -31,6 +31,17 @@ function supermarketColor(name: string) {
   return "bg-slate-500"
 }
 
+function safePromotionUrl(value: string | null): string | null {
+  if (!value) return null
+
+  try {
+    const url = new URL(value)
+    return url.protocol === "https:" || url.protocol === "http:" ? url.href : null
+  } catch {
+    return null
+  }
+}
+
 export function PromoCard({ promo }: Props) {
   const [expanded, setExpanded] = useState(false)
 
@@ -49,6 +60,7 @@ export function PromoCard({ promo }: Props) {
     : null
 
   const entity = promo.bank || promo.wallet
+  const promotionUrl = safePromotionUrl(promo.url)
 
   const formatDate = (d: string | null | undefined) => {
     if (!d) return null
@@ -167,7 +179,7 @@ export function PromoCard({ promo }: Props) {
         )}
 
         {/* Ver detalles toggle + link a la promoción */}
-        {(hasDetails || promo.url) && (
+        {(hasDetails || promotionUrl) && (
           <div className="flex items-center justify-between gap-2 mt-1">
             {hasDetails ? (
               <button
@@ -188,9 +200,9 @@ export function PromoCard({ promo }: Props) {
               <span />
             )}
 
-            {promo.url && (
+            {promotionUrl && (
               <a
-                href={promo.url}
+                href={promotionUrl}
                 target="_blank"
                 rel="noopener noreferrer"
                 className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
