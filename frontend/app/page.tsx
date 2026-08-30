@@ -11,7 +11,8 @@ import { StatsBar } from "@/components/StatsBar"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/UserMenu"
 import { useRouter } from "next/navigation"
-import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel } from "lucide-react"
+import Link from "next/link"
+import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, Sparkles, ArrowUpRight } from "lucide-react"
 
 const DEFAULT_FILTERS: FilterState = {
   supermarket: "",
@@ -123,26 +124,30 @@ export default function Home() {
   })
 
   const todayLabel = new Date().toLocaleDateString("es-AR", { weekday: "long" })
+  const todayDate = new Date().toLocaleDateString("es-AR", { day: "numeric", month: "long" })
 
   return (
-    <div className="min-h-screen bg-slate-50">
+    <div className="min-h-screen overflow-x-hidden">
       {/* Header */}
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+      <header className="sticky top-0 z-30 border-b border-white/10 bg-[#10243e]/95 text-[#fffdf8] shadow-lg backdrop-blur">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-4">
-            <span className="text-xl font-black text-slate-900 tracking-tight">PromoAR</span>
+            <Link href="/" className="group flex items-center gap-2" aria-label="Ir al inicio de PromoAR">
+              <span className="grid h-9 w-9 place-items-center rounded-full bg-[#ffd84d] text-base font-black text-[#10243e] shadow-[3px_3px_0_#ef5845] transition-transform group-hover:-translate-y-0.5">P</span>
+              <span className="text-xl font-black tracking-[-0.06em]">PROMO<span className="text-[#ffd84d]">AR</span></span>
+            </Link>
             {/* Category tabs */}
-            <div className="flex items-center bg-slate-100 rounded-lg p-0.5">
+            <div className="flex items-center rounded-full border border-white/15 bg-white/10 p-1">
               <button
                 onClick={() => {
                   setCategory("supermarket")
                   setFilters(DEFAULT_FILTERS)
                   setMyPromosMode(false)
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-full transition-colors ${
                   category === "supermarket"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-[#fffdf8] text-[#10243e] shadow-sm"
+                    : "text-white/70 hover:text-white"
                 }`}
               >
                 <ShoppingCart className="w-4 h-4" />
@@ -154,10 +159,10 @@ export default function Home() {
                   setFilters(DEFAULT_FILTERS)
                   setMyPromosMode(false)
                 }}
-                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-medium rounded-md transition-colors ${
+                className={`flex items-center gap-1.5 px-3 py-1.5 text-sm font-bold rounded-full transition-colors ${
                   category === "fuel"
-                    ? "bg-white text-slate-900 shadow-sm"
-                    : "text-slate-500 hover:text-slate-700"
+                    ? "bg-[#fffdf8] text-[#10243e] shadow-sm"
+                    : "text-white/70 hover:text-white"
                 }`}
               >
                 <Fuel className="w-4 h-4" />
@@ -170,7 +175,7 @@ export default function Home() {
               variant={todayOnly ? "default" : "outline"}
               size="sm"
               onClick={toggleTodayOnly}
-              className="gap-1.5 text-sm"
+              className="hidden md:flex gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
             >
               <CalendarDays className="w-4 h-4" />
               <span className="hidden sm:inline">Hoy — {todayLabel}</span>
@@ -188,7 +193,7 @@ export default function Home() {
                   setMyPromosMode((v) => !v)
                   setFilters(DEFAULT_FILTERS)
                 }}
-                className="gap-1.5 text-sm"
+                className="gap-1.5 border-white/20 bg-white/10 text-white hover:bg-white/20 hover:text-white"
               >
                 <CreditCard className="w-4 h-4" />
                 <span className="hidden sm:inline">Mis promos</span>
@@ -200,13 +205,26 @@ export default function Home() {
         </div>
       </header>
 
-      <main className="max-w-7xl mx-auto px-4 py-6 space-y-6">
-        {/* Stats bar */}
+      <main className="max-w-7xl mx-auto px-4 py-6 sm:py-10 space-y-6">
+        <section className="rise-in relative overflow-hidden rounded-[2rem] bg-[#10243e] px-6 py-8 text-[#fffdf8] shadow-[8px_8px_0_#ef5845] sm:px-10 sm:py-10">
+          <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border-[28px] border-[#ffd84d] opacity-95" />
+          <div className="pointer-events-none absolute bottom-0 right-20 h-20 w-40 bg-[#ef5845] [clip-path:polygon(0_0,100%_35%,78%_100%,0_76%)]" />
+          <div className="relative max-w-2xl">
+            <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#ffd84d]"><Sparkles className="h-4 w-4" /> Radar de descuentos</div>
+            <p className="text-sm font-medium text-white/70">{todayDate}</p>
+            <h1 className="mt-1 text-4xl font-black leading-[0.9] tracking-[-0.07em] sm:text-6xl">Que tu plata<br /><span className="text-[#ffd84d]">rinda más.</span></h1>
+            <p className="mt-5 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">Promos reales de bancos, billeteras y supermercados — ordenadas para que encuentres la mejor antes de salir.</p>
+          </div>
+          <button onClick={toggleTodayOnly} className="relative mt-7 inline-flex items-center gap-2 rounded-full bg-[#ffd84d] px-4 py-2 text-sm font-black text-[#10243e] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
+            Ver las de hoy <ArrowUpRight className="h-4 w-4" />
+          </button>
+        </section>
+
         <StatsBar stats={stats ?? null} loading={statsLoading} />
 
         {/* Filters — siempre visibles excepto en "mis promos" */}
         {!myPromosMode && (
-          <div className="bg-white rounded-xl border border-slate-200 p-4">
+          <div className="rise-in rounded-[1.5rem] border border-[#10243e]/10 bg-[#fffdf8] p-4 shadow-[4px_4px_0_rgb(16_36_62_/_0.12)] sm:p-5">
             <FilterBar
               filters={filters}
               banks={banks}
@@ -222,8 +240,8 @@ export default function Home() {
 
         {/* My promos mode banner */}
         {myPromosMode && (
-          <div className="flex items-center justify-between bg-blue-50 border border-blue-200 rounded-xl px-4 py-3">
-            <div className="flex items-center gap-2 text-blue-800">
+          <div className="flex items-center justify-between rounded-2xl border border-[#10243e]/15 bg-[#ffd84d] px-4 py-3 shadow-[3px_3px_0_#10243e]">
+            <div className="flex items-center gap-2 text-[#10243e]">
               <CreditCard className="w-4 h-4" />
               <span className="text-sm font-medium">
                 {promos?.total ?? 0} promociones para tus medios de pago — {todayLabel}
@@ -233,7 +251,7 @@ export default function Home() {
               variant="ghost"
               size="sm"
               onClick={resetFilters}
-              className="text-blue-700 hover:text-blue-900"
+              className="text-[#10243e] hover:bg-[#10243e]/10 hover:text-[#10243e]"
             >
               Ver todas
             </Button>
@@ -242,7 +260,7 @@ export default function Home() {
 
         {/* API error */}
         {error && (
-          <div className="flex items-center gap-2 bg-red-50 border border-red-200 rounded-xl px-4 py-3 text-red-700 text-sm">
+          <div className="flex items-center gap-2 rounded-2xl border border-[#ef5845]/30 bg-[#fff0e9] px-4 py-3 text-[#a9362a] text-sm">
             <AlertCircle className="w-4 h-4 shrink-0" />
             <span>
               No se pudo conectar con la API. Asegurate de que el backend esté corriendo:{" "}
@@ -264,8 +282,8 @@ export default function Home() {
         />
       </main>
 
-      <footer className="mt-12 border-t border-slate-200 py-6 text-center text-xs text-slate-400">
-        PromoAR — Datos extraídos de sitios oficiales. Verificar condiciones con cada entidad.
+      <footer className="mt-14 border-t border-[#10243e]/10 py-8 text-center text-xs text-[#687487]">
+        <span className="font-black text-[#10243e]">PROMOAR</span> — Datos extraídos de sitios oficiales. Verificar condiciones con cada entidad.
       </footer>
     </div>
   )

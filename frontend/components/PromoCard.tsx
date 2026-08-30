@@ -95,21 +95,21 @@ export function PromoCard({ promo }: Props) {
     !!formatDate(promo.valid_until)
 
   return (
-    <Card className="relative overflow-hidden hover:shadow-md transition-shadow duration-200 border-slate-200">
+    <Card className="group relative overflow-hidden rounded-[1.45rem] border-[#10243e]/12 bg-[#fffdf8] shadow-[3px_3px_0_rgb(16_36_62_/_0.12)] transition-all duration-200 hover:-translate-y-1 hover:shadow-[7px_8px_0_#ffd84d]">
       {/* Left accent bar */}
       <span
         className={clsx("absolute left-0 top-0 bottom-0 w-1", supermarketColor(promo.supermarket_name))}
       />
 
-      <CardContent className="pl-4 pr-4 pt-3 pb-3 space-y-2">
+      <CardContent className="relative pl-5 pr-4 pt-4 pb-4 space-y-3">
         {/* Header row: supermarket logo + discount */}
         <div className="flex items-start justify-between gap-2">
           <SupermarketLogo name={promo.supermarket_name} showLabel={true} />
-          {promo.discount && <DiscountBadge discount={promo.discount} className="max-w-[90px]" />}
+          {promo.discount && <DiscountBadge discount={promo.discount} className="max-w-[100px] scale-105 origin-top-right" />}
         </div>
 
         {/* Title */}
-        <p className="text-sm font-semibold text-slate-800 leading-snug">
+        <p className="text-[15px] font-black tracking-[-0.025em] text-[#10243e] leading-snug">
           {promo.title}
         </p>
 
@@ -130,7 +130,7 @@ export function PromoCard({ promo }: Props) {
             ? `${from} — ${until}`
             : from ? `Desde ${from}` : `Hasta ${until}`
           return (
-            <p className="text-[11px] text-slate-500">
+            <p className="text-[11px] font-medium text-[#687487]">
               <span className="font-medium">Vigencia:</span> {label}
             </p>
           )
@@ -180,11 +180,11 @@ export function PromoCard({ promo }: Props) {
 
         {/* Ver detalles toggle + link a la promoción */}
         {(hasDetails || promotionUrl) && (
-          <div className="flex items-center justify-between gap-2 mt-1">
+          <div className="flex items-center justify-between gap-2 border-t border-[#10243e]/8 pt-2 mt-1">
             {hasDetails ? (
               <button
                 onClick={() => setExpanded((v) => !v)}
-                className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-medium"
+                className="flex items-center gap-1 text-[11px] font-bold text-[#10243e] underline decoration-[#ffd84d] decoration-2 underline-offset-4 hover:text-[#ef5845]"
               >
                 {expanded ? (
                   <>
@@ -205,7 +205,7 @@ export function PromoCard({ promo }: Props) {
                 href={promotionUrl}
                 target="_blank"
                 rel="noopener noreferrer"
-                className="flex items-center gap-1 text-[11px] text-blue-600 hover:text-blue-800 font-medium whitespace-nowrap"
+                className="flex items-center gap-1 text-[11px] font-bold text-[#10243e] hover:text-[#ef5845] whitespace-nowrap"
               >
                 Ver promoción <ExternalLink className="w-3 h-3" />
               </a>

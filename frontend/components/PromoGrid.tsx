@@ -28,9 +28,9 @@ export function PromoGrid({ promotions, loading, page, pages, total, onPageChang
 
   if (!loading && promotions.length === 0) {
     return (
-      <div className="text-center py-16 text-slate-500">
-        <p className="text-lg font-medium">Sin resultados</p>
-        <p className="text-sm mt-1">Probá con otros filtros</p>
+      <div className="rounded-[2rem] border border-dashed border-[#10243e]/25 bg-[#fffdf8] py-16 text-center text-[#687487]">
+        <p className="text-xl font-black text-[#10243e]">No encontramos promos por acá.</p>
+        <p className="mt-1 text-sm">Probá con otros filtros o volvé a mirar mañana.</p>
       </div>
     )
   }
@@ -43,9 +43,16 @@ export function PromoGrid({ promotions, loading, page, pages, total, onPageChang
   for (let i = start; i <= end; i++) pageNumbers.push(i)
 
   return (
-    <div className="space-y-4">
+    <div className="space-y-5">
+      <div className="flex items-end justify-between px-1">
+        <div>
+          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#ef5845]">Selección</p>
+          <h2 className="text-2xl font-black tracking-[-0.05em] text-[#10243e]">Promos para aprovechar</h2>
+        </div>
+        <p className="hidden text-sm font-medium text-[#687487] sm:block">{total.toLocaleString("es-AR")} resultados</p>
+      </div>
       <div
-        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-3 transition-opacity duration-150 ${loading ? "opacity-40 pointer-events-none" : ""}`}
+        className={`grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4 transition-opacity duration-150 ${loading ? "opacity-40 pointer-events-none" : ""}`}
       >
         {promotions.map((promo) => (
           <PromoCard key={promo.id} promo={promo} />

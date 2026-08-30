@@ -14,7 +14,7 @@ export function StatsBar({ stats, loading }: Props) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
         {[...Array(4)].map((_, i) => (
-          <Skeleton key={i} className="h-16 rounded-xl" />
+          <Skeleton key={i} className="h-24 rounded-2xl" />
         ))}
       </div>
     )
@@ -39,18 +39,18 @@ export function StatsBar({ stats, loading }: Props) {
   ]
 
   return (
-    <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
-      {items.map(({ icon: Icon, label, value }) => (
+    <div className="rise-in grid grid-cols-2 sm:grid-cols-4 gap-3" style={{ animationDelay: "80ms" }}>
+      {items.map(({ icon: Icon, label, value }, index) => (
         <div
           key={label}
-          className="bg-white rounded-xl border border-slate-200 px-4 py-3 flex items-center gap-3"
+          className={`rounded-2xl border px-4 py-4 ${index === 0 ? "border-[#10243e] bg-[#10243e] text-[#fffdf8] shadow-[4px_4px_0_#ffd84d]" : "border-[#10243e]/10 bg-[#fffdf8] text-[#10243e]"}`}
         >
-          <span className="bg-slate-100 rounded-lg p-2 shrink-0">
-            <Icon className="w-4 h-4 text-slate-600" />
+          <span className={`mb-3 inline-flex rounded-full p-2 ${index === 0 ? "bg-[#ffd84d] text-[#10243e]" : "bg-[#f0e6d4] text-[#10243e]"}`}>
+            <Icon className="w-4 h-4" />
           </span>
           <div className="min-w-0">
-            <p className="text-lg font-bold text-slate-900 leading-none">{value}</p>
-            <p className="text-[11px] text-slate-500 mt-0.5 leading-tight">{label}</p>
+            <p className="text-xl font-black leading-none tracking-tight">{value}</p>
+            <p className={`text-[11px] mt-1 leading-tight ${index === 0 ? "text-white/60" : "text-[#687487]"}`}>{label}</p>
           </div>
         </div>
       ))}

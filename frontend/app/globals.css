@@ -48,21 +48,21 @@
 }
 
 :root {
-  --radius: 0.625rem;
-  --background: oklch(1 0 0);
-  --foreground: oklch(0.145 0 0);
-  --card: oklch(1 0 0);
-  --card-foreground: oklch(0.145 0 0);
+  --radius: 1rem;
+  --background: #f7f2e8;
+  --foreground: #10243e;
+  --card: #fffdf8;
+  --card-foreground: #10243e;
   --popover: oklch(1 0 0);
   --popover-foreground: oklch(0.145 0 0);
-  --primary: oklch(0.205 0 0);
-  --primary-foreground: oklch(0.985 0 0);
-  --secondary: oklch(0.97 0 0);
-  --secondary-foreground: oklch(0.205 0 0);
-  --muted: oklch(0.97 0 0);
-  --muted-foreground: oklch(0.556 0 0);
-  --accent: oklch(0.97 0 0);
-  --accent-foreground: oklch(0.205 0 0);
+  --primary: #10243e;
+  --primary-foreground: #fffdf8;
+  --secondary: #f0e6d4;
+  --secondary-foreground: #10243e;
+  --muted: #f0e6d4;
+  --muted-foreground: #687487;
+  --accent: #ffd84d;
+  --accent-foreground: #10243e;
   --destructive: oklch(0.577 0.245 27.325);
   --border: oklch(0.922 0 0);
   --input: oklch(0.922 0 0);
@@ -122,5 +122,20 @@
   }
   body {
     @apply bg-background text-foreground;
+    background-image: radial-gradient(circle at 2px 2px, rgb(16 36 62 / 0.04) 1px, transparent 0);
+    background-size: 18px 18px;
   }
+}
+
+@keyframes rise-in {
+  from { opacity: 0; transform: translateY(14px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.rise-in {
+  animation: rise-in 500ms cubic-bezier(.2,.7,.2,1) both;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .rise-in { animation: none; }
 }
