@@ -210,13 +210,13 @@ export default function Home() {
           <div className="pointer-events-none absolute -right-12 -top-20 h-64 w-64 rounded-full border-[28px] border-[#ffd84d] opacity-95" />
           <div className="pointer-events-none absolute bottom-0 right-20 h-20 w-40 bg-[#ef5845] [clip-path:polygon(0_0,100%_35%,78%_100%,0_76%)]" />
           <div className="relative max-w-2xl">
-            <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#ffd84d]"><Sparkles className="h-4 w-4" /> Radar de descuentos</div>
+            <div className="mb-4 flex items-center gap-2 text-xs font-bold uppercase tracking-[0.18em] text-[#ffd84d]"><Sparkles className="h-4 w-4" /> Antes de pagar</div>
             <p className="text-sm font-medium text-white/70">{todayDate}</p>
-            <h1 className="mt-1 text-4xl font-black leading-[0.9] tracking-[-0.07em] sm:text-6xl">Que tu plata<br /><span className="text-[#ffd84d]">rinda más.</span></h1>
-            <p className="mt-5 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">Promos reales de bancos, billeteras y supermercados — ordenadas para que encuentres la mejor antes de salir.</p>
+            <h1 className="promo-display mt-1 text-5xl font-semibold leading-[0.85] tracking-[-0.06em] sm:text-7xl">Antes de pagar,<br /><span className="text-[#ffd84d]">mirá acá.</span></h1>
+            <p className="mt-5 max-w-md text-sm leading-relaxed text-white/75 sm:text-base">Descuentos bancarios y promociones de súper. Buscá por día, banco o comercio.</p>
           </div>
           <button onClick={toggleTodayOnly} className="relative mt-7 inline-flex items-center gap-2 rounded-full bg-[#ffd84d] px-4 py-2 text-sm font-black text-[#10243e] transition-transform hover:-translate-y-0.5 focus-visible:outline-2 focus-visible:outline-offset-2 focus-visible:outline-white">
-            Ver las de hoy <ArrowUpRight className="h-4 w-4" />
+            Ver promos de hoy <ArrowUpRight className="h-4 w-4" />
           </button>
         </section>
 
@@ -278,6 +278,8 @@ export default function Home() {
           page={promos?.page ?? 1}
           pages={promos?.pages ?? 1}
           total={promos?.total ?? 0}
+          layout={filters.supermarket ? "table" : "grid"}
+          marketName={filters.supermarket || undefined}
           onPageChange={(p) => updateFilters({ page: p })}
         />
       </main>

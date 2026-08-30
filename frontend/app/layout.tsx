@@ -1,10 +1,11 @@
 import type { Metadata } from "next"
-import { Geist } from "next/font/google"
+import { Newsreader, Public_Sans } from "next/font/google"
 import "./globals.css"
 import { Providers } from "./providers"
 import { AuthProvider } from "@/components/AuthProvider"
 
-const geist = Geist({ subsets: ["latin"], variable: "--font-geist-sans" })
+const newsreader = Newsreader({ subsets: ["latin"], variable: "--font-newsreader" })
+const publicSans = Public_Sans({ subsets: ["latin"], variable: "--font-public-sans" })
 
 export const metadata: Metadata = {
   title: "PromoAR — Descuentos de supermercados",
@@ -14,7 +15,7 @@ export const metadata: Metadata = {
 export default function RootLayout({ children }: { children: React.ReactNode }) {
   return (
     <html lang="es">
-      <body className={`${geist.variable} font-sans antialiased bg-slate-50 min-h-screen`}>
+      <body className={`${newsreader.variable} ${publicSans.variable} font-sans antialiased min-h-screen`}>
         <Providers>
           <AuthProvider>
             {children}
