@@ -17,11 +17,11 @@ function classify(discount: string) {
 }
 
 const STYLES = {
-  percent:  "bg-emerald-100 text-emerald-800 border-emerald-200",
-  cuotas:   "bg-blue-100 text-blue-800 border-blue-200",
-  cashback: "bg-violet-100 text-violet-800 border-violet-200",
-  bundle:   "bg-amber-100 text-amber-800 border-amber-200",
-  other:    "bg-slate-100 text-slate-700 border-slate-200",
+  percent:  "bg-[#efffdc] text-[#36561a] border-[#b8f36b]",
+  cuotas:   "bg-[#eef3ff] text-[#1f4ab8] border-[#b9c9fb]",
+  cashback: "bg-[#f3efff] text-[#6344aa] border-[#d5c7fb]",
+  bundle:   "bg-[#fff6df] text-[#765410] border-[#edd292]",
+  other:    "bg-[#edf2f7] text-[#40536b] border-[#d4dee9]",
 }
 
 export function DiscountBadge({ discount, className }: Props) {
@@ -31,7 +31,7 @@ export function DiscountBadge({ discount, className }: Props) {
   return (
     <span
       className={clsx(
-        "inline-block text-center px-2 py-0.5 rounded-full border text-[11px] font-semibold tracking-wide uppercase leading-tight",
+        "inline-block rounded-lg border px-2 py-1 text-center text-[11px] font-semibold tracking-wide uppercase leading-tight",
         STYLES[type],
         className
       )}

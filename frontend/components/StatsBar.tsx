@@ -39,18 +39,18 @@ export function StatsBar({ stats, loading }: Props) {
   ]
 
   return (
-    <div className="rise-in grid grid-cols-2 sm:grid-cols-4 gap-3" style={{ animationDelay: "80ms" }}>
+    <div className="enter grid grid-cols-2 gap-3 sm:grid-cols-4" style={{ animationDelay: "90ms" }}>
       {items.map(({ icon: Icon, label, value }, index) => (
         <div
           key={label}
-          className={`rounded-2xl border px-4 py-4 ${index === 0 ? "border-[#10243e] bg-[#10243e] text-[#fffdf8] shadow-[4px_4px_0_#ffd84d]" : "border-[#10243e]/10 bg-[#fffdf8] text-[#10243e]"}`}
+          className={`rounded-2xl border px-4 py-4 ${index === 0 ? "border-[#102a4c] bg-[#102a4c] text-white" : "border-[#dbe4ee] bg-white text-[#102a4c] shadow-[0_12px_30px_rgb(16_42_76_/_0.05)]"}`}
         >
-          <span className={`mb-3 inline-flex rounded-full p-2 ${index === 0 ? "bg-[#ffd84d] text-[#10243e]" : "bg-[#f0e6d4] text-[#10243e]"}`}>
+          <span className={`mb-3 inline-flex rounded-lg p-2 ${index === 0 ? "bg-[#b8f36b] text-[#102a4c]" : "bg-[#edf2f7] text-[#2758d8]"}`}>
             <Icon className="w-4 h-4" />
           </span>
           <div className="min-w-0">
-            <p className="text-xl font-black leading-none tracking-tight">{value}</p>
-            <p className={`text-[11px] mt-1 leading-tight ${index === 0 ? "text-white/60" : "text-[#687487]"}`}>{label}</p>
+            <p className="display text-xl font-semibold leading-none tracking-[-0.05em]">{value}</p>
+            <p className={`mt-1 text-[11px] leading-tight ${index === 0 ? "text-white/65" : "text-[#52657d]"}`}>{label}</p>
           </div>
         </div>
       ))}

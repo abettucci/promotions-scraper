@@ -1,6 +1,6 @@
 "use client"
 
-import { useState, useEffect, useRef } from "react"
+import { useState, useRef } from "react"
 import { Input } from "@/components/ui/input"
 import { Button } from "@/components/ui/button"
 import {
@@ -87,10 +87,6 @@ export function FilterBar({
   const [localSearch, setLocalSearch] = useState(filters.search)
   const debounceRef = useRef<ReturnType<typeof setTimeout>>(undefined)
 
-  useEffect(() => {
-    setLocalSearch(filters.search)
-  }, [filters.search])
-
   const handleSearchChange = (value: string) => {
     setLocalSearch(value)
     clearTimeout(debounceRef.current)
@@ -111,8 +107,14 @@ export function FilterBar({
     onChange({ modality: next, page: 1 })
   }
 
+  const handleReset = () => {
+    clearTimeout(debounceRef.current)
+    setLocalSearch("")
+    onReset()
+  }
+
   return (
-    <div className="space-y-5">
+    <div className="space-y-6">
       {/* Search input */}
       <div className="relative">
         <Search className="absolute left-4 top-1/2 -translate-y-1/2 w-4 h-4 text-[#687487] pointer-events-none" />
@@ -120,13 +122,13 @@ export function FilterBar({
           placeholder="Buscar promoción, banco, condición..."
           value={localSearch}
           onChange={(e) => handleSearchChange(e.target.value)}
-          className="h-12 rounded-xl border-[#10243e]/15 bg-[#f7f2e8] pl-10 text-[#10243e] placeholder:text-[#687487] focus-visible:ring-[#ef5845]"
+          className="h-12 rounded-xl border-[#cbd8e6] bg-[#f8fafd] pl-10 text-[#102a4c] placeholder:text-[#71839a] focus-visible:border-[#2758d8] focus-visible:ring-[#2758d8]/25"
         />
       </div>
 
       {/* Estado */}
       <section className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-[0.15em] text-[#10243e]">Estado</h4>
+        <h4 className="eyebrow">Estado</h4>
         <div className="flex gap-3">
           {STATES.map(({ value, label, Icon }) => {
             const selected = filters.state === value
@@ -134,21 +136,21 @@ export function FilterBar({
               <button
                 key={value}
                 onClick={() => onChange({ state: value, page: 1 })}
-                className={`flex flex-col items-center gap-1.5 transition-colors`}
+                className="flex min-w-12 flex-col items-center gap-1.5 transition-colors"
                 aria-pressed={selected}
               >
                 <span
                   className={`flex items-center justify-center w-12 h-12 rounded-xl border ${
                   selected
-                      ? "bg-[#ef5845] border-[#ef5845] text-white shadow-[2px_2px_0_#10243e]"
-                      : "bg-[#f7f2e8] border-[#10243e]/15 text-[#10243e] hover:bg-[#ffd84d]"
+                      ? "border-[#102a4c] bg-[#102a4c] text-white"
+                      : "border-[#cbd8e6] bg-[#f8fafd] text-[#102a4c] hover:border-[#9cb5d0] hover:bg-[#edf2f7]"
                   }`}
                 >
                   <Icon className="w-5 h-5" />
                 </span>
                 <span
                   className={`text-xs ${
-                    selected ? "text-[#10243e] font-bold" : "text-[#687487]"
+                    selected ? "font-semibold text-[#102a4c]" : "text-[#52657d]"
                   }`}
                 >
                   {label}
@@ -161,7 +163,7 @@ export function FilterBar({
 
       {/* Días de aplicación */}
       <section className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-[0.15em] text-[#10243e]">Días de aplicación</h4>
+        <h4 className="eyebrow">Días de aplicación</h4>
         <div className="flex gap-2 flex-wrap">
           {DAYS.map(({ code, letter, label }) => {
             const selected = filters.days.includes(code)
@@ -173,8 +175,8 @@ export function FilterBar({
                 aria-pressed={selected}
                 className={`w-11 h-11 rounded-xl border text-sm font-medium transition-colors ${
                   selected
-                    ? "bg-[#10243e] border-[#10243e] text-[#ffd84d] shadow-[2px_2px_0_#ef5845]"
-                    : "bg-[#f7f2e8] border-[#10243e]/15 text-[#10243e] hover:bg-[#ffd84d]"
+                    ? "border-[#102a4c] bg-[#102a4c] text-[#b8f36b]"
+                    : "border-[#cbd8e6] bg-[#f8fafd] text-[#102a4c] hover:border-[#9cb5d0] hover:bg-[#edf2f7]"
                 }`}
               >
                 {letter}
@@ -186,7 +188,7 @@ export function FilterBar({
 
       {/* Modalidad de uso */}
       <section className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-[0.15em] text-[#10243e]">Modalidad de uso</h4>
+        <h4 className="eyebrow">Modalidad de uso</h4>
         <div className="flex gap-6">
           {MODALITIES.map(({ value, label }) => {
             const selected = filters.modality.includes(value)
@@ -201,7 +203,7 @@ export function FilterBar({
                   onChange={() => toggleModality(value)}
                   className="w-4 h-4 rounded border-[#10243e]/30 text-[#ef5845] focus:ring-[#ef5845]"
                 />
-                <span className="text-sm font-medium text-[#10243e]">{label}</span>
+                <span className="text-sm font-medium text-[#102a4c]">{label}</span>
               </label>
             )
           })}
@@ -210,13 +212,13 @@ export function FilterBar({
 
       {/* Empresa / Banco / Tipo de descuento */}
       <section className="space-y-2">
-        <h4 className="text-xs font-black uppercase tracking-[0.15em] text-[#10243e]">Filtros adicionales</h4>
+        <h4 className="eyebrow">Filtros adicionales</h4>
         <div className="flex flex-wrap gap-2">
           <Select
             value={filters.supermarket || ALL_VALUE}
             onValueChange={(v) => onChange({ supermarket: v === ALL_VALUE ? "" : v, page: 1 })}
           >
-            <SelectTrigger className="w-[170px] h-10 rounded-xl text-sm bg-[#f7f2e8] border-[#10243e]/15">
+            <SelectTrigger className="h-11 w-[170px] rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
               <SelectValue placeholder={merchantLabel} />
             </SelectTrigger>
             <SelectContent>
@@ -233,7 +235,7 @@ export function FilterBar({
             value={filters.bank || ALL_VALUE}
             onValueChange={(v) => onChange({ bank: v === ALL_VALUE ? "" : v, page: 1 })}
           >
-            <SelectTrigger className="w-[160px] h-10 rounded-xl text-sm bg-[#f7f2e8] border-[#10243e]/15">
+            <SelectTrigger className="h-11 w-[160px] rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
               <SelectValue placeholder="Banco / Wallet" />
             </SelectTrigger>
             <SelectContent>
@@ -250,7 +252,7 @@ export function FilterBar({
             value={filters.discount_type || ALL_VALUE}
             onValueChange={(v) => onChange({ discount_type: v === ALL_VALUE ? "" : v, page: 1 })}
           >
-            <SelectTrigger className="w-[145px] h-10 rounded-xl text-sm bg-[#f7f2e8] border-[#10243e]/15">
+            <SelectTrigger className="h-11 w-[145px] rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
               <SelectValue placeholder="Tipo descuento" />
             </SelectTrigger>
             <SelectContent>
@@ -267,8 +269,8 @@ export function FilterBar({
             <Button
               variant="ghost"
               size="sm"
-              onClick={onReset}
-              className="h-10 text-[#687487] hover:bg-[#f0e6d4] hover:text-[#10243e] gap-1"
+              onClick={handleReset}
+              className="h-11 gap-1 text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"
             >
               <X className="w-3.5 h-3.5" />
               Limpiar
@@ -278,7 +280,7 @@ export function FilterBar({
       </section>
 
       {/* Results count */}
-      <p className={`text-xs font-medium transition-opacity ${loading ? "text-[#687487]/40" : "text-[#687487]"}`}>
+      <p aria-live="polite" className={`text-xs font-medium transition-opacity ${loading ? "text-[#52657d]/40" : "text-[#52657d]"}`}>
         {totalResults.toLocaleString("es-AR")} promociones encontradas
       </p>
     </div>

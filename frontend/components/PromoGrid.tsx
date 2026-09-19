@@ -22,13 +22,13 @@ interface Props {
 
 function PromotionTable({ promotions, marketName }: { promotions: Promotion[]; marketName?: string }) {
   return (
-    <section className="overflow-hidden rounded-[1.6rem] border border-[#10243e]/15 bg-[#fffdf8] shadow-[5px_5px_0_rgb(16_36_62_/_0.12)]">
-      <header className="flex items-center justify-between gap-4 bg-[#10243e] px-5 py-4 text-[#fffdf8] sm:px-6">
+    <section className="overflow-hidden rounded-2xl border border-[#dbe4ee] bg-white shadow-[0_14px_36px_rgb(16_42_76_/_0.07)]">
+      <header className="flex items-center justify-between gap-4 bg-[#102a4c] px-5 py-4 text-white sm:px-6">
         <div className="flex min-w-0 items-center gap-3">
           {marketName && <SupermarketLogo name={marketName} showLabel={false} />}
           <div className="min-w-0">
-            <p className="text-[10px] font-bold uppercase tracking-[0.18em] text-[#ffd84d]">Listado del súper</p>
-            <h3 className="truncate text-lg font-black tracking-[-0.04em]">{marketName || "Promociones seleccionadas"}</h3>
+            <p className="text-[10px] font-semibold uppercase tracking-[0.15em] text-[#b8f36b]">Listado del súper</p>
+            <h3 className="display truncate text-lg font-semibold tracking-[-0.04em]">{marketName || "Promociones seleccionadas"}</h3>
           </div>
         </div>
         <span className="hidden rounded-full border border-white/15 px-3 py-1 text-xs font-bold text-white/75 sm:block">Compará beneficio por beneficio</span>
@@ -36,7 +36,7 @@ function PromotionTable({ promotions, marketName }: { promotions: Promotion[]; m
 
       <div className="overflow-x-auto">
         <table className="w-full min-w-[760px] border-collapse text-left">
-          <thead className="bg-[#f0e6d4] text-[10px] font-black uppercase tracking-[0.13em] text-[#536176]">
+          <thead className="bg-[#edf2f7] text-[10px] font-semibold uppercase tracking-[0.13em] text-[#52657d]">
             <tr>
               <th scope="col" className="whitespace-nowrap px-5 py-3 sm:px-6">Día</th>
               <th scope="col" className="whitespace-nowrap px-4 py-3">Banco / billetera</th>
@@ -46,27 +46,27 @@ function PromotionTable({ promotions, marketName }: { promotions: Promotion[]; m
               <th scope="col" className="whitespace-nowrap px-5 py-3 sm:px-6">Vigencia</th>
             </tr>
           </thead>
-          <tbody className="divide-y divide-[#10243e]/10">
+          <tbody className="divide-y divide-[#e5ebf2]">
             {promotions.map((promo) => {
               const entity = promo.bank || promo.wallet || "Sin entidad"
               const limit = promo.tope || promo.max_discount || "Sin tope informado"
               const validity = promo.valid_until ? `Hasta ${promo.valid_until}` : promo.valid_from ? `Desde ${promo.valid_from}` : "Ver condiciones"
 
               return (
-                <tr key={promo.id} className="transition-colors hover:bg-[#fff8df]">
-                  <td className="whitespace-nowrap px-5 py-4 align-top text-sm font-black text-[#10243e] sm:px-6">{promo.valid_days || "Todos los días"}</td>
+                <tr key={promo.id} className="transition-colors hover:bg-[#f5f8fc]">
+                  <td className="whitespace-nowrap px-5 py-4 align-top text-sm font-semibold text-[#102a4c] sm:px-6">{promo.valid_days || "Todos los días"}</td>
                   <td className="px-4 py-4 align-top"><BankBadge name={entity} size="sm" showLabel /></td>
                   <td className="px-4 py-4 align-top"><DiscountBadge discount={promo.discount || "Beneficio"} /></td>
-                  <td className="max-w-48 px-4 py-4 align-top text-sm font-bold leading-snug text-[#10243e]">{limit}</td>
-                  <td className="min-w-72 px-4 py-4 align-top text-sm leading-snug text-[#536176]">{promo.title}</td>
-                  <td className="whitespace-nowrap px-5 py-4 align-top text-xs font-medium text-[#687487] sm:px-6">{validity}</td>
+                  <td className="max-w-48 px-4 py-4 align-top text-sm font-semibold leading-snug text-[#102a4c]">{limit}</td>
+                  <td className="min-w-72 px-4 py-4 align-top text-sm leading-snug text-[#52657d]">{promo.title}</td>
+                  <td className="whitespace-nowrap px-5 py-4 align-top text-xs font-medium text-[#52657d] sm:px-6">{validity}</td>
                 </tr>
               )
             })}
           </tbody>
         </table>
       </div>
-      <p className="border-t border-[#10243e]/10 px-5 py-3 text-xs text-[#687487] sm:px-6">Deslizá horizontalmente para ver todas las columnas en pantallas chicas.</p>
+      <p className="border-t border-[#e5ebf2] px-5 py-3 text-xs text-[#52657d] sm:px-6">Deslizá horizontalmente para ver todas las columnas en pantallas chicas.</p>
     </section>
   )
 }
@@ -84,8 +84,8 @@ export function PromoGrid({ promotions, loading, page, pages, total, layout, mar
 
   if (!loading && promotions.length === 0) {
     return (
-      <div className="rounded-[2rem] border border-dashed border-[#10243e]/25 bg-[#fffdf8] py-16 text-center text-[#687487]">
-        <p className="text-xl font-black text-[#10243e]">No encontramos promos por acá.</p>
+      <div className="rounded-2xl border border-dashed border-[#b7c7d8] bg-white py-16 text-center text-[#52657d]">
+        <p className="display text-xl font-semibold text-[#102a4c]">No encontramos promos por acá.</p>
         <p className="mt-1 text-sm">Probá con otros filtros o volvé a mirar mañana.</p>
       </div>
     )
@@ -102,10 +102,10 @@ export function PromoGrid({ promotions, loading, page, pages, total, layout, mar
     <div className="space-y-5">
       <div className="flex items-end justify-between gap-4 px-1">
         <div>
-          <p className="text-xs font-bold uppercase tracking-[0.16em] text-[#ef5845]">{layout === "table" ? "Compará" : "Vigentes"}</p>
-          <h2 className="promo-display text-3xl font-semibold tracking-[-0.045em] text-[#10243e]">{layout === "table" ? `Promos de ${marketName || "este súper"}` : "Promos para esta semana"}</h2>
+          <p className="eyebrow">{layout === "table" ? "Compará" : "Vigentes"}</p>
+          <h2 className="display text-3xl font-semibold tracking-[-0.055em] text-[#102a4c]">{layout === "table" ? `Promos de ${marketName || "este súper"}` : "Promos para esta semana"}</h2>
         </div>
-        <div className="hidden items-center gap-2 text-sm font-medium text-[#687487] sm:flex">
+        <div className="hidden items-center gap-2 text-sm font-medium text-[#52657d] sm:flex">
           {layout === "table" ? <TableProperties className="h-4 w-4" aria-hidden="true" /> : <LayoutGrid className="h-4 w-4" aria-hidden="true" />}
           {total.toLocaleString("es-AR")} resultados
         </div>

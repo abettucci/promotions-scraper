@@ -124,6 +124,7 @@ def _query_promotions(
         SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type,
                p.payment_method, p.store_types, p.valid_days,
                p.valid_from, p.valid_until, p.tope, p.min_purchase,
+               p.terms_raw, p.exclusions, p.requirements, p.url, p.acumulable,
                s.name AS supermarket_name,
                {"COALESCE(s.category, 'supermarket')" if _HAS_SUPERMARKET_CATEGORY else "'supermarket'"} AS category
         FROM promotions p
@@ -224,6 +225,7 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "• /banco &lt;nombre&gt; — filtrar por banco/wallet\n"
         "• /super &lt;nombre&gt; — filtrar por super o marca\n"
         "• /combustible — promos de combustible hoy\n"
+        "• Escribime una pregunta — ej. <i>¿El vino Alaris está excluido en Coto hoy?</i>\n"
         "• /stats — estadísticas\n\n"
         "<b>Comandos personalizados</b> (requieren cuenta):\n"
         "• /mis — promos para tus medios de pago\n"
@@ -248,6 +250,12 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "<code>/super coto</code> — Promos en Coto.\n"
         "<code>/super ypf</code> — Promos en YPF.\n\n"
         "<code>/combustible</code> — Solo promos de combustible vigentes hoy.\n\n"
+        "<b>Preguntas en lenguaje natural</b>\n\n"
+        "También podés escribirme sin comando. Por ejemplo:\n"
+        "<i>¿El vino Alaris está excluido de la promo de Coto hoy?</i>\n"
+        "<i>¿En qué súper me conviene comprar vino hoy?</i>\n\n"
+        "Las recomendaciones usan tus medios vinculados si tenés cuenta y aclaran "
+        "cuando los T&amp;C no permiten confirmar un producto.\n\n"
         "<code>/stats</code> — Total de promos, supers y bancos.\n\n"
         "<b>Comandos privados</b> (requieren cuenta linkeada)\n\n"
         "<code>/mis</code> — Promos que matchean tus medios de pago.\n"
@@ -471,7 +479,19 @@ def handle_message(update: dict, user_db: UserDatabase, notifier: TelegramNotifi
     chat_id = str(msg["chat"]["id"])
     text = (msg.get("text") or "").strip()
     if not text.startswith("/"):
-        # No-op para texto plano. Podemos sugerir /ayuda en el futuro.
+        from promo_questions import answer_promo_question
+
+        # Para preguntas abiertas se consulta solo la información vigente hoy.
+        # Si el chat está vinculado, la comparación usa sus medios de pago.
+        user = user_db.get_user_by_telegram_chat_id(chat_id)
+        methods = user_db.get_user_payment_methods(user["id"]) if user else []
+        reply_text = answer_promo_question(
+            text,
+            _query_promotions(today_only=True, limit=500),
+            methods,
+        )
+        if reply_text:
+            notifier.send_message_to(chat_id, reply_text, parse_mode="HTML")
         return
 
     # Telegram permite /comando@botname — descartamos el sufijo

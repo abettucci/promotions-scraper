@@ -3,7 +3,7 @@
 import { useState, useEffect } from "react"
 import { useRouter } from "next/navigation"
 import Link from "next/link"
-import { useQuery, useMutation, useQueryClient } from "@tanstack/react-query"
+import { useQuery, useMutation } from "@tanstack/react-query"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
 import { PaymentMethodSelector } from "@/components/PaymentMethodSelector"
@@ -18,7 +18,6 @@ import {
 export default function ProfilePage() {
   const router = useRouter()
   const { user, token, setUser, logout } = useAuthStore()
-  const qc = useQueryClient()
 
   // Redirect if not logged in
   useEffect(() => {
@@ -38,16 +37,6 @@ export default function ProfilePage() {
   const [notifyHour, setNotifyHour] = useState(user?.notify_hour ?? 9)
   const [successMsg, setSuccessMsg] = useState("")
   const [errorMsg, setErrorMsg] = useState("")
-
-  // Sync state when user loads
-  useEffect(() => {
-    if (user) {
-      setSelectedMethods(user.payment_methods ?? [])
-      setTelegramChatId(user.telegram_chat_id ?? "")
-      setNotifyDaily(user.notify_daily)
-      setNotifyHour(user.notify_hour)
-    }
-  }, [user?.id])
 
   const saveMethods = useMutation({
     mutationFn: () => api.updatePaymentMethods(token!, selectedMethods),

@@ -22,7 +22,7 @@ interface Props {
 }
 
 export function DaysBadge({ validDays }: Props) {
-  if (!validDays) return <span className="text-[11px] text-slate-400">Todos los días</span>
+  if (!validDays) return <span className="text-[11px] text-[#71839a]">Todos los días</span>
 
   const today = todayEs()
   const days = Object.keys(DAY_SHORT)
@@ -32,7 +32,7 @@ export function DaysBadge({ validDays }: Props) {
   )
 
   if (activeDays.length === 0) {
-    return <span className="text-[11px] text-slate-500 truncate max-w-[180px]">{validDays}</span>
+    return <span className="max-w-[180px] truncate text-[11px] text-[#52657d]">{validDays}</span>
   }
 
   return (
@@ -43,10 +43,10 @@ export function DaysBadge({ validDays }: Props) {
           <span
             key={d}
             className={clsx(
-              "text-[10px] font-semibold px-1.5 py-0.5 rounded",
+              "rounded-md px-1.5 py-0.5 text-[10px] font-semibold",
               isToday
-                ? "bg-emerald-500 text-white"
-                : "bg-slate-100 text-slate-600"
+                ? "bg-[#102a4c] text-[#b8f36b]"
+                : "bg-[#edf2f7] text-[#52657d]"
             )}
           >
             {DAY_SHORT[d]}
