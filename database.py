@@ -768,6 +768,11 @@ class UserDatabase:
                 window_started_at INTEGER NOT NULL,
                 request_count INTEGER NOT NULL DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS assistant_public_rate_limits (
+                identity_hash TEXT PRIMARY KEY,
+                window_started_at INTEGER NOT NULL,
+                request_count INTEGER NOT NULL DEFAULT 0
+            );
         """)
         conn.commit()
         conn.close()
@@ -950,6 +955,47 @@ class UserDatabase:
             conn.rollback()
             # Fail closed: ante un problema con el control de cuota no se sirve
             # la consulta, para no abrir una vía de abuso.
+            return window_seconds
+        finally:
+            conn.close()
+
+    def consume_public_assistant_quota(
+        self, identity_hash: str, max_requests: int, window_seconds: int,
+    ) -> int:
+        """Consume una cuota pública persistente sin almacenar IPs ni preguntas.
+
+        ``identity_hash`` debe ser un HMAC SHA-256 generado en la capa HTTP.
+        Se valida de forma estricta antes de usarlo como clave de base de datos.
+        """
+        if not re.fullmatch(r"[0-9a-f]{64}", identity_hash or ""):
+            return window_seconds
+        now = int(datetime.now().timestamp())
+        conn = self._conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT window_started_at, request_count FROM assistant_public_rate_limits WHERE identity_hash = ?",
+                (identity_hash,),
+            ).fetchone()
+            if not row or now - row["window_started_at"] >= window_seconds:
+                conn.execute(
+                    "INSERT INTO assistant_public_rate_limits (identity_hash, window_started_at, request_count) VALUES (?, ?, 1) "
+                    "ON CONFLICT(identity_hash) DO UPDATE SET window_started_at = excluded.window_started_at, request_count = 1",
+                    (identity_hash, now),
+                )
+                conn.commit()
+                return 0
+            if row["request_count"] >= max_requests:
+                conn.commit()
+                return max(1, window_seconds - (now - row["window_started_at"]))
+            conn.execute(
+                "UPDATE assistant_public_rate_limits SET request_count = request_count + 1 WHERE identity_hash = ?",
+                (identity_hash,),
+            )
+            conn.commit()
+            return 0
+        except sqlite3.Error:
+            conn.rollback()
             return window_seconds
         finally:
             conn.close()

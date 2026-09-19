@@ -3,7 +3,14 @@ Configuración del scraper de promociones
 """
 import os
 from pathlib import Path
-from dotenv import load_dotenv
+
+try:
+    from dotenv import load_dotenv
+except ImportError:
+    # En producción las variables llegan desde el entorno. Esto permite correr
+    # utilidades y pruebas ligeras sin instalar la dependencia opcional local.
+    def load_dotenv() -> bool:
+        return False
 
 # Cargar variables de entorno desde .env
 load_dotenv()
@@ -284,6 +291,15 @@ JWT_EXPIRE_DAYS = 30
 # Asistente web: por usuario autenticado. La pregunta no se persiste.
 ASSISTANT_RATE_LIMIT_MAX = int(os.getenv("ASSISTANT_RATE_LIMIT_MAX", "12"))
 ASSISTANT_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("ASSISTANT_RATE_LIMIT_WINDOW_SECONDS", "60"))
+
+# Asistente web público: sin cuenta ni medios de pago personales. La clave se
+# usa únicamente para convertir la IP en un identificador HMAC no reversible
+# antes de guardarla para el rate limit. En producción debe tener 32+ caracteres.
+ASSISTANT_PUBLIC_RATE_LIMIT_MAX = int(os.getenv("ASSISTANT_PUBLIC_RATE_LIMIT_MAX", "5"))
+ASSISTANT_PUBLIC_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("ASSISTANT_PUBLIC_RATE_LIMIT_WINDOW_SECONDS", "3600"))
+ASSISTANT_PUBLIC_RATE_LIMIT_SECRET = os.getenv(
+    "ASSISTANT_PUBLIC_RATE_LIMIT_SECRET", JWT_SECRET,
+)
 
 # ============================================
 # CATÁLOGO DE MEDIOS DE PAGO

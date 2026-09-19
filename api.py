@@ -17,6 +17,9 @@ import sys
 import os
 import html
 import re
+import hashlib
+import hmac
+from ipaddress import ip_address
 
 
 def _strip_accents(s: str) -> str:
@@ -549,6 +552,27 @@ def _assistant_plain_text(value: str) -> str:
     return html.unescape(re.sub(r"</?(?:b|i)>", "", value or ""))
 
 
+def _public_assistant_rate_key(request: Request) -> str:
+    """Genera una clave HMAC de la IP de red, sin guardar la IP original.
+
+    No se aceptan encabezados como ``X-Forwarded-For``: sin una configuración
+    explícita de proxy confiable esos valores pueden ser falsificados. Si la
+    plataforma no entrega una IP válida, se rechaza la consulta para no abrir
+    un bypass del límite público.
+    """
+    client_host = request.client.host if request.client else ""
+    try:
+        canonical_ip = str(ip_address(client_host))
+    except ValueError:
+        raise HTTPException(503, "El asistente público no está disponible temporalmente.")
+
+    secret = config.ASSISTANT_PUBLIC_RATE_LIMIT_SECRET.encode("utf-8")
+    if len(secret) < 32:
+        raise HTTPException(503, "El asistente público no está disponible temporalmente.")
+    rate_material = b"promoar-public-assistant-rate-v1:" + canonical_ip.encode("utf-8")
+    return hmac.new(secret, rate_material, hashlib.sha256).hexdigest()
+
+
 @app.post("/api/assistant/query")
 def ask_assistant(body: AssistantQuestionBody, current_user=Depends(get_current_user)):
     """Responde únicamente consultas permitidas sobre promociones vigentes.
@@ -573,7 +597,6 @@ def ask_assistant(body: AssistantQuestionBody, current_user=Depends(get_current_
         raise HTTPException(
             429,
             "Alcanzaste el límite temporal de consultas. Probá nuevamente en un momento.",
-            headers={"Retry-After": str(retry_after)},
         )
 
     answer = answer_promo_question(
@@ -581,6 +604,38 @@ def ask_assistant(body: AssistantQuestionBody, current_user=Depends(get_current_
         _assistant_promotions(),
         _db.get_user_payment_methods(current_user["id"]),
     )
+    if not answer:
+        raise HTTPException(422, "No pude interpretar una consulta válida sobre promociones.")
+    return {"answer": _assistant_plain_text(answer)}
+
+
+@app.post("/api/assistant/public-query")
+def ask_public_assistant(body: AssistantQuestionBody, request: Request):
+    """Responde consultas generales sin requerir una cuenta.
+
+    La cuota se calcula por IP mediante un HMAC persistente; ni la IP ni la
+    pregunta se almacenan. No recibe ni consulta medios de pago de usuarios.
+    """
+    from promo_questions import answer_promo_question, is_allowed_promo_question
+
+    if not is_allowed_promo_question(body.question):
+        raise HTTPException(
+            422,
+            "Solo puedo responder sobre promociones, exclusiones y dónde conviene comprar.",
+        )
+
+    retry_after = _db.consume_public_assistant_quota(
+        _public_assistant_rate_key(request),
+        config.ASSISTANT_PUBLIC_RATE_LIMIT_MAX,
+        config.ASSISTANT_PUBLIC_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(
+            429,
+            "Alcanzaste el límite de 5 consultas públicas por hora. Iniciá sesión para consultas personalizadas.",
+        )
+
+    answer = answer_promo_question(body.question, _assistant_promotions(), [])
     if not answer:
         raise HTTPException(422, "No pude interpretar una consulta válida sobre promociones.")
     return {"answer": _assistant_plain_text(answer)}

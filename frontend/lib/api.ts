@@ -99,4 +99,7 @@ export const api = {
 
   askAssistant: (token: string, question: string) =>
     fetchMutation<AssistantResponse>("POST", "/api/assistant/query", { question }, token),
+
+  askPublicAssistant: (question: string) =>
+    fetchMutation<AssistantResponse>("POST", "/api/assistant/public-query", { question }),
 }
