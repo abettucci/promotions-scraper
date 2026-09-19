@@ -2,6 +2,7 @@
 Configuración del scraper de promociones
 """
 import os
+import secrets
 from pathlib import Path
 
 try:
@@ -297,9 +298,13 @@ ASSISTANT_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("ASSISTANT_RATE_LIMIT_WINDOW
 # antes de guardarla para el rate limit. En producción debe tener 32+ caracteres.
 ASSISTANT_PUBLIC_RATE_LIMIT_MAX = int(os.getenv("ASSISTANT_PUBLIC_RATE_LIMIT_MAX", "5"))
 ASSISTANT_PUBLIC_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("ASSISTANT_PUBLIC_RATE_LIMIT_WINDOW_SECONDS", "3600"))
-ASSISTANT_PUBLIC_RATE_LIMIT_SECRET = os.getenv(
-    "ASSISTANT_PUBLIC_RATE_LIMIT_SECRET", JWT_SECRET,
-)
+_public_rate_limit_secret = os.getenv("ASSISTANT_PUBLIC_RATE_LIMIT_SECRET", JWT_SECRET)
+if len(_public_rate_limit_secret.encode("utf-8")) < 32:
+    # Sin configuración el modo público sigue disponible. Esta clave no se
+    # persiste ni se expone: solo mantiene el HMAC de la IP durante esta vida
+    # del proceso. Configurar la variable conserva el límite tras reinicios.
+    _public_rate_limit_secret = secrets.token_urlsafe(32)
+ASSISTANT_PUBLIC_RATE_LIMIT_SECRET = _public_rate_limit_secret
 
 # ============================================
 # CATÁLOGO DE MEDIOS DE PAGO

@@ -2,10 +2,14 @@ import tempfile
 import unittest
 from pathlib import Path
 
+import config
 from database import UserDatabase
 
 
 class PublicAssistantQuotaTests(unittest.TestCase):
+    def test_public_rate_limit_has_a_secure_runtime_secret_by_default(self):
+        self.assertGreaterEqual(len(config.ASSISTANT_PUBLIC_RATE_LIMIT_SECRET.encode("utf-8")), 32)
+
     def test_public_quota_is_limited_without_storing_raw_identity(self):
         with tempfile.TemporaryDirectory() as temporary_dir:
             db = UserDatabase(Path(temporary_dir) / "users.db")
