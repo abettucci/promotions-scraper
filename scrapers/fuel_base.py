@@ -9,6 +9,7 @@ import asyncio
 import os
 from typing import List, Dict
 from playwright.async_api import async_playwright
+from fuel_conditions import extract_fuel_conditions
 
 
 # Prompt específico para combustibles
@@ -31,7 +32,9 @@ Para cada promoción, extrae la siguiente información en formato JSON:
 - tope: Tope de reintegro/descuento (ej: "$10000 mensual", "$5000 por transacción", "Sin tope")
 - min_purchase: Compra mínima si se menciona
 - exclusions: Lista de exclusiones (ej: "No acumulable con otras promos")
-- requirements: Lista de requisitos (ej: "Pagando con QR", "App YPF", "Cuenta Sueldo")
+- requirements: Lista de requisitos. Incluir, si aparecen: adhesión a un
+  programa/club, segmento de cliente, cuenta o paquete, app/QR obligatorio y
+  medio de pago. No supongas requisitos que no estén escritos.
 
 IMPORTANTE:
 - Extrae TODAS las promociones visibles, incluso si están en tabs o secciones colapsables
@@ -40,6 +43,10 @@ IMPORTANTE:
 - Los descuentos pueden ser % o $/litro
 - Si no se menciona un banco/billetera identificable, NO incluyas la promo (descartá info institucional genérica)
 - Presta atención a los días — son críticos
+- En requirements separá con precisión condiciones como "cliente adherido a
+  Shell Box", "miembro de On", "Cuenta Sueldo", "nivel X", "registrado en
+  la app" o "pago obligatorio con QR". En exclusions incluí restricciones de
+  usuario, programa, combustible, canal o acumulación.
 - Si la imagen no muestra promociones bancarias claras, devolvé "promotions": []
 
 Responde ÚNICAMENTE con un JSON válido:
@@ -173,6 +180,9 @@ async def scrape_fuel_station_with_ai(name: str, url: str, debug_name: str = Non
                 if isinstance(raw_brands, str):
                     raw_brands = [b.strip() for b in raw_brands.replace(' y ', ',').split(',') if b.strip()]
                 brands = [b.strip() for b in raw_brands if b and b.strip()]
+                requirements, exclusions = extract_fuel_conditions(
+                    p.get('terms_raw'), p.get('requirements'), p.get('exclusions'),
+                )
 
                 normalized.append({
                     'supermarket': name,
@@ -190,8 +200,8 @@ async def scrape_fuel_station_with_ai(name: str, url: str, debug_name: str = Non
                     'tope': p.get('tope') or '',
                     'min_purchase': p.get('min_purchase') or '',
                     'terms_raw': p.get('terms_raw') or '',
-                    'exclusions': ', '.join(p.get('exclusions', []) if isinstance(p.get('exclusions'), list) else [p.get('exclusions')] if p.get('exclusions') else []),
-                    'requirements': ', '.join(p.get('requirements', []) if isinstance(p.get('requirements'), list) else [p.get('requirements')] if p.get('requirements') else []),
+                    'exclusions': ' | '.join(exclusions),
+                    'requirements': ' | '.join(requirements),
                     'url': url,
                 })
             print(f"\n✅ {name}: {len(normalized)} promociones únicas extraídas")

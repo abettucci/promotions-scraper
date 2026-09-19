@@ -93,6 +93,12 @@ SUPERMARKETS = {
         'enabled': True,
         'category': 'benefits',
     },
+    'mercadopago': {
+        'name': 'Mercado Pago',
+        'url': 'https://promociones.mercadopago.com.ar/',
+        'enabled': True,
+        'category': 'benefits',
+    },
     'clublanacion': {
         'name': 'Club La Nación',
         'url': 'https://club.lanacion.com.ar/beneficios',
@@ -270,9 +276,14 @@ PASSWORD_RESET_MAX_PER_HOUR = int(os.getenv("PASSWORD_RESET_MAX_PER_HOUR", "3"))
 # ============================================
 # AUTENTICACIÓN JWT
 # ============================================
-JWT_SECRET = os.getenv("JWT_SECRET", "cambia-esto-en-produccion-usa-openssl-rand-hex-32")
+# Obligatorio por entorno: no debe existir una clave JWT de respaldo en código.
+JWT_SECRET = os.getenv("JWT_SECRET", "")
 JWT_ALGORITHM = "HS256"
 JWT_EXPIRE_DAYS = 30
+
+# Asistente web: por usuario autenticado. La pregunta no se persiste.
+ASSISTANT_RATE_LIMIT_MAX = int(os.getenv("ASSISTANT_RATE_LIMIT_MAX", "12"))
+ASSISTANT_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("ASSISTANT_RATE_LIMIT_WINDOW_SECONDS", "60"))
 
 # ============================================
 # CATÁLOGO DE MEDIOS DE PAGO
@@ -322,4 +333,3 @@ CLUBS_KEYWORDS = [
     'river plate', 'boca juniors', 'racing', 'san lorenzo', 'independiente',
     'velez', 'huracan', 'estudiantes universitarios',
 ]
-

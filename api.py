@@ -8,13 +8,15 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List
 from datetime import date, datetime, timedelta, timezone
-from pydantic import BaseModel
+from pydantic import BaseModel, ConfigDict, field_validator
 import sqlite3
 import json
 import unicodedata
 from pathlib import Path
 import sys
 import os
+import html
+import re
 
 
 def _strip_accents(s: str) -> str:
@@ -139,6 +141,10 @@ _db = UserDatabase()
 # ── JWT helpers ───────────────────────────────────────────────────────────────
 security = HTTPBearer(auto_error=False)
 
+def _auth_is_ready() -> bool:
+    """No emite ni acepta JWT si falta un secreto criptográficamente fuerte."""
+    return AUTH_AVAILABLE and len(config.JWT_SECRET) >= 32
+
 def _create_token(user_id: int) -> str:
     payload = {
         "sub": str(user_id),
@@ -154,8 +160,8 @@ def _decode_token(token: str) -> Optional[int]:
         return None
 
 def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
-    if not AUTH_AVAILABLE:
-        raise HTTPException(503, "Auth no disponible: instalá bcrypt y python-jose")
+    if not _auth_is_ready():
+        raise HTTPException(503, "Autenticación no disponible")
     if not credentials:
         raise HTTPException(401, "Token requerido")
     user_id = _decode_token(credentials.credentials)
@@ -205,6 +211,20 @@ class ForgotPasswordBody(BaseModel):
 class ResetPasswordBody(BaseModel):
     token: str
     new_password: str
+
+class AssistantQuestionBody(BaseModel):
+    """Contrato mínimo y estricto para el asistente de promociones."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    question: str
+
+    @field_validator("question")
+    @classmethod
+    def validate_question(cls, value: str) -> str:
+        if not value or len(value) > 280:
+            raise ValueError("La pregunta debe tener entre 1 y 280 caracteres")
+        if any(ord(char) < 32 and char not in "\n\t" for char in value):
+            raise ValueError("La pregunta contiene caracteres no permitidos")
+        return value
 
 # ── Health ────────────────────────────────────────────────────────────────────
 @app.get("/health")
@@ -339,7 +359,7 @@ def trigger_my_notify(current_user=Depends(get_current_user)):
 # ── Auth endpoints ────────────────────────────────────────────────────────────
 @app.post("/api/auth/register")
 def register(body: RegisterBody):
-    if not AUTH_AVAILABLE:
+    if not _auth_is_ready():
         raise HTTPException(503, "Auth no disponible")
     email = body.email.lower().strip()
     if not email or "@" not in email:
@@ -359,7 +379,7 @@ def register(body: RegisterBody):
 
 @app.post("/api/auth/login")
 def login(body: LoginBody):
-    if not AUTH_AVAILABLE:
+    if not _auth_is_ready():
         raise HTTPException(503, "Auth no disponible")
     user = _db.get_user_by_email(body.email)
     if not user or not _verify_password(body.password, user["password_hash"]):
@@ -382,7 +402,7 @@ def forgot_password(body: ForgotPasswordBody):
     Pedido de reset. Siempre responde 200 (no leakear si el email existe).
     Si el email existe → genera token, envía mail con link.
     """
-    if not AUTH_AVAILABLE:
+    if not _auth_is_ready():
         raise HTTPException(503, "Auth no disponible")
 
     email = (body.email or "").lower().strip()
@@ -428,7 +448,7 @@ def reset_password(body: ResetPasswordBody):
     """
     Aplica el reset. Valida token, expiración y single-use.
     """
-    if not AUTH_AVAILABLE:
+    if not _auth_is_ready():
         raise HTTPException(503, "Auth no disponible")
 
     if not body.token:
@@ -495,6 +515,75 @@ def get_my_promotions(
             for name, items in by_super.items()
         ],
     }
+
+
+def _assistant_promotions() -> list[dict]:
+    """Datos mínimos y vigentes para el asistente; no recibe filtros del cliente."""
+    today_iso = date.today().isoformat()
+    conn = get_conn()
+    rows = conn.execute(
+        """
+        SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.payment_method,
+               p.store_types, p.valid_days, p.valid_from, p.valid_until, p.tope,
+               p.min_purchase, p.terms_raw, p.acumulable,
+               COALESCE((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.exclusions) AS exclusions,
+               COALESCE((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.requirements) AS requirements,
+               s.name AS supermarket_name,
+               COALESCE(s.category, 'supermarket') AS category
+        FROM promotions p
+        JOIN supermarkets s ON p.supermarket_id = s.id
+        WHERE p.is_active = 1
+          AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
+          AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
+        ORDER BY s.name, p.scraped_at DESC
+        LIMIT 500
+        """,
+        (today_iso, today_iso),
+    ).fetchall()
+    conn.close()
+    return [row_to_dict(row) for row in rows]
+
+
+def _assistant_plain_text(value: str) -> str:
+    """El bot de Telegram devuelve HTML; la web recibe exclusivamente texto."""
+    return html.unescape(re.sub(r"</?(?:b|i)>", "", value or ""))
+
+
+@app.post("/api/assistant/query")
+def ask_assistant(body: AssistantQuestionBody, current_user=Depends(get_current_user)):
+    """Responde únicamente consultas permitidas sobre promociones vigentes.
+
+    La identidad y los métodos de pago se leen de la sesión autenticada; nunca
+    del body. Las preguntas no se almacenan ni se envían a un proveedor externo.
+    """
+    from promo_questions import answer_promo_question, is_allowed_promo_question
+
+    if not is_allowed_promo_question(body.question):
+        raise HTTPException(
+            422,
+            "Solo puedo responder sobre promociones, exclusiones y dónde conviene comprar.",
+        )
+
+    retry_after = _db.consume_assistant_quota(
+        current_user["id"],
+        config.ASSISTANT_RATE_LIMIT_MAX,
+        config.ASSISTANT_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(
+            429,
+            "Alcanzaste el límite temporal de consultas. Probá nuevamente en un momento.",
+            headers={"Retry-After": str(retry_after)},
+        )
+
+    answer = answer_promo_question(
+        body.question,
+        _assistant_promotions(),
+        _db.get_user_payment_methods(current_user["id"]),
+    )
+    if not answer:
+        raise HTTPException(422, "No pude interpretar una consulta válida sobre promociones.")
+    return {"answer": _assistant_plain_text(answer)}
 
 # ── Catálogo de medios de pago ────────────────────────────────────────────────
 @app.get("/api/catalog/payment-methods")

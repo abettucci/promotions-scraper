@@ -526,6 +526,18 @@ class Database:
     
     def insert_terms(self, promotion_id: int, terms_data: Dict):
         """Inserta términos y condiciones (one row per promotion)"""
+        def as_list(value):
+            """Mantiene separados los requisitos/exclusiones en la API.
+
+            Los scrapers históricos entregan strings; los nuevos separan items
+            con `` | `` para no partir comas internas de una condición legal.
+            """
+            if isinstance(value, list):
+                return value
+            if isinstance(value, str):
+                return [item.strip() for item in value.split("|") if item.strip()]
+            return []
+
         conn = self.get_connection()
         cursor = conn.cursor()
 
@@ -541,8 +553,8 @@ class Database:
         """, (
             promotion_id,
             terms_data.get('raw_text', ''),
-            json.dumps(terms_data.get('exclusions', [])),
-            json.dumps(terms_data.get('requirements', [])),
+            json.dumps(as_list(terms_data.get('exclusions'))),
+            json.dumps(as_list(terms_data.get('requirements'))),
             terms_data.get('max_discount', ''),
             terms_data.get('min_purchase', ''),
             json.dumps(terms_data.get('valid_days', [])),
@@ -751,6 +763,11 @@ class UserDatabase:
             );
             CREATE INDEX IF NOT EXISTS idx_password_resets_token ON password_resets(token_hash);
             CREATE INDEX IF NOT EXISTS idx_password_resets_user ON password_resets(user_id);
+            CREATE TABLE IF NOT EXISTS assistant_rate_limits (
+                user_id INTEGER PRIMARY KEY REFERENCES users(id) ON DELETE CASCADE,
+                window_started_at INTEGER NOT NULL,
+                request_count INTEGER NOT NULL DEFAULT 0
+            );
         """)
         conn.commit()
         conn.close()
@@ -896,6 +913,46 @@ class UserDatabase:
         ).fetchone()
         conn.close()
         return row["c"] if row else 0
+
+    def consume_assistant_quota(self, user_id: int, max_requests: int, window_seconds: int) -> int:
+        """Consume una cuota por usuario de forma persistente y devuelve espera.
+
+        No guarda ni registra el contenido de la pregunta. ``0`` significa que
+        la consulta puede continuar; otro valor es el número de segundos a
+        esperar para no exceder el límite.
+        """
+        now = int(datetime.now().timestamp())
+        conn = self._conn()
+        try:
+            conn.execute("BEGIN IMMEDIATE")
+            row = conn.execute(
+                "SELECT window_started_at, request_count FROM assistant_rate_limits WHERE user_id = ?",
+                (user_id,),
+            ).fetchone()
+            if not row or now - row["window_started_at"] >= window_seconds:
+                conn.execute(
+                    "INSERT INTO assistant_rate_limits (user_id, window_started_at, request_count) VALUES (?, ?, 1) "
+                    "ON CONFLICT(user_id) DO UPDATE SET window_started_at = excluded.window_started_at, request_count = 1",
+                    (user_id, now),
+                )
+                conn.commit()
+                return 0
+            if row["request_count"] >= max_requests:
+                conn.commit()
+                return max(1, window_seconds - (now - row["window_started_at"]))
+            conn.execute(
+                "UPDATE assistant_rate_limits SET request_count = request_count + 1 WHERE user_id = ?",
+                (user_id,),
+            )
+            conn.commit()
+            return 0
+        except sqlite3.Error:
+            conn.rollback()
+            # Fail closed: ante un problema con el control de cuota no se sirve
+            # la consulta, para no abrir una vía de abuso.
+            return window_seconds
+        finally:
+            conn.close()
 
     def get_promotions_for_user(self, user_id: int, today_only: bool = True) -> List[Dict]:
         """Promociones activas que coinciden con los métodos de pago del usuario.

@@ -31,6 +31,43 @@ _PRODUCT_CATEGORIES = {
 }
 
 
+def is_allowed_promo_question(question: object) -> bool:
+    """Allowlist de preguntas que el asistente puede contestar.
+
+    El asistente no es un chat general ni ejecuta acciones: solo consulta la
+    información de promociones vigente. Este control también evita enviar
+    texto arbitrario a futuros proveedores de IA.
+    """
+    raw = str(question or "")
+    if not raw or len(raw) > 280 or any(ord(char) < 32 and char not in "\n\t" for char in raw):
+        return False
+    normalized = _norm(raw)
+    exclusion = bool(re.search(r"\b(exclu|inclu|no aplica|aplica.*producto)\w*", normalized))
+    recommendation = bool(re.search(
+        r"\b(conviene|mejor(?:es)?|donde comprar|en que super|en cual super|recomenda|recomienda)\b",
+        normalized,
+    ))
+    promo_data = bool(re.search(
+        r"\b(promo|promocion|descuento|beneficio|reintegro|cuota|combustible|nafta|gasoil|diesel)\w*",
+        normalized,
+    ))
+    return exclusion or recommendation or promo_data
+
+# Términos que pueden justificar una exclusión por categoría. Son más
+# estrechos que los usados para recomendar: "bodega" por sí solo no permite
+# concluir nada sobre un vino concreto.
+_EXCLUSION_CATEGORY_TERMS = {
+    "vino": ("vino", "vinos"),
+    "cerveza": ("cerveza", "cervezas"),
+    "gaseosa": ("gaseosa", "gaseosas"),
+    "carne": ("carne", "carnes"),
+    "pollo": ("pollo", "aves"),
+    "lacteo": ("lacteo", "lacteos", "leche", "queso", "yogur"),
+    "nafta": ("nafta", "combustible", "combustibles", "infinia"),
+    "combustible": ("nafta", "combustible", "combustibles", "diesel", "gasoil"),
+}
+
+
 def _norm(value: object) -> str:
     text = unicodedata.normalize("NFD", str(value or ""))
     text = "".join(c for c in text if unicodedata.category(c) != "Mn")
@@ -56,6 +93,97 @@ def _contains_product(text: str, product: str) -> bool:
     # Si hay una marca/palabra específica, una coincidencia alcanza. Para una
     # consulta genérica (p.ej. "vino"), exigimos la coincidencia exacta.
     return len(meaningful) > 1 and any(token in normalized for token in meaningful)
+
+
+def _product_parts(product: str) -> tuple[list[str], list[str]]:
+    """Separa la categoría de los datos que identifican una marca/bodega.
+
+    ``vino Alaris`` no puede considerarse excluido solo porque un T&C diga
+    "vinos en tetrabrik". En cambio, la consulta genérica ``vino`` sí puede
+    responderse con una exclusión que nombre a los vinos.
+    """
+    tokens = _tokens(product)
+    category_tokens: set[str] = set()
+    for trigger, words in _EXCLUSION_CATEGORY_TERMS.items():
+        if trigger in tokens or trigger in _norm(product):
+            category_tokens.add(trigger)
+            category_tokens.update(words)
+    specific_tokens = [token for token in tokens if token not in category_tokens]
+    return list(category_tokens), specific_tokens
+
+
+def _excerpt_for_match(
+    text: object, anchors: list[str], limit: int = 220, position: Optional[int] = None,
+) -> str:
+    """Devuelve el fragmento legal relevante, no el T&C completo."""
+    raw = re.sub(r"\s+", " ", str(text or "")).strip()
+    normalized = _norm(raw)
+    positions = [normalized.find(_norm(anchor)) for anchor in anchors if _norm(anchor)]
+    positions = [found for found in positions if found >= 0]
+    if not positions:
+        return raw[:limit].rstrip() + ("…" if len(raw) > limit else "")
+
+    # Busca el inicio de la cláusula de exclusión anterior a la coincidencia.
+    position = position if position is not None else min(positions)
+    starts = [match.start() for match in re.finditer(
+        r"\b(?:no incluye|no aplica|no valido|no válido|excluye|excluidos?|excepto|quedan excluidos?)\b",
+        normalized,
+    ) if match.start() <= position]
+    start = starts[-1] if starts else max(0, position - 70)
+    # En T&C extensos sin puntos, la cláusula puede ser mucho más larga que
+    # el extracto. Conservamos contexto, pero sin cortar antes del término.
+    if position - start > limit - 70:
+        start = max(0, position - 70)
+    end = normalized.find(".", position)
+    if end < 0:
+        end = min(len(raw), start + limit)
+    else:
+        end += 1
+    excerpt = raw[start:end].strip()
+    return excerpt[:limit].rstrip() + ("…" if len(excerpt) > limit else "")
+
+
+def _direct_category_term(text: str, categories: list[str]) -> Optional[tuple[str, int]]:
+    """Devuelve una categoría solo si está en una cláusula de exclusión directa."""
+    normalized = _norm(text)
+    for category in categories:
+        for match in re.finditer(rf"(?<!\w){re.escape(category)}(?:s)?(?!\w)", normalized):
+            before = normalized[max(0, match.start() - 90):match.start()]
+            # Ej.: "NO INCLUYE VINOS" o ", NI VINOS EN TETRABRIK".
+            if re.search(
+                r"(?:no incluye|no aplica|no valido|no válido|excluye|excluidos?|excepto)\b[^.]{0,55}$|"
+                r"(?:^|[,;])\s*ni\s+$",
+                before,
+            ):
+                return category, match.start()
+    return None
+
+
+def _exclusion_match(exclusions: object, product: str) -> tuple[str, str]:
+    """Clasifica la evidencia como exacta, de categoría o relacionada.
+
+    Una coincidencia relacionada se informa como advertencia, nunca como una
+    confirmación de exclusión del producto específico.
+    """
+    text = str(exclusions or "")
+    normalized = _norm(text)
+    categories, specific = _product_parts(product)
+    if not normalized:
+        return "", ""
+
+    # Para marcas y bodegas exigimos que todos sus términos aparezcan en el
+    # texto de exclusiones. Evita falsos positivos por el término "vino".
+    if specific and all(re.search(rf"(?<!\w){re.escape(token)}(?!\w)", normalized) for token in specific):
+        return "exact", _excerpt_for_match(text, specific)
+
+    direct_category_match = _direct_category_term(text, categories)
+    if not direct_category_match:
+        return "", ""
+    direct_category, position = direct_category_match
+    excerpt = _excerpt_for_match(text, [direct_category], position=position)
+    # Solo una pregunta genérica ("vino") se puede confirmar por categoría.
+    # Para una marca concreta la categoría es una pista, no una respuesta.
+    return ("related" if specific else "category"), excerpt
 
 
 def _promo_text(promo: dict) -> str:
@@ -95,7 +223,7 @@ def _extract_exclusion_product(question: str) -> Optional[str]:
     for pattern in patterns:
         match = re.search(pattern, _norm(question))
         if match:
-            product = re.sub(r"^(?:el|la|los|las)\s+", "", match.group(1)).strip(" ?!.,")
+            product = re.sub(r"^(?:el|la|los|las)\s+", "", match.group(1)).strip(" ?!.,¿")
             # Quitar el preámbulo habitual de la segunda forma de pregunta.
             product = re.sub(r"^(?:el|la|los|las)\s+", "", product)
             if product and len(product) <= 80:
@@ -168,13 +296,27 @@ def _answer_exclusion(question: str, promotions: list[dict]) -> str:
     if not candidates:
         return f"No encontré promociones vigentes hoy para <b>{_esc(supermarket)}</b>."
 
-    excluded = [p for p in candidates if _contains_product(str(p.get("exclusions") or ""), product)]
-    if excluded:
-        lines = [f"⛔ <b>Sí: { _esc(product) }</b> figura en exclusiones de { _esc(supermarket) } hoy."]
-        for promo in excluded[:3]:
-            evidence = str(promo.get("exclusions") or "").strip()
+    matches = [
+        (promo, *_exclusion_match(promo.get("exclusions"), product))
+        for promo in candidates
+    ]
+    exact = [(promo, excerpt) for promo, kind, excerpt in matches if kind in {"exact", "category"}]
+    related = [(promo, excerpt) for promo, kind, excerpt in matches if kind == "related"]
+    if exact:
+        lines = [f"⛔ <b>Sí: {_esc(product)}</b> figura excluido en { _esc(supermarket) } hoy."]
+        for promo, evidence in exact[:2]:
             lines.append(f"• {_promo_line(promo)}")
-            lines.append(f"  <i>T&C: {_esc(evidence[:280])}</i>")
+            lines.append(f"  <i>Fragmento: {_esc(evidence)}</i>")
+        return "\n".join(lines)
+
+    if related:
+        lines = [
+            f"⚠️ <b>{_esc(product)}</b> no figura mencionado en las exclusiones de { _esc(supermarket) }. "
+            "Sí hay una restricción para una categoría relacionada, pero no alcanza para confirmar esa marca o bodega.",
+        ]
+        for promo, evidence in related[:1]:
+            lines.append(f"• {_promo_line(promo)}")
+            lines.append(f"  <i>Fragmento: {_esc(evidence)}</i>")
         return "\n".join(lines)
 
     mentioned = [p for p in candidates if _contains_product(_promo_text(p), product)]

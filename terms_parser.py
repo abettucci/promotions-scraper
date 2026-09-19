@@ -6,6 +6,7 @@ import re
 from typing import Dict, List, Optional, Tuple
 from datetime import datetime
 import config
+from fuel_conditions import extract_fuel_conditions
 
 class TermsParser:
     def __init__(self):
@@ -39,10 +40,18 @@ class TermsParser:
         text_upper = text.upper().strip()
         text_lower = text.lower().strip()
         
+        extracted_requirements, extracted_exclusions = extract_fuel_conditions(
+            text,
+            self.extract_requirements_improved(text_upper),
+            self.extract_exclusions_improved(text_upper),
+        )
         result = {
             'raw_text': text,
-            'exclusions': self.extract_exclusions_improved(text_upper),
-            'requirements': self.extract_requirements_improved(text_upper),
+            # El parser histórico devuelve strings; Database.insert_terms los
+            # convierte a arrays JSON para la API. Mantener ese contrato evita
+            # romper scrapers que hacen promo.update(parsed).
+            'exclusions': ' | '.join(extracted_exclusions),
+            'requirements': ' | '.join(extracted_requirements),
             'valid_days': self.extract_valid_days(text_upper),
             'tope': self.extract_tope(text_upper),
             'acumulable': self.extract_acumulable(text_upper),

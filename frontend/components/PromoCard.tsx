@@ -131,7 +131,7 @@ export function PromoCard({ promo }: Props) {
         )}
 
         {/* Tags: sucursales + tope + min compra + exclusiones */}
-        {(promo.store_types || meaningfulTope || promo.min_purchase || exclusions.length > 0) && (
+        {(promo.store_types || meaningfulTope || promo.min_purchase || requirements.length > 0 || exclusions.length > 0) && (
           <div className="flex flex-wrap gap-1">
             {promo.store_types && promo.store_types.split(',').map(s => s.trim()).filter(Boolean).map((store, i) => (
               <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
@@ -148,12 +148,23 @@ export function PromoCard({ promo }: Props) {
                 Min: {promo.min_purchase}
               </Badge>
             )}
+            {requirements.length > 0 && (
+              <Badge variant="outline" className="h-5 border-[#b9c9fb] bg-[#eef3ff] px-1.5 py-0 text-[10px] text-[#1f4ab8]">
+                Requiere condición
+              </Badge>
+            )}
             {exclusions.length > 0 && (
               <Badge variant="outline" className="h-5 border-[#f0b7b2] bg-[#fff3f2] px-1.5 py-0 text-[10px] text-[#8f2d28]">
                 Excluye productos
               </Badge>
             )}
           </div>
+        )}
+
+        {requirements.length > 0 && (
+          <p className="rounded-lg border border-[#d7e1f8] bg-[#f5f8ff] px-3 py-2 text-[11px] leading-relaxed text-[#34517d]">
+            <span className="font-semibold text-[#1f4ab8]">Condición:</span> {requirements[0]}
+          </p>
         )}
 
         {/* Ver detalles toggle + link a la promoción */}

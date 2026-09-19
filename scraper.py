@@ -39,6 +39,7 @@ from scrapers.galicia_scraper import GaliciaScraper
 from scrapers.bna_scraper import BnaScraper
 from scrapers.brubank_scraper import BrubankScraper
 from scrapers.personalpay_scraper import PersonalPayScraper
+from scrapers.mercadopago_scraper import MercadoPagoScraper
 from scrapers.clublanacion_scraper import ClubLaNacionScraper
 from scrapers.buepp_scraper import BueppScraper
 from scrapers.cuentadni_scraper import CuentaDniScraper
@@ -142,6 +143,7 @@ class PromoScraper:
             'bna': BnaScraper,
             'brubank': BrubankScraper,
             'personalpay': PersonalPayScraper,
+            'mercadopago': MercadoPagoScraper,
             'clublanacion': ClubLaNacionScraper,
             'buepp': BueppScraper,
             'cuentadni': CuentaDniScraper,
@@ -523,4 +525,3 @@ def main():
 
 if __name__ == "__main__":
     main()
-

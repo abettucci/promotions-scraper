@@ -13,6 +13,7 @@ import { PromoGrid } from "@/components/PromoGrid"
 import { StatsBar } from "@/components/StatsBar"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/UserMenu"
+import { PromoAssistant } from "@/components/PromoAssistant"
 
 const DEFAULT_FILTERS: FilterState = {
   supermarket: "", bank: "", days: [], search: "", discount_type: "",
@@ -135,6 +136,8 @@ export default function Home() {
         <div className="grid gap-3 text-sm text-[#52657d] sm:grid-cols-3">
           {["Vigencia y condiciones a la vista", "Topes y medios de pago claros", "Datos extraídos de sitios oficiales"].map((item) => <p key={item} className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-[#2758d8]" aria-hidden="true" />{item}</p>)}
         </div>
+
+        <PromoAssistant token={token} />
 
         <StatsBar stats={stats ?? null} loading={statsLoading} />
 

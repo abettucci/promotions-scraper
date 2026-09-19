@@ -1,6 +1,6 @@
 import type {
   PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, Promotion,
-  User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse,
+  User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
 } from "./types"
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
@@ -96,4 +96,7 @@ export const api = {
 
   getMyPromotions: (token: string, today_only = true) =>
     fetchJSON<MyPromotionsResponse>("/api/auth/me/promotions", { today_only }, token),
+
+  askAssistant: (token: string, question: string) =>
+    fetchMutation<AssistantResponse>("POST", "/api/assistant/query", { question }, token),
 }

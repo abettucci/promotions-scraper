@@ -112,3 +112,7 @@ export interface MyPromotionsResponse {
     promotions: Promotion[]
   }[]
 }
+
+export interface AssistantResponse {
+  answer: string
+}

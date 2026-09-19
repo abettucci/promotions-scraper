@@ -21,6 +21,7 @@ import requests
 from bs4 import BeautifulSoup
 
 from .base_scraper import BaseScraper
+from fuel_conditions import extract_fuel_conditions
 
 BASE_URL = 'https://pumaenergyarg.com.ar'
 _LISTING_URL = f'{BASE_URL}/promociones'
@@ -165,7 +166,7 @@ class PumaScraper(BaseScraper):
         card_type    = self._extract_card_type(full_text)
         tope         = self._extract_tope(full_text)
         min_purchase = self._extract_min_purchase(full_text)
-        exclusions   = self._extract_exclusions(full_text)
+        requirements, exclusions = extract_fuel_conditions(full_text)
         dates        = self.extract_dates(details_text)
 
         return {
@@ -183,8 +184,8 @@ class PumaScraper(BaseScraper):
             'terms_url':      terms_url,
             'tope':           tope,
             'min_purchase':   min_purchase,
-            'exclusions':     exclusions,
-            'requirements':   None,
+            'exclusions':     ' | '.join(exclusions),
+            'requirements':   ' | '.join(requirements),
             'valid_from':     dates.get('valid_from'),
             'valid_until':    dates.get('valid_until'),
         }

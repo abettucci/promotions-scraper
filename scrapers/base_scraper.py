@@ -3,10 +3,16 @@ Scraper base con funcionalidades comunes
 """
 import asyncio
 import random
-from typing import List, Dict, Optional
+from typing import Any, List, Dict, Optional, TYPE_CHECKING
 from abc import ABC, abstractmethod
-from playwright.async_api import Page, Browser
 import re
+
+# Playwright es necesario para ejecutar algunos scrapers, pero no para importar
+# sus utilidades de parsing o correr tests unitarios sin navegador.
+if TYPE_CHECKING:
+    from playwright.async_api import Browser, Page
+else:
+    Page = Browser = Any
 
 class BaseScraper(ABC):
     def __init__(self, name: str, url: str):
@@ -177,4 +183,3 @@ class BaseScraper(ABC):
         # Remover caracteres especiales molestos
         text = text.replace('\n', ' ').replace('\r', ' ').replace('\t', ' ')
         return text.strip()
-

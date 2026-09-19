@@ -19,6 +19,7 @@ Approach:
 """
 import re
 from typing import List, Dict, Set, Optional
+from fuel_conditions import extract_fuel_conditions
 
 
 _TABS = {
@@ -208,7 +209,7 @@ class ShellScraper:
         wallet     = self._identify_wallet(full_text) or self._identify_wallet(img_alt)
         card_type  = self._identify_card_type(full_text)
         valid_from, valid_until = self._extract_dates(legal_text)
-        excl       = self._extract_exclusion(legal_text)
+        requirements, exclusions = extract_fuel_conditions(legal_text)
 
         if not title and not discount and not bank and not wallet:
             return None
@@ -225,7 +226,8 @@ class ShellScraper:
             'valid_days':   day_label,
             'valid_from':   valid_from,
             'valid_until':  valid_until,
-            'exclusions':   excl,
+            'exclusions':   ' | '.join(exclusions),
+            'requirements': ' | '.join(requirements),
             'terms_raw':    legal_text[:1500],
             'image_url':    img_url,
             'footnote_num': footnote_num,
