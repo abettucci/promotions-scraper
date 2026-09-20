@@ -99,6 +99,39 @@
 
 .enter { animation: enter 360ms cubic-bezier(.2,.8,.2,1) both; }
 
+@keyframes assistant-radar {
+  0% { opacity: .7; transform: scale(.72); }
+  78%, 100% { opacity: 0; transform: scale(1.85); }
+}
+
+@keyframes assistant-panel-in {
+  from { opacity: 0; transform: translateY(14px) scale(.97); }
+  to { opacity: 1; transform: translateY(0) scale(1); }
+}
+
+.assistant-radar {
+  position: absolute;
+  inset: -2px;
+  border: 1px solid rgb(184 243 107 / .88);
+  border-radius: 1.45rem;
+  animation: assistant-radar 2.8s cubic-bezier(.2,.78,.34,1) infinite;
+}
+
+.assistant-radar-delayed { animation-delay: 1.4s; }
+.assistant-panel { animation: assistant-panel-in 260ms cubic-bezier(.2,.8,.2,1) both; }
+.assistant-greeting::after {
+  content: "";
+  position: absolute;
+  right: -7px;
+  bottom: 22px;
+  width: 14px;
+  height: 14px;
+  transform: rotate(45deg);
+  border-right: 1px solid #b9c8d7;
+  border-top: 1px solid #b9c8d7;
+  background: #10233d;
+}
+
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
 }

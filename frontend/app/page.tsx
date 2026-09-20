@@ -35,9 +35,6 @@ export default function Home() {
   const updateFilters = useCallback((partial: Partial<FilterState>) => {
     setFilters((prev) => ({ ...prev, ...partial }))
     setMyPromosMode(false)
-    if (partial.page || partial.supermarket || partial.bank || partial.days || partial.discount_type || partial.state || partial.modality) {
-      window.scrollTo({ top: 0, behavior: "smooth" })
-    }
   }, [])
 
   const resetFilters = useCallback(() => {
@@ -137,8 +134,6 @@ export default function Home() {
           {["Vigencia y condiciones a la vista", "Topes y medios de pago claros", "Datos extraídos de sitios oficiales"].map((item) => <p key={item} className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-[#2758d8]" aria-hidden="true" />{item}</p>)}
         </div>
 
-        <PromoAssistant token={token} />
-
         <StatsBar stats={stats ?? null} loading={statsLoading} />
 
         {!myPromosMode && <section className="surface enter rounded-2xl p-4 sm:p-6" style={{ animationDelay: "70ms" }}><div className="mb-5 flex items-end justify-between gap-4"><div><p className="eyebrow">Explorá beneficios</p><h2 className="display mt-1 text-xl font-semibold tracking-[-0.045em] text-[#102a4c]">Encontrá cómo te conviene pagar</h2></div><button onClick={toggleTodayOnly} className="hidden text-sm font-semibold text-[#2758d8] hover:text-[#102a4c] sm:block">Solo hoy</button></div><FilterBar key={category} filters={filters} banks={banks} supermarkets={supermarkets} category={category} onChange={updateFilters} onReset={resetFilters} totalResults={promos?.total ?? 0} loading={isFetching} /></section>}
@@ -151,6 +146,7 @@ export default function Home() {
       </main>
 
       <footer className="mx-auto mt-10 max-w-7xl border-t border-[#dbe4ee] px-4 py-7 text-sm text-[#52657d] sm:px-6"><span className="display mr-2 font-semibold tracking-[-0.04em] text-[#102a4c]">PROMOAR</span> Información extraída de sitios oficiales. Confirmá las condiciones antes de pagar.</footer>
+      <PromoAssistant token={token} />
     </div>
   )
 }
