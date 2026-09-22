@@ -12,11 +12,20 @@ Flujo:
   4. Parsea con BeautifulSoup
   5. Dedup global por (entidad, descuento, valid_days, store_types)
 """
-from typing import List, Dict, Optional
-from .base_scraper import BaseScraper
-from bs4 import BeautifulSoup
+import asyncio
+from datetime import date
 import re
 import os
+from typing import Any, Dict, List, Optional
+
+from .base_scraper import BaseScraper
+
+# El endpoint JSON de VTEX no necesita BeautifulSoup. Mantener el import opcional
+# permite seguir usando esa fuente aun si el fallback con navegador no está instalado.
+try:
+    from bs4 import BeautifulSoup
+except ImportError:  # pragma: no cover - solo afecta al fallback HTML
+    BeautifulSoup = None
 
 
 _DAYS = [
@@ -29,6 +38,53 @@ _JS_EXPAND_LEGAL = (
     'document.querySelectorAll(\'[class*="legalHeader"]\')'
     ".forEach(b => { try { b.click(); } catch(e) {} });"
 )
+
+# Carrefour publica estas mismas promociones en el backend VTEX que consume su UI.
+# Son constantes deliberadas: no se construyen a partir de datos externos ni del usuario.
+_VTEX_GRAPHQL_URL = (
+    'https://www.carrefour.com.ar/_v/private/graphql/v1?workspace=master&locale=es-AR'
+)
+_VTEX_GRAPHQL_QUERY = '''
+query GetPromotions($account: String) @context(sender: "valtech.carrefourar-bank-promotions@0.x") {
+  documents(
+    acronym: "BP",
+    schema: "mdv1",
+    fields: [
+      "id", "title", "sub_title", "discount_percentage",
+      "discounts_amount_installments", "discounts_text_installments",
+      "discount_text_info", "img_card", "hyper", "market", "ecommerce",
+      "express", "maxi", "legal", "valid", "monday", "tuesday",
+      "wednesday", "thursday", "friday", "saturday", "sunday",
+      "idBank", "idCard"
+    ],
+    sort: "order ASC",
+    account: $account,
+    pageSize: 999
+  ) @context(provider: "vtex.store-graphql") {
+    fields { key value }
+  }
+}
+'''
+_VTEX_HEADERS = {
+    'content-type': 'application/json',
+    'x-vtex-tenant': 'carrefourargentina',
+}
+_DAY_LABELS = {
+    'monday': 'Lunes',
+    'tuesday': 'Martes',
+    'wednesday': 'Miércoles',
+    'thursday': 'Jueves',
+    'friday': 'Viernes',
+    'saturday': 'Sábado',
+    'sunday': 'Domingo',
+}
+_STORE_LABELS = {
+    'hyper': 'Hipermercado',
+    'market': 'Market',
+    'ecommerce': 'Online',
+    'express': 'Express',
+    'maxi': 'Maxi',
+}
 
 # Image URL fragments → (bank, wallet)
 _IMG_PATTERNS: List[tuple] = [
@@ -63,14 +119,26 @@ class CarrefourScraper(BaseScraper):
 
     async def scrape(self, page=None) -> List[Dict]:
         """page aceptado para compatibilidad pero no se usa."""
+        print(f"🔍 Scraping {self.name}...")
+
+        # Fuente primaria: no depende de selectores visuales ni de lazy loading.
+        graphql_promotions = await self._scrape_vtex_graphql()
+        if graphql_promotions:
+            print(f"✅ {self.name}: {len(graphql_promotions)} promociones encontradas (VTEX API)")
+            return graphql_promotions
+
+        # Fallback para no dejar de intentar si Carrefour cambia temporalmente la API.
         try:
             from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
         except ImportError:
-            print("   ⚠️ crawl4ai no instalado — pip install crawl4ai && crawl4ai-setup")
+            print("   ⚠️ Fuente VTEX sin resultados y crawl4ai no está instalado")
             return []
 
-        print(f"🔍 Scraping {self.name}...")
-        print(f"   🌐 URL base: {self.url}")
+        if BeautifulSoup is None:
+            print("   ⚠️ Fuente VTEX sin resultados y BeautifulSoup no está instalado")
+            return []
+
+        print(f"   🌐 Fallback HTML: {self.url}")
 
         browser_cfg = BrowserConfig(headless=True, verbose=False)
         all_promotions: List[Dict] = []
@@ -125,11 +193,214 @@ class CarrefourScraper(BaseScraper):
         print(f"\n✅ {self.name}: {len(all_promotions)} promociones encontradas")
         return all_promotions
 
+    async def _scrape_vtex_graphql(self) -> List[Dict]:
+        """Obtiene y valida los documentos públicos que usa la UI de Carrefour."""
+        try:
+            import requests
+        except ImportError:
+            print("   ⚠️ requests no está instalado; se usará el fallback HTML")
+            return []
+
+        def request_documents() -> Any:
+            response = requests.post(
+                _VTEX_GRAPHQL_URL,
+                json={
+                    'operationName': 'GetPromotions',
+                    'variables': {'account': 'carrefourar'},
+                    'query': _VTEX_GRAPHQL_QUERY,
+                },
+                headers=_VTEX_HEADERS,
+                timeout=(8, 30),
+                allow_redirects=False,
+            )
+            response.raise_for_status()
+            return response.json()
+
+        try:
+            payload = await asyncio.to_thread(request_documents)
+        except Exception:
+            # No registrar la respuesta remota: podría contener información operativa.
+            print("   ⚠️ No se pudo consultar la fuente VTEX; se usará el fallback HTML")
+            return []
+
+        documents = payload.get('data', {}).get('documents', []) if isinstance(payload, dict) else []
+        if not isinstance(documents, list):
+            print("   ⚠️ La fuente VTEX devolvió un formato inválido")
+            return []
+
+        promotions: List[Dict] = []
+        for document in documents:
+            promo = self._parse_vtex_document(document)
+            if promo:
+                promotions.append(promo)
+
+        return self._deduplicate_graphql_promotions(promotions)
+
+    def _parse_vtex_document(self, document: Any) -> Optional[Dict]:
+        """Convierte un documento VTEX en el contrato interno de promociones."""
+        if not isinstance(document, dict) or not isinstance(document.get('fields'), list):
+            return None
+
+        fields: Dict[str, str] = {}
+        for item in document['fields']:
+            if not isinstance(item, dict):
+                continue
+            key = item.get('key')
+            if not isinstance(key, str):
+                continue
+            value = item.get('value')
+            fields[key] = '' if value is None or str(value).lower() == 'null' else str(value).strip()
+
+        title = self.clean_text(fields.get('title', ''))
+        terms_raw = self.clean_text(fields.get('legal', ''))
+        if not title or not terms_raw:
+            return None
+
+        valid_from, valid_until = self._extract_validity_dates(terms_raw)
+        if valid_until and valid_until < date.today().isoformat():
+            return None
+
+        identity_text = ' '.join((title, fields.get('sub_title', ''), fields.get('img_card', '')))
+        bank, wallet, card_type, payment_method = self._identify_payment_source(identity_text)
+        discount = self._format_discount(fields)
+        if not discount:
+            discount = self.extract_discount(title)
+        if not discount:
+            return None
+
+        valid_days = [
+            label for key, label in _DAY_LABELS.items()
+            if fields.get(key, '').lower() == 'true'
+        ]
+        store_types = [
+            label for key, label in _STORE_LABELS.items()
+            if fields.get(key, '').lower() == 'true'
+        ]
+
+        exclusions: List[str] = []
+        exclusion_match = re.search(r'NO\s+INCLUYE\s+([^.]{10,800})', terms_raw, re.I)
+        if exclusion_match:
+            exclusions.append(exclusion_match.group(1).strip().rstrip('.'))
+
+        return {
+            'title': title,
+            'discount': discount,
+            'bank': bank,
+            'wallet': wallet,
+            'card_type': card_type,
+            'payment_method': payment_method,
+            'store_types': ', '.join(store_types) or None,
+            'valid_days': ', '.join(valid_days) or None,
+            'url': self.url,
+            'image_url': None,
+            # La columna es TEXT: conservar el legal completo permite responder exclusiones reales.
+            'terms_raw': terms_raw,
+            'tope': self._extract_tope(terms_raw),
+            'min_purchase': self._extract_min_purchase(terms_raw),
+            'exclusions': exclusions,
+            'requirements': [],
+            'valid_from': valid_from,
+            'valid_until': valid_until,
+        }
+
+    @staticmethod
+    def _format_discount(fields: Dict[str, str]) -> str:
+        percentage = fields.get('discount_percentage', '').strip()
+        if percentage and percentage.replace('.', '', 1).isdigit():
+            if '.' in percentage:
+                percentage = percentage.rstrip('0').rstrip('.')
+            return f'{percentage}%'
+
+        installments = fields.get('discounts_amount_installments', '').strip()
+        installments_text = fields.get('discounts_text_installments', '').strip()
+        if installments and installments.isdigit() and installments_text:
+            return f'{installments} cuotas {installments_text}'
+        return ''
+
+    def _identify_payment_source(self, identity_text: str) -> tuple[Optional[str], Optional[str], Optional[str], Optional[str]]:
+        """Identifica el medio solo desde el encabezado, nunca desde exclusiones del legal."""
+        normalized = identity_text.lower()
+        bank = self.extract_bank(identity_text)
+        wallet = self.extract_wallet(identity_text)
+        card_type: Optional[str] = None
+        payment_method: Optional[str] = None
+
+        if 'cuenta dni' in normalized:
+            bank = 'Banco Provincia'
+            wallet = 'Cuenta DNI'
+        elif 'cuenta digital' in normalized:
+            bank = 'Carrefour Banco'
+            card_type = 'Cuenta Digital Carrefour'
+        elif 'carrefour banco' in normalized:
+            bank = 'Carrefour Banco'
+            if 'crédito' in normalized or 'credito' in normalized:
+                card_type = 'Tarjeta de crédito Carrefour Banco'
+            elif 'prepaga' in normalized:
+                card_type = 'Tarjeta prepaga Carrefour Banco'
+        elif 'anses' in normalized:
+            bank = 'ANSES'
+        elif 'todos los medios' in normalized or 'cualquier medio de pago' in normalized:
+            payment_method = 'Todos los medios de pago'
+
+        return bank, wallet, card_type, payment_method
+
+    @staticmethod
+    def _extract_validity_dates(terms_raw: str) -> tuple[Optional[str], Optional[str]]:
+        # Reutiliza el parser compartido para mantener el mismo formato ISO de la base.
+        from terms_parser import TermsParser
+        valid_from, valid_until = TermsParser().extract_validity_dates(terms_raw.upper())
+        if valid_until:
+            return valid_from, valid_until
+
+        # Carrefour también publica "TODOS LOS JUEVES DE SEPTIEMBRE 2026".
+        # El parser histórico no reconoce esa variante sin "DE" antes del año.
+        month_match = re.search(
+            r'\bDE\s+(ENERO|FEBRERO|MARZO|ABRIL|MAYO|JUNIO|JULIO|AGOSTO|'
+            r'SEPTIEMBRE|OCTUBRE|NOVIEMBRE|DICIEMBRE)(?:\s+DE)?\s+(\d{4})\b',
+            terms_raw.upper(),
+        )
+        if not month_match:
+            return valid_from, valid_until
+
+        month_names = {
+            'ENERO': 1, 'FEBRERO': 2, 'MARZO': 3, 'ABRIL': 4,
+            'MAYO': 5, 'JUNIO': 6, 'JULIO': 7, 'AGOSTO': 8,
+            'SEPTIEMBRE': 9, 'OCTUBRE': 10, 'NOVIEMBRE': 11, 'DICIEMBRE': 12,
+        }
+        year = int(month_match.group(2))
+        month = month_names[month_match.group(1)]
+        if month == 12:
+            last_day = 31
+        else:
+            last_day = (date(year, month + 1, 1) - date.resolution).day
+        return f'{year}-{month:02d}-01', f'{year}-{month:02d}-{last_day:02d}'
+
+    @staticmethod
+    def _deduplicate_graphql_promotions(promotions: List[Dict]) -> List[Dict]:
+        seen: Dict[tuple, Dict] = {}
+        for promo in promotions:
+            entity = (
+                promo.get('bank') or promo.get('wallet') or promo.get('card_type')
+                or promo.get('payment_method') or ''
+            ).lower()
+            key = (
+                entity,
+                (promo.get('discount') or '').lower(),
+                (promo.get('valid_days') or '').lower(),
+                (promo.get('store_types') or '').lower(),
+            )
+            existing = seen.get(key)
+            if existing is None or len(promo.get('terms_raw', '')) > len(existing.get('terms_raw', '')):
+                seen[key] = promo
+        return list(seen.values())
+
     # ──────────────────────────────────────────────────────────
     # Parsing VTEX
     # ──────────────────────────────────────────────────────────
 
     def _extract_vtex_cards(self, html: str) -> List[Dict]:
+        if BeautifulSoup is None:
+            return []
         soup = BeautifulSoup(html, 'html.parser')
         card_boxes = soup.find_all('div', class_=re.compile(r'valtech-carrefourar-bank-promotions.*cardBox'))
         print(f"      🔍 {len(card_boxes)} cardBox en DOM")

@@ -316,14 +316,18 @@ class PromoScraper:
         """
         Universal dedup applied before DB insert, regardless of scraper path.
         Key: (entity, discount, valid_days, has_online).
-        Drops promos with no bank AND no wallet (unidentifiable noise).
+        Keeps promotions that identify either an entity, a card type or a general
+        payment method. Carrefour publishes valid "todos los medios" promotions
+        without a bank/wallet, and dropping them turned a successful scrape into 0.
         Prefers entries with more data (longer terms_raw).
         """
         seen: dict = {}
         for promo in promotions:
             bank = (promo.get('bank') or '').strip().lower()
             wallet = (promo.get('wallet') or '').strip().lower()
-            entity = bank or wallet
+            card_type = (promo.get('card_type') or '').strip().lower()
+            payment_method = (promo.get('payment_method') or '').strip().lower()
+            entity = bank or wallet or card_type or payment_method
             if not entity:
                 continue
             discount = (promo.get('discount') or '').strip().lower()
