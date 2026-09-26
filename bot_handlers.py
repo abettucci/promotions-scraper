@@ -213,6 +213,16 @@ def _pagination_markup(callback_prefix: str, page: int, total_pages: int,
     return {"inline_keyboard": [buttons]}
 
 
+def _today_category_markup() -> dict:
+    """Selector inicial de /hoy para no mezclar categorías en un mismo digest."""
+    return {
+        "inline_keyboard": [[
+            {"text": "🛒 Supermercados", "callback_data": "hoycat:supermarket"},
+            {"text": "⛽ Combustible", "callback_data": "hoycat:fuel"},
+        ]]
+    }
+
+
 # ── Comandos ──────────────────────────────────────────────────────────────────
 def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
     text = (
@@ -220,7 +230,7 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "Te muestro promos bancarias activas en supermercados y combustibles "
         "de Argentina.\n\n"
         "<b>Comandos públicos:</b>\n"
-        "• /hoy — promos vigentes hoy\n"
+        "• /hoy — elegí promos de supermercados o combustible\n"
         "• /buscar &lt;texto&gt; — buscar promos\n"
         "• /banco &lt;nombre&gt; — filtrar por banco/wallet\n"
         "• /super &lt;nombre&gt; — filtrar por super o marca\n"
@@ -243,7 +253,7 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
     text = (
         "📖 <b>Ayuda — PromoAR Bot</b>\n\n"
         "<b>Comandos públicos</b>\n\n"
-        "<code>/hoy</code> — Lista promos vigentes hoy. Paginado con botones.\n\n"
+        "<code>/hoy</code> — Elegí supermercados o combustible y recibí solo esa categoría.\n\n"
         "<code>/buscar nafta</code> — Busca \"nafta\" en título y T&amp;C.\n\n"
         "<code>/banco galicia</code> — Promos del Banco Galicia.\n"
         "<code>/banco modo</code> — Promos pagando con MODO.\n\n"
@@ -269,12 +279,34 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
 
 
 def cmd_hoy(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
-    promos = _query_promotions(today_only=True)
     today_label = datetime.now().strftime("%A %d/%m").capitalize()
-    header = f"📅 <b>Promos de hoy — {_esc(today_label)}</b>"
+    text = (
+        f"📅 <b>Promos de hoy — {_esc(today_label)}</b>\n\n"
+        "¿Qué promociones querés ver?"
+    )
+    return text, _today_category_markup()
+
+
+def _cmd_hoy_category(category: str, header: str, callback_prefix: str,
+                       page: int) -> tuple[str, dict]:
+    promos = _query_promotions(today_only=True, category=category)
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
-    return text, _pagination_markup("hoy", page, total_pages)
+    return text, _pagination_markup(callback_prefix, page, total_pages)
+
+
+def cmd_hoy_supermarkets(chat_id: str, args: str, user_db: UserDatabase,
+                         page: int = 1) -> tuple[str, dict]:
+    return _cmd_hoy_category(
+        "supermarket", "🛒 <b>Promos de supermercados — hoy</b>", "hoysuper", page,
+    )
+
+
+def cmd_hoy_fuel(chat_id: str, args: str, user_db: UserDatabase,
+                 page: int = 1) -> tuple[str, dict]:
+    return _cmd_hoy_category(
+        "fuel", "⛽ <b>Promos de combustible — hoy</b>", "hoyfuel", page,
+    )
 
 
 def cmd_mis(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
@@ -470,6 +502,19 @@ COMMANDS = {
     "hora": cmd_hora,
 }
 
+# Callbacks internos: no se exponen como comandos de texto, solo para paginar
+# la categoría elegida desde /hoy.
+CALLBACK_COMMANDS = {
+    **COMMANDS,
+    "hoysuper": cmd_hoy_supermarkets,
+    "hoyfuel": cmd_hoy_fuel,
+}
+
+_TODAY_CATEGORY_CALLBACKS = {
+    "hoycat:supermarket": cmd_hoy_supermarkets,
+    "hoycat:fuel": cmd_hoy_fuel,
+}
+
 
 def handle_message(update: dict, user_db: UserDatabase, notifier: TelegramNotifier) -> None:
     """Procesa un message entrante. Idempotente — Telegram puede reentregar."""
@@ -529,6 +574,17 @@ def handle_callback_query(update: dict, user_db: UserDatabase, notifier: Telegra
         notifier.answer_callback_query(callback_id)
         return
 
+    category_handler = _TODAY_CATEGORY_CALLBACKS.get(data)
+    if category_handler:
+        reply_text, reply_markup = category_handler(chat_id, "", user_db, page=1)
+        notifier.edit_message_text(
+            chat_id, message_id, reply_text,
+            reply_markup=reply_markup or None,
+            parse_mode="HTML",
+        )
+        notifier.answer_callback_query(callback_id)
+        return
+
     # Formato: "<cmd>:<page>[:<extra>]"
     parts = data.split(":", 2)
     if len(parts) < 2:
@@ -543,7 +599,7 @@ def handle_callback_query(update: dict, user_db: UserDatabase, notifier: Telegra
         return
     extra = rest[0] if rest else ""
 
-    handler = COMMANDS.get(cmd)
+    handler = CALLBACK_COMMANDS.get(cmd)
     if not handler:
         notifier.answer_callback_query(callback_id)
         return
