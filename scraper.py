@@ -250,7 +250,7 @@ class PromoScraper:
                             touched[brand_id].append(promo.get('title', ''))
                             inserted += 1
                             if promo.get('terms_raw'):
-                                terms_data = self.terms_parser.parse(promo['terms_raw'])
+                                terms_data = self._terms_for_promo(promo)
                                 self.db.insert_terms(promotion_id, terms_data)
 
                 # Update scrape metadata para cada marca tocada
@@ -273,7 +273,7 @@ class PromoScraper:
                         current_titles.append(promo.get('title', ''))
                         inserted += 1
                         if promo.get('terms_raw'):
-                            terms_data = self.terms_parser.parse(promo['terms_raw'])
+                            terms_data = self._terms_for_promo(promo)
                             self.db.insert_terms(promotion_id, terms_data)
 
                 deactivated = self.db.deactivate_old_promotions(supermarket_id, current_titles)
@@ -339,6 +339,15 @@ class PromoScraper:
             if existing is None or len(promo.get('terms_raw') or '') > len(existing.get('terms_raw') or ''):
                 seen[key] = promo
         return list(seen.values())
+
+    def _terms_for_promo(self, promo: dict) -> dict:
+        """Preserva condiciones explícitas del scraper si el parser no las detecta."""
+        terms_data = self.terms_parser.parse(promo['terms_raw'])
+        for field in ('exclusions', 'requirements'):
+            source_value = promo.get(field)
+            if source_value and not terms_data.get(field):
+                terms_data[field] = source_value
+        return terms_data
 
     async def _scrape_traditional(self, page, supermarket_key: str, supermarket_data: dict):
         """Ejecuta scraping tradicional (CSS selectors + regex)"""

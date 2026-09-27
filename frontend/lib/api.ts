@@ -1,5 +1,5 @@
 import type {
-  PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, Promotion,
+  PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, PromotionDetails,
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
 } from "./types"
 
@@ -62,7 +62,7 @@ export const api = {
     page?: number; page_size?: number
   }) => fetchJSON<PromotionsResponse>("/api/promotions", params as Record<string, string | number | boolean | undefined>),
 
-  getPromotion: (id: number) => fetchJSON<Promotion>(`/api/promotions/${id}`),
+  getPromotion: (id: number) => fetchJSON<PromotionDetails>(`/api/promotions/${id}`),
   getTodayPromotions: () => fetchJSON<TodayResponse>("/api/promotions/today"),
   getBanks: (filters?: {
     supermarket?: string; day?: string; category?: string

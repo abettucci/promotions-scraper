@@ -23,6 +23,14 @@ export interface Promotion {
   min_purchase: string | null
 }
 
+export interface PromotionDetails extends Promotion {
+  /** Texto legal capturado desde la fuente oficial de la promoción. */
+  terms_raw: string | null
+  raw_text: string | null
+  payment_methods: string[]
+  tc_valid_days: string[]
+}
+
 export interface PromotionsResponse {
   total: number
   page: number

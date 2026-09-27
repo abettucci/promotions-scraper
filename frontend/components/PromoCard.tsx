@@ -6,12 +6,13 @@ import { Badge } from "@/components/ui/badge"
 import { BankBadge } from "./BankBadge"
 import { DiscountBadge } from "./DiscountBadge"
 import { DaysBadge } from "./DaysBadge"
-import { ChevronDown, ChevronUp, ExternalLink } from "lucide-react"
+import { ChevronDown, ChevronUp, ExternalLink, FileText } from "lucide-react"
 import type { Promotion } from "@/lib/types"
 import { SupermarketLogo } from "./SupermarketLogo"
 
 interface Props {
   promo: Promotion
+  onOpenConditions?: (promo: Promotion) => void
 }
 
 function safePromotionUrl(value: string | null): string | null {
@@ -25,7 +26,7 @@ function safePromotionUrl(value: string | null): string | null {
   }
 }
 
-export function PromoCard({ promo }: Props) {
+export function PromoCard({ promo, onOpenConditions }: Props) {
   const [expanded, setExpanded] = useState(false)
 
   // Ensure these are always arrays to prevent .map() crash if API returns non-array
@@ -168,7 +169,7 @@ export function PromoCard({ promo }: Props) {
         )}
 
         {/* Ver detalles toggle + link a la promoción */}
-        {(hasDetails || promotionUrl) && (
+        {(hasDetails || promotionUrl || onOpenConditions) && (
           <div className="mt-1 flex items-center justify-between gap-2 border-t border-[#e5ebf2] pt-3">
             {hasDetails ? (
               <button
@@ -189,7 +190,17 @@ export function PromoCard({ promo }: Props) {
               <span />
             )}
 
-            {promotionUrl && (
+            <div className="ml-auto flex items-center gap-3">
+              {onOpenConditions && (
+                <button
+                  type="button"
+                  onClick={() => onOpenConditions(promo)}
+                  className="flex min-h-7 items-center gap-1 text-[11px] font-semibold text-[#2758d8] hover:text-[#102a4c] whitespace-nowrap"
+                >
+                  <FileText className="h-3 w-3" /> Ver condiciones
+                </button>
+              )}
+              {promotionUrl && (
               <a
                 href={promotionUrl}
                 target="_blank"
@@ -198,7 +209,8 @@ export function PromoCard({ promo }: Props) {
               >
                 Ver promoción <ExternalLink className="w-3 h-3" />
               </a>
-            )}
+              )}
+            </div>
           </div>
         )}
 

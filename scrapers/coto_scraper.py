@@ -6,10 +6,37 @@ Scraper de Coto Digital - Promociones Bancarias
 """
 import asyncio
 import re
-from typing import List, Dict
+from typing import Any, Dict, List, Optional
 
-from playwright.async_api import async_playwright
-from bs4 import BeautifulSoup
+try:
+    from playwright.async_api import async_playwright
+except ImportError:  # La fuente primaria no requiere browser.
+    async_playwright = None
+
+try:
+    from bs4 import BeautifulSoup
+except ImportError:  # La fuente primaria entrega JSON estructurado.
+    BeautifulSoup = None
+
+
+# Endpoint fijo utilizado por la página pública de descuentos de Coto Digital.
+# No se construye desde datos de usuarios ni respuestas remotas.
+_COTO_MULTICHANNEL_URL = (
+    "https://www.cotodigital.com.ar/rest/model/atg/actors/"
+    "cProfileActor/getPromocionesMulticanal?enviroment=ag"
+)
+_ICON_BANKS = {
+    "credicoop": "Banco Credicoop",
+    "comafi": "Banco Comafi",
+    "naranjax": "Naranja X",
+    "mercadopago": "Mercado Pago",
+    "galicia": "Banco Galicia",
+    "macro": "Banco Macro",
+    "supervielle": "Banco Supervielle",
+    "ciudad": "Banco Ciudad",
+    "nacion": "Banco Nación",
+    "provincia": "Banco Provincia",
+}
 
 
 class CotoScraper:
@@ -21,6 +48,15 @@ class CotoScraper:
         """Scraping de promociones bancarias de Coto Digital"""
         print(f"\n🔍 Scraping {self.name} - Términos y Condiciones de Descuentos...")
         print(f"   🌐 URL: {self.url}")
+
+        promotions = await self._scrape_multichannel_promotions()
+        if promotions:
+            print(f"\n✅ {self.name}: {len(promotions)} promociones encontradas (fuente oficial)")
+            return promotions
+
+        if async_playwright is None or BeautifulSoup is None:
+            print("   ⚠️ Fuente oficial sin resultados y el fallback HTML no está disponible")
+            return []
         
         async with async_playwright() as p:
             browser = await p.chromium.launch(headless=True)
@@ -72,6 +108,148 @@ class CotoScraper:
                 return []
             finally:
                 await browser.close()
+
+    async def _scrape_multichannel_promotions(self) -> List[Dict]:
+        """Lee la fuente estructurada que alimenta la pantalla de descuentos de Coto."""
+        try:
+            import requests
+        except ImportError:
+            print("   ⚠️ requests no está instalado; se usará el fallback HTML")
+            return []
+
+        def request_promotions() -> Any:
+            response = requests.get(
+                _COTO_MULTICHANNEL_URL,
+                timeout=(8, 30),
+                allow_redirects=False,
+            )
+            response.raise_for_status()
+            return response.json()
+
+        try:
+            payload = await asyncio.to_thread(request_promotions)
+        except Exception:
+            print("   ⚠️ No se pudo consultar la fuente estructurada de Coto")
+            return []
+
+        result = payload.get("result") if isinstance(payload, dict) else None
+        if not isinstance(result, dict):
+            print("   ⚠️ La fuente estructurada de Coto devolvió un formato inválido")
+            return []
+
+        promotions: List[Dict] = []
+        for field, is_digital in (
+            ("promocionesDigitales", True),
+            ("promocionesSucursalesFisicas", False),
+        ):
+            raw_promotions = result.get(field, [])
+            if not isinstance(raw_promotions, list):
+                continue
+            for raw_promo in raw_promotions:
+                promo = self._parse_multichannel_promotion(raw_promo, is_digital)
+                if promo:
+                    promotions.append(promo)
+        return self._deduplicate_multichannel_promotions(promotions)
+
+    def _parse_multichannel_promotion(self, raw_promo: Any, is_digital: bool) -> Optional[Dict]:
+        if not isinstance(raw_promo, dict):
+            return None
+
+        description = self._clean_value(raw_promo.get("descripcion"))
+        observation = self._clean_value(raw_promo.get("observacion"))
+        terms_label = self._clean_value(raw_promo.get("labelTerminos"))
+        discount = self._clean_value(raw_promo.get("textoDescuento"))
+        icon = self._clean_value(raw_promo.get("icono"))
+        terms_raw = " ".join(value for value in (description, observation, terms_label) if value)
+        if not description or not discount:
+            return None
+
+        bank = self._identify_bank(f"{description} {icon}") or self._bank_from_icon(icon)
+        if not bank:
+            return None
+
+        valid_days = self._clean_value(raw_promo.get("diasVigencia"))
+        if not valid_days:
+            days = raw_promo.get("dias", [])
+            if isinstance(days, list):
+                valid_days = ", ".join(
+                    self._clean_value(day.get("descripcion"))
+                    for day in days if isinstance(day, dict) and self._clean_value(day.get("descripcion"))
+                )
+
+        payment_types: List[str] = []
+        if re.search(r"tarjetas?\s+de\s+cr[eé]dito|cr[eé]dito", description, re.I):
+            payment_types.append("Crédito")
+        if re.search(r"tarjetas?\s+de\s+d[eé]bito|d[eé]bito", description, re.I):
+            payment_types.append("Débito")
+        if re.search(r"dinero\s+en\s+cuenta|cuenta\s+digital", description, re.I):
+            payment_types.append("Dinero en cuenta")
+
+        requirements: List[str] = []
+        if is_digital:
+            requirements.append("Exclusivo para compras online en Coto Digital")
+        elif re.search(r"exclusiv[oa]\s+en\s+sucursales", description, re.I):
+            requirements.append("Exclusivo para compras presenciales en sucursales")
+
+        exclusions = ""
+        if re.search(r"aplican\s+exclusiones", terms_raw, re.I):
+            exclusions = "Aplican exclusiones. Consultá los legales de Coto antes de pagar."
+
+        title = f"{bank} {discount}"
+        if payment_types:
+            title += f" ({', '.join(payment_types)})"
+
+        return {
+            "title": title,
+            "discount": discount,
+            "bank": bank,
+            "wallet": "",
+            "card_type": "",
+            "payment_method": ", ".join(payment_types),
+            "store_types": "Online" if is_digital else "Presencial",
+            "valid_days": valid_days,
+            "valid_from": self._clean_value(raw_promo.get("vigenciaDesde")),
+            "valid_until": self._clean_value(raw_promo.get("vigenciaHasta")),
+            "url": self.url,
+            "terms_raw": terms_raw,
+            "exclusions": exclusions,
+            "requirements": " | ".join(requirements),
+            "tope": self._extract_tope(terms_raw),
+        }
+
+    @staticmethod
+    def _clean_value(value: Any) -> str:
+        if value is None or str(value).lower() == "null":
+            return ""
+        return re.sub(r"\s+", " ", str(value)).strip()
+
+    @staticmethod
+    def _deduplicate_multichannel_promotions(promotions: List[Dict]) -> List[Dict]:
+        seen: Dict[tuple, Dict] = {}
+        for promo in promotions:
+            key = (
+                (promo.get("bank") or "").lower(),
+                (promo.get("discount") or "").lower(),
+                (promo.get("store_types") or "").lower(),
+                (promo.get("valid_days") or "").lower(),
+            )
+            existing = seen.get(key)
+            if existing is None or len(promo.get("terms_raw") or "") > len(existing.get("terms_raw") or ""):
+                seen[key] = promo
+        return list(seen.values())
+
+    @staticmethod
+    def _extract_tope(text: str) -> str:
+        match = re.search(r"tope\s+de\s+(?:reintegro|descuento)\s*(?:unificado)?\s*:?\s*\$\s*([\d.,]+)", text, re.I)
+        return f"${match.group(1)}" if match else ""
+
+    @staticmethod
+    def _bank_from_icon(icon: str) -> str:
+        icon_lower = icon.lower()
+        for fragment, name in _ICON_BANKS.items():
+            if fragment in icon_lower:
+                return name
+        return ""
     
     async def _scroll_full_page(self, page):
         """Hace scroll completo de la página para cargar todo el contenido"""
@@ -139,7 +317,9 @@ class CotoScraper:
         """Parsea un bloque de texto para extraer información de la promoción"""
         promo = {
             'url': self.url,
-            'raw_text': text[:2500]
+            # El parser central usa terms_raw para extraer y conservar los
+            # legales. Mantenerlo también en el fallback HTML.
+            'terms_raw': text[:2500]
         }
         
         # 1. Identificar banco
