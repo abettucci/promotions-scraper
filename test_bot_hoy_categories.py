@@ -128,7 +128,45 @@ class BotHoyCategoriesTests(unittest.TestCase):
             "exclusions": "Aplican exclusiones", "valid_days": "Sábado",
         })
         self.assertEqual(message.count("🏪 Online"), 1)
-        self.assertIn("Aplica exclusiones", message)
+        self.assertIn("Aplican exclusiones", message)
+
+    def test_conditions_buttons_identify_the_promotion_not_only_the_wallet(self):
+        markup = bot_handlers._results_markup([
+            {"id": 10, "supermarket_name": "Coto Digital", "bank": "Mercado Pago"},
+            {"id": 11, "supermarket_name": "Supermercados Día", "discount": "15%", "bank": "Mercado Pago"},
+        ], "hoysuper", 1, 1, "h", "s")
+
+        labels = [row[0]["text"] for row in markup["inline_keyboard"][:-1]]
+        self.assertEqual(labels, [
+            "📋 Coto Digital · Mercado Pago",
+            "📋 Supermercados Día · 15% · Mercado Pago",
+        ])
+
+    def test_conditions_render_json_exclusions_as_readable_text(self):
+        text = bot_handlers._format_conditions_html({
+            "supermarket_name": "Coto Digital",
+            "title": "Mercado Pago",
+            "terms_exclusions": '["No incluye vinos", "No acumulable con otras ofertas"]',
+            "terms_requirements": '[]',
+        })
+
+        self.assertIn("No incluye vinos", text)
+        self.assertNotIn('["No incluye vinos"', text)
+
+    def test_conditions_message_prioritizes_exclusions_without_exceeding_telegram_limit(self):
+        text = bot_handlers._format_conditions_html({
+            "supermarket_name": "Más Online", "title": "MásClub",
+            "terms_exclusions": '["' + ("productos excluidos " * 500) + '"]',
+            "raw_text": "legal " * 900,
+        })
+
+        self.assertIn("Exclusiones:", text)
+        self.assertLess(len(text), 3900)
+
+    def test_payment_menu_offers_promotions_without_declared_payment_rail(self):
+        _, markup = bot_handlers._filter_options("m", "s", "p")
+        labels = [row[0]["text"] for row in markup["inline_keyboard"]]
+        self.assertIn("❔ No informado", labels)
 
 
 if __name__ == "__main__":

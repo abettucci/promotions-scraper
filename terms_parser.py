@@ -45,6 +45,21 @@ class TermsParser:
             self.extract_requirements_improved(text_upper),
             self.extract_exclusions_improved(text_upper),
         )
+        product_scope = self.extract_included_products_restriction(text_upper)
+        if product_scope:
+            # "Únicamente en los productos detallados" no es una condición
+            # positiva genérica: delimita el alcance de la promo. Mostrarlo
+            # como exclusión deja claro que lo no listado no recibe descuento.
+            extracted_exclusions.insert(0, product_scope)
+            extracted_requirements = [
+                item for item in extracted_requirements
+                if not re.search(
+                    r'(?:ÚNICAMENTE|SOLO)\s+(?:EN|PARA)\s+(?:LOS\s+)?'
+                    r'PRODUCTOS?\s+(?:DETALLADOS|LISTADOS|INCLUIDOS)',
+                    item,
+                    re.IGNORECASE,
+                )
+            ]
         result = {
             'raw_text': text,
             # El parser histórico devuelve strings; Database.insert_terms los
@@ -65,6 +80,37 @@ class TermsParser:
             result['valid_until'] = valid_until
         
         return result
+
+    @staticmethod
+    def extract_included_products_restriction(text: str) -> str:
+        """Convierte una lista cerrada de productos en una exclusión legible.
+
+        Algunas promociones de supermercados publican los productos que sí
+        aplican, en lugar de enumerar los excluidos. La interpretación es
+        directa y no inferida: el propio legal dice que aplica *únicamente* a
+        esa lista. Se conserva el listado para que la persona pueda verificar
+        el alcance completo del beneficio.
+        """
+        match = re.search(
+            r'(?:ÚNICAMENTE|SOLO)\s+(?:EN|PARA)\s+(?:LOS\s+)?PRODUCTOS?\s+'
+            r'(?:DETALLADOS|LISTADOS|INCLUIDOS)(?:\s+A\s+CONTINUACIÓN)?\s*:\s*'
+            r'(.+?)(?=\.\s*(?:NO\s+ACUMULA|NO\s+ES\s+ACUMULABLE|'
+            r'SOLO\s+DISPONIBLE|DESCUENTO\s+PERSONAL|PROMOCI[ÓO]N\s+'
+            r'(?:VÁLIDA|VIGENTE)|V[ÁA]LID[AO]|$))',
+            text,
+            re.IGNORECASE | re.DOTALL,
+        )
+        if not match:
+            return ''
+
+        products = re.sub(r'\s+', ' ', match.group(1)).strip(' .,;')
+        if not products:
+            return ''
+        return (
+            'El descuento aplica únicamente a los productos listados; todo '
+            'producto fuera de esta lista queda excluido. Productos incluidos: '
+            f'{products}'
+        )[:3500]
     
     def extract_acumulable(self, text: str) -> Optional[bool]:
         """

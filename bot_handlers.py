@@ -15,6 +15,8 @@ Comandos:
 from __future__ import annotations
 
 import html
+import json
+import re
 import sqlite3
 from datetime import date, datetime
 from typing import Optional
@@ -133,20 +135,39 @@ def _query_promotions(
     elif discount_filter == "cuotas":
         where.append("LOWER(COALESCE(p.discount, '')) LIKE '%cuota%'")
 
+    # No todos los sitios publican si el pago es crédito, débito o saldo. El
+    # filtro anterior además sólo buscaba "dinero en cuenta", aunque la fuente
+    # dijera directamente "Mercado Pago", y no miraba banco/wallet. Eso hacía
+    # desaparecer promociones válidas del perfil.
     payment_terms = {
-        "credito": "crédito",
-        "debito": "débito",
-        "cuenta": "dinero en cuenta",
+        "credito": ("crédito", "credito", "Crédito", "CRÉDITO", "CREDITO"),
+        "debito": ("débito", "debito", "Débito", "DÉBITO", "DEBITO"),
+        "cuenta": (
+            "dinero en cuenta", "Mercado Pago", "mercado pago", "MERCADO PAGO",
+            "Cuenta DNI", "cuenta dni", "Personal Pay", "personal pay",
+            "Ualá", "uala", "Naranja X", "naranja x",
+        ),
     }
+    payment_columns = (
+        "p.card_type", "p.payment_method", "p.title", "p.terms_raw", "p.bank", "p.wallet",
+    )
     if payment_filter in payment_terms:
-        term = payment_terms[payment_filter]
-        where.append(
-            "(LOWER(COALESCE(p.card_type, '')) LIKE ? OR "
-            "LOWER(COALESCE(p.payment_method, '')) LIKE ? OR "
-            "LOWER(COALESCE(p.title, '')) LIKE ? OR "
-            "LOWER(COALESCE(p.terms_raw, '')) LIKE ?)"
-        )
-        params.extend([f"%{term}%"] * 4)
+        clauses = []
+        for term in payment_terms[payment_filter]:
+            clauses.append("(" + " OR ".join(
+                f"COALESCE({column}, '') LIKE ?" for column in payment_columns
+            ) + ")")
+            params.extend([f"%{term}%"] * len(payment_columns))
+        where.append("(" + " OR ".join(clauses) + ")")
+    elif payment_filter == "sin_info":
+        known_clauses = []
+        for terms in payment_terms.values():
+            for term in terms:
+                known_clauses.append("(" + " OR ".join(
+                    f"COALESCE({column}, '') LIKE ?" for column in payment_columns
+                ) + ")")
+                params.extend([f"%{term}%"] * len(payment_columns))
+        where.append("NOT (" + " OR ".join(known_clauses) + ")")
 
     sql = f"""
         SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type,
@@ -190,11 +211,47 @@ def _format_promo_html(p: dict) -> str:
         details.append(f"⚠️ Tope {_esc(p['tope'])}")
     if p.get("min_purchase"):
         details.append(f"🛍️ Mínimo {_esc(p['min_purchase'])}")
-    if p.get("exclusions"):
-        details.append("⚠️ Aplica exclusiones · ver condiciones")
     if details:
         parts.append("   " + " | ".join(details))
+    exclusion_preview = _condition_preview(p.get("exclusions"), limit=260)
+    if exclusion_preview:
+        parts.append(f"⚠️ <b>Exclusiones:</b> {_esc(exclusion_preview)}")
     return "\n".join(parts)
+
+
+def _condition_items(value) -> list[str]:
+    """Normaliza listas JSON de terms_conditions y textos históricos."""
+    if value is None:
+        return []
+    if isinstance(value, (list, tuple)):
+        return [str(item).strip() for item in value if str(item).strip()]
+    text = str(value).strip()
+    if not text or text == "[]":
+        return []
+    try:
+        decoded = json.loads(text)
+    except (TypeError, ValueError):
+        decoded = None
+    if isinstance(decoded, list):
+        return [str(item).strip() for item in decoded if str(item).strip()]
+    if isinstance(decoded, str) and decoded.strip():
+        return [decoded.strip()]
+    return [text]
+
+
+def _condition_preview(value, limit: int) -> str:
+    """Da un adelanto legible, sin llenar el listado de resultados con T&C."""
+    items = _condition_items(value)
+    if not items:
+        return ""
+    text = " ".join(items)
+    text = re.sub(r"\s+", " ", text).strip()
+    generic = {"aplican exclusiones", "aplica exclusiones", "ver condiciones"}
+    if text.lower().strip(". ") in generic:
+        return "Aplican exclusiones; abrí el detalle."
+    if len(text) > limit:
+        return text[:limit - 1].rstrip(" ,;.") + "…"
+    return text
 
 
 def _paginate(promos: list[dict], page: int) -> tuple[list[dict], int]:
@@ -267,13 +324,32 @@ def _results_markup(promos: list[dict], callback_prefix: str, page: int,
     for promo in page_promos:
         promo_id = promo.get("id")
         if isinstance(promo_id, int) and promo_id > 0:
-            label = (promo.get("bank") or promo.get("wallet") or promo.get("supermarket_name") or "esta promo")
             rows.append([{
-                "text": f"Ver condiciones · {label}"[:64],
+                "text": _conditions_button_text(promo),
                 "callback_data": f"terms:{promo_id}",
             }])
     rows.append([{"text": "⚙️ Filtrar resultados", "callback_data": f"f:{scope}:{category_code}"}])
     return {"inline_keyboard": rows}
+
+
+def _conditions_button_text(promo: dict) -> str:
+    """Etiqueta cada legal con el mismo contexto visible en su tarjeta."""
+    supermarket = str(promo.get("supermarket_name") or "Promo").strip()
+    discount = str(promo.get("discount") or "").strip()
+    entity = str(promo.get("bank") or promo.get("wallet") or "").strip()
+    title = str(promo.get("title") or "").strip()
+
+    details = [supermarket]
+    if discount:
+        details.append(discount)
+    if entity and entity.lower() not in discount.lower():
+        details.append(entity)
+    # Para promos sin descuento (por ejemplo MODO + BNA), el nombre permite
+    # identificar el botón sin repetir una etiqueta genérica.
+    if len(details) == 1 and title:
+        details.append(title)
+    label = " · ".join(details)
+    return f"📋 {label}"[:64].rstrip(" ·")
 
 
 def _filtered_pagination_markup(scope: str, category: str, filter_kind: str,
@@ -603,7 +679,15 @@ def cmd_hora(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]
 _FILTER_DIMENSIONS = {
     "m": ("Modalidad", [("o", "🌐 Online"), ("p", "🏪 Presencial")]),
     "b": ("Tipo de beneficio", [("d", "🏷️ Descuento"), ("q", "🧾 Cuotas")]),
-    "p": ("Medio de pago", [("c", "💳 Crédito"), ("d", "💳 Débito"), ("e", "💰 Dinero en cuenta")]),
+    "p": (
+        "Medio de pago",
+        [
+            ("c", "💳 Crédito"),
+            ("d", "💳 Débito"),
+            ("e", "💰 Dinero en cuenta"),
+            ("u", "❔ No informado"),
+        ],
+    ),
 }
 _FILTER_VALUES = {
     ("m", "o"): ("modality_filter", "online", "Online"),
@@ -613,6 +697,7 @@ _FILTER_VALUES = {
     ("p", "c"): ("payment_filter", "credito", "Crédito"),
     ("p", "d"): ("payment_filter", "debito", "Débito"),
     ("p", "e"): ("payment_filter", "cuenta", "Dinero en cuenta"),
+    ("p", "u"): ("payment_filter", "sin_info", "Medio no informado"),
 }
 _SCOPE_LABELS = {"h": "Promos de hoy", "m": "Tus promos de hoy"}
 _CATEGORY_VALUES = {"s": "supermarket", "f": "fuel"}
@@ -639,7 +724,13 @@ def _filter_options(scope: str, category_code: str, kind: str) -> tuple[str, dic
         for option_code, option_label in options
     ]
     buttons.append([{"text": "← Otros filtros", "callback_data": f"f:{scope}:{category_code}"}])
-    return f"⚙️ <b>{_esc(label)}</b>\n\nElegí una opción:", {"inline_keyboard": buttons}
+    detail = ""
+    if kind == "p":
+        detail = (
+            "\n\n<i>Se filtra por lo que publica cada promoción. Algunas aceptan "
+            "más de un medio; “No informado” reúne las que no lo detallan.</i>"
+        )
+    return f"⚙️ <b>{_esc(label)}</b>\n\nElegí una opción:{detail}", {"inline_keyboard": buttons}
 
 
 def _filtered_results(chat_id: str, user_db: UserDatabase, scope: str,
@@ -705,13 +796,17 @@ def _format_conditions_html(promo: dict) -> str:
         lines.append(f"💳 <b>Medio:</b> {_esc(promo['payment_method'])}")
     if promo.get("tope"):
         lines.append(f"⚠️ <b>Tope:</b> {_esc(promo['tope'])}")
-    if promo.get("terms_requirements"):
-        lines.append(f"✅ <b>Condiciones:</b> {_esc(promo['terms_requirements'])}")
-    if promo.get("terms_exclusions"):
-        lines.append(f"⛔ <b>Aplican exclusiones:</b> {_esc(promo['terms_exclusions'])}")
+    requirements = _condition_preview(promo.get("terms_requirements"), limit=650)
+    if requirements:
+        lines.append(f"✅ <b>Condiciones:</b> {_esc(requirements)}")
+    exclusions = _condition_preview(promo.get("terms_exclusions"), limit=1_650)
+    if exclusions:
+        lines.append(f"⛔ <b>Exclusiones:</b> {_esc(exclusions)}")
     raw_text = (promo.get("raw_text") or "").strip()
     if raw_text:
-        lines.append(f"\n<i>T&C:</i> {_esc(raw_text[:2600])}")
+        # Priorizamos las exclusiones estructuradas y dejamos un extracto del
+        # legal. Así el edit siempre queda dentro del máximo de Telegram.
+        lines.append(f"\n<i>Extracto de T&C:</i> {_esc(_condition_preview(raw_text, limit=900))}")
     return "\n".join(lines)
 
 

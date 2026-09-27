@@ -12,6 +12,40 @@ from typing import List, Dict, Set
 from bs4 import BeautifulSoup
 
 
+# Espera a que la página haya montado tarjetas reales. El body trae texto
+# institucional desde el inicio, por lo que su longitud no es una señal útil.
+_JS_WAIT_FOR_PROMOTIONS = (
+    "js:() => Array.from(document.querySelectorAll('button, [role=button], span, a, div'))"
+    ".some(el => /ver\\s*legal/i.test((el.textContent || '').trim()) && el.offsetParent !== null)"
+    " || /no hay promociones vigentes/i.test(document.body.innerText)"
+)
+
+# Acciona cada control una sola vez. Un span dentro de un botón puede coincidir
+# dos veces en un selector amplio y terminar cerrando el acordeón recién abierto.
+_JS_EXPAND_VER_LEGAL = """
+    (async () => {
+        const matches = Array.from(document.querySelectorAll('button, [role="button"], span, a, div'))
+            .filter(el => {
+                const text = (el.textContent || '').trim();
+                const childHasLabel = Array.from(el.children).some(child =>
+                    /ver\\s*legal/i.test((child.textContent || '').trim())
+                );
+                return /ver\\s*legal/i.test(text) && !childHasLabel && el.offsetParent !== null;
+            });
+        const controls = [...new Set(matches.map(el =>
+            el.closest('button, [role="button"], a, [class*="legal"], [class*="Legal"]') || el.parentElement || el
+        ))];
+        for (const control of controls) {
+            if (control.getAttribute('aria-expanded') !== 'true') {
+                try { control.click(); } catch (error) {}
+            }
+        }
+        await new Promise(resolve => setTimeout(resolve, 500));
+        return controls.length;
+    })();
+"""
+
+
 class MasOnlineScraper:
     def __init__(self):
         self.name = 'Más Online (ChangoMás)'
@@ -42,14 +76,6 @@ class MasOnlineScraper:
         all_promotions = []
         seen_promos: Set[str] = set()
 
-        _JS_EXPAND_VER_LEGAL = (
-            "document.querySelectorAll('button, span, a').forEach(el => {"
-            "    if (/ver\\s*legal/i.test(el.textContent) && el.offsetParent !== null) {"
-            "        try { el.click(); } catch(e) {}"
-            "    }"
-            "});"
-        )
-
         browser_cfg = BrowserConfig(headless=True, verbose=False)
 
         try:
@@ -63,12 +89,9 @@ class MasOnlineScraper:
 
                     run_cfg = CrawlerRunConfig(
                         session_id='masonline_session',
-                        wait_for=(
-                            "js:() => document.querySelectorAll('[class*=\"card\"]').length > 0"
-                            " || document.body.innerText.length > 500"
-                        ),
+                        wait_for=_JS_WAIT_FOR_PROMOTIONS,
                         js_code=_JS_EXPAND_VER_LEGAL,
-                        delay_before_return_html=2.5,
+                        delay_before_return_html=3.5,
                         page_timeout=60000,
                         cache_mode=CacheMode.BYPASS,
                     )
@@ -135,8 +158,12 @@ class MasOnlineScraper:
                 text, re.I
             ))
             
-            # Longitud razonable
-            good_length = 50 < len(text) < 2000
+            # Un legal expandido puede ser mucho más largo que el resumen de
+            # la tarjeta. Antes se descartaba el nodo con las exclusiones.
+            good_length = 50 < len(text) < 12000
+            has_legal_details = bool(re.search(
+                r'ver\s+legal|excluidos?|no\s+incluye|promoci[oó]n\s+exclusiva', text, re.I,
+            ))
             
             # FILTRO: Excluir contenido institucional/informativo que no es promoción del día
             # Esto detecta secciones como "SERVICIO EXTRA CASH", "CUOTAS SIN INTERÉS" genéricas
@@ -152,6 +179,11 @@ class MasOnlineScraper:
                         is_parent = True
                         break
                 
+                # Si el padre contiene el legal expandido, conserva más datos
+                # que el hijo que sólo tiene el encabezado de la promoción.
+                if has_legal_details:
+                    is_parent = False
+
                 if not is_parent:
                     all_cards.append(div)
 
