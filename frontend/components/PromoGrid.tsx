@@ -75,7 +75,15 @@ function ConditionsDialog({ promo, onClose }: { promo: Promotion; onClose: () =>
     return () => window.removeEventListener("keydown", onKeyDown)
   }, [promo, onClose])
 
-  const display = details || promo
+  // Mientras la API se actualiza (o si existe una fila histórica incompleta),
+  // nunca ocultamos condiciones que ya estaban presentes en el listado.
+  const display: Promotion | PromotionDetails = details
+    ? {
+        ...details,
+        exclusions: details.exclusions.length > 0 ? details.exclusions : promo.exclusions,
+        requirements: details.requirements.length > 0 ? details.requirements : promo.requirements,
+      }
+    : promo
   const exclusions = Array.isArray(display.exclusions) ? display.exclusions : []
   const requirements = Array.isArray(display.requirements) ? display.requirements : []
   const sourceUrl = safeOfficialPromotionUrl(display.url)

@@ -529,8 +529,8 @@ def _assistant_promotions() -> list[dict]:
         SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.payment_method,
                p.store_types, p.valid_days, p.valid_from, p.valid_until, p.tope,
                p.min_purchase, p.terms_raw, p.acumulable,
-               COALESCE((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.exclusions) AS exclusions,
-               COALESCE((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.requirements) AS requirements,
+               COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
+               COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
                s.name AS supermarket_name,
                COALESCE(s.category, 'supermarket') AS category
         FROM promotions p
@@ -782,8 +782,8 @@ def get_promotions(
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             p.is_active, p.scraped_at,
             s.name AS supermarket_name,
-            COALESCE((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.exclusions) AS exclusions,
-            COALESCE((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.requirements) AS requirements,
+            COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
+            COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
             (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
             p.min_purchase
         FROM promotions p
@@ -819,8 +819,8 @@ def get_promotions_today():
             p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
             s.name AS supermarket_name,
-            COALESCE((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.exclusions) AS exclusions,
-            COALESCE((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.requirements) AS requirements,
+            COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
+            COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
             (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
             p.min_purchase
         FROM promotions p
@@ -857,9 +857,12 @@ def get_promotion(promotion_id: int):
             p.valid_from, p.valid_until, p.url, p.image_url, p.terms_raw,
             p.tope, p.acumulable, p.is_active, p.scraped_at, p.min_purchase,
             s.name AS supermarket_name,
-            (SELECT t.raw_text FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS raw_text,
-            (SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS exclusions,
-            (SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS requirements,
+            -- Algunas promos históricas tienen una fila de términos incompleta.
+            -- NULLIF evita que esa fila vacía oculte los datos ya guardados en
+            -- la promoción al abrir el detalle.
+            COALESCE(NULLIF((SELECT t.raw_text FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), ''), p.terms_raw) AS raw_text,
+            COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
+            COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
             (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
             (SELECT t.min_purchase FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS tc_min_purchase,
             (SELECT t.valid_days FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS tc_valid_days,

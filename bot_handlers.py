@@ -680,9 +680,9 @@ def _promotion_conditions(promotion_id: int) -> Optional[dict]:
                p.payment_method, p.store_types, p.valid_days, p.valid_from,
                p.valid_until, p.tope, p.min_purchase, p.terms_raw, p.exclusions,
                p.requirements, p.acumulable, p.url, s.name AS supermarket_name,
-               COALESCE((SELECT t.raw_text FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.terms_raw) AS raw_text,
-               COALESCE((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.exclusions) AS terms_exclusions,
-               COALESCE((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), p.requirements) AS terms_requirements
+               COALESCE(NULLIF((SELECT t.raw_text FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), ''), p.terms_raw) AS raw_text,
+               COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS terms_exclusions,
+               COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS terms_requirements
         FROM promotions p JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE p.id = ? AND p.is_active = 1
           AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
