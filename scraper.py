@@ -323,6 +323,18 @@ class PromoScraper:
         """
         seen: dict = {}
         for promo in promotions:
+            # Algunas fuentes oficiales (como Coto) publican varias tarjetas
+            # con la misma entidad y beneficio, pero distinto canal, día o
+            # condición. El id de origen evita que el deduplicador universal
+            # borre una promo publicada legítimamente.
+            source_id = (promo.get('source_id') or '').strip()
+            if source_id:
+                key = ('source', source_id)
+                existing = seen.get(key)
+                if existing is None or len(promo.get('terms_raw') or '') > len(existing.get('terms_raw') or ''):
+                    seen[key] = promo
+                continue
+
             bank = (promo.get('bank') or '').strip().lower()
             wallet = (promo.get('wallet') or '').strip().lower()
             card_type = (promo.get('card_type') or '').strip().lower()

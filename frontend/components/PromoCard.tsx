@@ -9,6 +9,7 @@ import { DaysBadge } from "./DaysBadge"
 import { ChevronDown, ChevronUp, ExternalLink, FileText } from "lucide-react"
 import type { Promotion } from "@/lib/types"
 import { SupermarketLogo } from "./SupermarketLogo"
+import { benefitLabel } from "@/lib/benefit"
 
 interface Props {
   promo: Promotion
@@ -45,6 +46,7 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
 
   const entity = promo.bank || promo.wallet
   const promotionUrl = safePromotionUrl(promo.url)
+  const benefit = benefitLabel(promo)
 
   const formatDate = (d: string | null | undefined) => {
     if (!d) return null
@@ -84,7 +86,7 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
         {/* Header row: supermarket logo + discount */}
         <div className="flex items-start justify-between gap-2">
           <SupermarketLogo name={promo.supermarket_name} showLabel={true} />
-          {promo.discount && <DiscountBadge discount={promo.discount} className="max-w-[100px] scale-105 origin-top-right" />}
+          <DiscountBadge discount={benefit} className="max-w-[132px] scale-105 origin-top-right" />
         </div>
 
         {/* Title */}

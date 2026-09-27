@@ -1,8 +1,10 @@
 #!/usr/bin/env python3
-"""
-Scraper de Coto Digital - Promociones Bancarias
-- Extrae promociones bancarias de https://www.cotodigital.com.ar/sitios/cdigi/terminos-descuentos
-- Esta página tiene toda la información detallada: términos, exclusiones, vigencia, etc.
+"""Promociones de Coto desde el feed público de su página de descuentos.
+
+La página pública ``/descuentos`` se alimenta de ``getPromocionesMulticanal``.
+Ese feed incluye tarjetas online y de sucursal, con el beneficio y las
+condiciones resumidas. Los legales históricos no siempre tienen cada tarjeta,
+por eso esta es la fuente de catálogo y no un listado hardcodeado.
 """
 import asyncio
 import re
@@ -26,13 +28,26 @@ _COTO_MULTICHANNEL_URL = (
     "cProfileActor/getPromocionesMulticanal?enviroment=ag"
 )
 _ICON_BANKS = {
+    "amex": "American Express",
+    "americanexpress": "American Express",
+    "bbva": "BBVA",
+    "bancor": "Bancor",
+    "beneficios_anses": "ANSES",
+    "columbia": "Banco Columbia",
+    "comunidad": "Comunidad Coto",
     "credicoop": "Banco Credicoop",
     "comafi": "Banco Comafi",
+    "hipotecario": "Banco Hipotecario",
+    "icbc": "ICBC",
     "naranjax": "Naranja X",
     "mercadopago": "Mercado Pago",
     "galicia": "Banco Galicia",
     "macro": "Banco Macro",
+    "patagonia": "Banco Patagonia",
     "supervielle": "Banco Supervielle",
+    "tci": "Tarjeta Coto Inteligente",
+    "jubiladosypensionados": "Jubilados y pensionados",
+    "visa": "Visa Débito",
     "ciudad": "Banco Ciudad",
     "nacion": "Banco Nación",
     "provincia": "Banco Provincia",
@@ -42,7 +57,9 @@ _ICON_BANKS = {
 class CotoScraper:
     def __init__(self):
         self.name = 'Coto Digital'
-        self.url = 'https://www.cotodigital.com.ar/sitios/cdigi/terminos-descuentos'
+        # Fuente visible para quien abre "Ver promoción". El JSON fijo de
+        # abajo es el mismo que consume esta pantalla Angular de Coto.
+        self.url = 'https://www.coto.com.ar/descuentos'
         
     async def scrape(self) -> List[Dict]:
         """Scraping de promociones bancarias de Coto Digital"""
@@ -158,9 +175,15 @@ class CotoScraper:
         description = self._clean_value(raw_promo.get("descripcion"))
         observation = self._clean_value(raw_promo.get("observacion"))
         terms_label = self._clean_value(raw_promo.get("labelTerminos"))
-        discount = self._clean_value(raw_promo.get("textoDescuento"))
+        discount = self._benefit_label(
+            self._clean_value(raw_promo.get("textoDescuento")),
+            description,
+            observation,
+        )
         icon = self._clean_value(raw_promo.get("icono"))
         terms_raw = " ".join(value for value in (description, observation, terms_label) if value)
+        # No inventamos beneficios: si Coto no publica un porcentaje, cuotas o
+        # reintegro en ninguno de sus campos, la tarjeta no es comparable.
         if not description or not discount:
             return None
 
@@ -178,11 +201,11 @@ class CotoScraper:
                 )
 
         payment_types: List[str] = []
-        if re.search(r"tarjetas?\s+de\s+cr[eé]dito|cr[eé]dito", description, re.I):
+        if re.search(r"tarjetas?\s+de\s+cr[eé]dito|cr[eé]dito", terms_raw, re.I):
             payment_types.append("Crédito")
-        if re.search(r"tarjetas?\s+de\s+d[eé]bito|d[eé]bito", description, re.I):
+        if re.search(r"tarjetas?\s+de\s+d[eé]bito|d[eé]bito", terms_raw, re.I):
             payment_types.append("Débito")
-        if re.search(r"dinero\s+en\s+cuenta|cuenta\s+digital", description, re.I):
+        if re.search(r"dinero\s+en\s+cuenta|cuenta\s+digital", terms_raw, re.I):
             payment_types.append("Dinero en cuenta")
 
         requirements: List[str] = []
@@ -195,9 +218,19 @@ class CotoScraper:
         if re.search(r"aplican\s+exclusiones", terms_raw, re.I):
             exclusions = "Aplican exclusiones. Consultá los legales de Coto antes de pagar."
 
-        title = f"{bank} {discount}"
+        min_purchase = self._extract_min_purchase(terms_raw)
+        if re.search(r"pagando\s+con\s+qr", terms_raw, re.I):
+            requirements.append("Pago con QR")
+
+        # El beneficio y canal van primero: evita tarjetas ambiguas del estilo
+        # "Mercado Pago (Crédito, Débito)" cuando en realidad son cuotas, y
+        # mantiene separadas las variantes online y de sucursal de Coto.
+        channel_label = "Online" if is_digital else "Sucursal"
+        title = f"{discount} · {bank} · {channel_label}"
         if payment_types:
             title += f" ({', '.join(payment_types)})"
+        if valid_days:
+            title += f" · {valid_days}"
 
         return {
             "title": title,
@@ -211,10 +244,12 @@ class CotoScraper:
             "valid_from": self._clean_value(raw_promo.get("vigenciaDesde")),
             "valid_until": self._clean_value(raw_promo.get("vigenciaHasta")),
             "url": self.url,
+            "source_id": f"coto-{self._clean_value(raw_promo.get('id'))}",
             "terms_raw": terms_raw,
             "exclusions": exclusions,
             "requirements": " | ".join(requirements),
             "tope": self._extract_tope(terms_raw),
+            "min_purchase": min_purchase,
         }
 
     @staticmethod
@@ -224,10 +259,47 @@ class CotoScraper:
         return re.sub(r"\s+", " ", str(value)).strip()
 
     @staticmethod
+    def _benefit_label(source_label: str, *text_fields: str) -> str:
+        """Normaliza el beneficio publicado, con fallback al texto dinámico.
+
+        Coto normalmente ofrece ``textoDescuento``. Cuando ese campo llega
+        vacío, las tarjetas igualmente expresan el beneficio en descripción u
+        observación; se extrae desde allí sin codificar una promoción concreta.
+        """
+        label = CotoScraper._clean_value(source_label)
+        text = " ".join(field for field in text_fields if field)
+        source = label or text
+        if not source:
+            return ""
+
+        cuotas = re.search(
+            r"(?:hasta\s+)?(\d{1,2})(?:\s*(?:-|a)\s*(\d{1,2}))?\s*cuotas?\s+sin\s+inter[eé]s",
+            source,
+            re.I,
+        )
+        if cuotas:
+            start, end = cuotas.group(1), cuotas.group(2)
+            return f"{start}{'-' + end if end else ''} cuotas sin interés"
+
+        percent = re.search(
+            r"(\d{1,3})\s*%\s*(?:de\s+)?(descuento|reintegro|cashback|devoluci[oó]n)",
+            source,
+            re.I,
+        )
+        if percent:
+            kind = percent.group(2).lower()
+            return f"{percent.group(1)}% {kind}"
+
+        # Mantiene etiquetas de Coto que ya son explícitas aunque no coincidan
+        # con los formatos anteriores (por ejemplo, beneficios propios).
+        return label
+
+    @staticmethod
     def _deduplicate_multichannel_promotions(promotions: List[Dict]) -> List[Dict]:
         seen: Dict[tuple, Dict] = {}
         for promo in promotions:
             key = (
+                promo.get("source_id") or "",
                 (promo.get("bank") or "").lower(),
                 (promo.get("discount") or "").lower(),
                 (promo.get("store_types") or "").lower(),
@@ -242,6 +314,15 @@ class CotoScraper:
     def _extract_tope(text: str) -> str:
         match = re.search(r"tope\s+de\s+(?:reintegro|descuento)\s*(?:unificado)?\s*:?\s*\$\s*([\d.,]+)", text, re.I)
         return f"${match.group(1)}" if match else ""
+
+    @staticmethod
+    def _extract_min_purchase(text: str) -> str:
+        match = re.search(
+            r"(?:compras?|compra)\s+(?:a\s+partir\s+de|desde)\s*\$\s*([\d.,]+)",
+            text,
+            re.I,
+        )
+        return f"${match.group(1).rstrip('.,')}" if match else ""
 
     @staticmethod
     def _bank_from_icon(icon: str) -> str:

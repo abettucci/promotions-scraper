@@ -10,6 +10,7 @@ import { useEffect, useState } from "react"
 import { AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, FileText, LayoutGrid, TableProperties, X } from "lucide-react"
 import { api } from "@/lib/api"
 import type { Promotion, PromotionDetails } from "@/lib/types"
+import { benefitLabel } from "@/lib/benefit"
 
 interface Props {
   promotions: Promotion[]
@@ -197,7 +198,7 @@ function PromotionTable({ promotions, marketName, onOpenConditions }: { promotio
                 <tr key={promo.id} className="transition-colors hover:bg-[#f5f8fc]">
                   <td className="whitespace-nowrap px-5 py-4 align-top text-sm font-semibold text-[#102a4c] sm:px-6">{promo.valid_days || "Todos los días"}</td>
                   <td className="px-4 py-4 align-top"><BankBadge name={entity} size="sm" showLabel /></td>
-                  <td className="px-4 py-4 align-top"><DiscountBadge discount={promo.discount || "Beneficio"} /></td>
+                  <td className="px-4 py-4 align-top"><DiscountBadge discount={benefitLabel(promo)} /></td>
                   <td className="max-w-48 px-4 py-4 align-top text-sm font-semibold leading-snug text-[#102a4c]">{limit}</td>
                   <td className="min-w-72 px-4 py-4 align-top text-sm leading-snug text-[#52657d]">
                     <p>{promo.title}</p>
