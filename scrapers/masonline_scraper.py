@@ -308,7 +308,10 @@ class MasOnlineScraper:
             'url': url,
             'supermarket': 'ChangoMás',
             'valid_days': dia_nombre,
-            'raw_text': text[:3000]
+            # El pipeline central persiste y procesa los legales desde
+            # ``terms_raw``. Usar el nombre de contrato correcto evita perder
+            # el contenido que aparece al expandir "Ver legal".
+            'terms_raw': text[:8000]
         }
         
         # 1. Extraer imagen del banco/billetera
@@ -629,6 +632,13 @@ class MasOnlineScraper:
         no_valido = re.findall(r'[Nn]o\s+v[aá]lido\s+(?:para\s+)?([^.]+?)(?:\.|$)', text)
         for match in no_valido:
             exclusions_parts.append(f"No válido {match.strip()}")
+
+        # Formato publicado por MásClub: "EXCLUIDOS-NO INCLUYE: ...".
+        # Se conserva además el texto legal completo en terms_raw para que la
+        # vista de condiciones muestre la lista sin perder categorías largas.
+        no_incluye_match = re.search(r'(?:excluidos?\s*[-–—]?\s*)?no\s+incluye\s*:\s*([^.]+)', text, re.I)
+        if no_incluye_match:
+            exclusions_parts.append(f"No incluye: {no_incluye_match.group(1).strip()}")
         
         if exclusions_parts:
             promo['exclusions'] = ' | '.join(exclusions_parts)[:1000]
@@ -659,6 +669,11 @@ class MasOnlineScraper:
         
         if sucursales_excluidas:
             promo['sucursales_excluidas'] = ', '.join(sucursales_excluidas)[:500]
+
+        # 15.6 Requisitos de MásClub: la promoción es exclusiva para socios,
+        # aunque no intervenga una tarjeta bancaria específica.
+        if re.search(r'promoci[oó]n\s+exclusiva\s+para\s+(?:todos\s+los\s+)?socios\s+de\s+m[aá]s\s*club', text, re.I):
+            promo['requirements'] = 'Exclusiva para socios de MásClub'
         
         # 16. Extraer plazo de acreditación del reintegro/descuento
         # Busca frases como "se verán reflejados en la cuenta... en los 30 días posteriores a la compra"
@@ -1125,7 +1140,7 @@ async def main():
             
             print(f"   🔗 URL: {promo.get('url', 'N/A')}")
             
-            raw_text = promo.get('raw_text', '')
+            raw_text = promo.get('terms_raw', '')
             if raw_text:
                 print(f"   📝 Texto: {raw_text[:300]}...")
     else:
@@ -1135,4 +1150,3 @@ async def main():
 
 if __name__ == "__main__":
     asyncio.run(main())
-
