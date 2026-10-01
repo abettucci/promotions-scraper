@@ -12,6 +12,8 @@ import unicodedata
 from collections import defaultdict
 from typing import Optional
 
+from supplement_prices import find_supplement_price
+
 
 _STOP_WORDS = {
     "el", "la", "los", "las", "un", "una", "unos", "unas", "de", "del",
@@ -29,6 +31,14 @@ _PRODUCT_CATEGORIES = {
     "nafta": ("nafta", "combustible", "combustibles", "infinia"),
     "combustible": ("nafta", "combustible", "combustibles", "diesel", "gasoil"),
 }
+
+_PRICE_INTENT_RE = re.compile(
+    r"\b(?:mas barat[oa]s?|precio(?:s)?|cuanto cuesta|cuanto sale|comparar precio)\b",
+)
+_SUPPLEMENT_TERMS = (
+    "proteina", "protein", "whey", "creatina", "aminoacido", "bcaa",
+    "pre entreno", "preentreno", "suplemento", "star nutrition",
+)
 
 
 def is_allowed_promo_question(question: object) -> bool:
@@ -51,7 +61,8 @@ def is_allowed_promo_question(question: object) -> bool:
         r"\b(promo|promocion|descuento|beneficio|reintegro|cuota|combustible|nafta|gasoil|diesel)\w*",
         normalized,
     ))
-    return exclusion or recommendation or promo_data
+    price_comparison = bool(_PRICE_INTENT_RE.search(normalized))
+    return exclusion or recommendation or promo_data or price_comparison
 
 # Términos que pueden justificar una exclusión por categoría. Son más
 # estrechos que los usados para recomendar: "bodega" por sí solo no permite
@@ -240,6 +251,59 @@ def _extract_recommendation_product(question: str) -> Optional[str]:
     return product if product and len(product) <= 80 else None
 
 
+def _is_price_comparison_question(question: str) -> bool:
+    return bool(_PRICE_INTENT_RE.search(_norm(question)))
+
+
+def _extract_price_product(question: str) -> Optional[str]:
+    normalized = _norm(question)
+    patterns = (
+        r"\b(?:en que|en cual|donde)\s+(?:lugar|tienda|comercio)?\s*(?:esta|sale)?\s*(?:mas|menos)\s+(?:barat[oa]|car[oa])\s+(?:el|la|los|las)?\s*(.+?)(?:\?|$)",
+        r"\b(?:precio|cuanto cuesta|cuanto sale)\s+(?:de|del|de la)?\s*(.+?)(?:\?|$)",
+    )
+    for pattern in patterns:
+        match = re.search(pattern, normalized)
+        if not match:
+            continue
+        product = re.sub(r"^(?:el|la|los|las)\s+", "", match.group(1)).strip(" ?!.,")
+        if product and len(product) <= 120:
+            return product
+    return None
+
+
+def _format_ars(value: int) -> str:
+    return f"${value:,}".replace(",", ".")
+
+
+def _answer_price_comparison(question: str) -> str:
+    product = _extract_price_product(question)
+    if not product:
+        return "¿Qué suplemento querés comparar? Ej.: <i>¿En qué lugar está más barata la proteína Star Nutrition 2 lb?</i>"
+    normalized = _norm(product)
+    if not any(term in normalized for term in _SUPPLEMENT_TERMS):
+        return (
+            "Por ahora puedo comparar precios publicados de <b>suplementos</b>. "
+            "Para supermercados y combustibles comparo promociones y sus condiciones, no precios ni stock de productos."
+        )
+    result = find_supplement_price(product)
+    if not result:
+        return (
+            f"No encontré un precio publicado para <b>{_esc(product)}</b> en este momento. "
+            "Probá con marca, presentación y peso; verificá siempre el precio final en la tienda."
+        )
+    lines = [
+        f"💸 <b>Precio más bajo publicado para {_esc(result.product_name)}</b>",
+        f"<b>{_esc(result.store_name)}</b> — {_format_ars(result.price or 0)}",
+    ]
+    if result.transfer_price and result.transfer_price != result.price:
+        lines.append(f"Con transferencia: {_format_ars(result.transfer_price)}")
+    if result.offer_count:
+        lines.append(f"{result.offer_count} tiendas publicadas en la comparación.")
+    lines.append(f'<a href="{_esc(result.source_url)}">Ver comparación y precio actualizado</a>')
+    lines.append("<i>Es un precio publicado: confirmá stock, sabor/presentación, envío y precio final antes de pagar.</i>")
+    return "\n".join(lines)
+
+
 def _discount_value(value: object) -> float:
     match = re.search(r"(\d+(?:[,.]\d+)?)\s*%", str(value or ""))
     return float(match.group(1).replace(",", ".")) if match else 0.0
@@ -419,6 +483,8 @@ def answer_promo_question(question: str, promotions: list[dict], methods: Option
         r"\b(conviene|mejor(?:es)?|donde comprar|en que super|en cual super|recomenda|recomienda)\b",
         normalized,
     ))
+    if _is_price_comparison_question(question):
+        return _answer_price_comparison(question)
     if exclusion_intent:
         return _answer_exclusion(question, promotions)
     if recommendation_intent:

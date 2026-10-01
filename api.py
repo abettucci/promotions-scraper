@@ -578,14 +578,15 @@ def ask_assistant(body: AssistantQuestionBody, current_user=Depends(get_current_
     """Responde únicamente consultas permitidas sobre promociones vigentes.
 
     La identidad y los métodos de pago se leen de la sesión autenticada; nunca
-    del body. Las preguntas no se almacenan ni se envían a un proveedor externo.
+    del body. Las preguntas no se almacenan. Las comparaciones de precios de
+    suplementos consultan una fuente pública acotada y no usan datos de perfil.
     """
     from promo_questions import answer_promo_question, is_allowed_promo_question
 
     if not is_allowed_promo_question(body.question):
         raise HTTPException(
             422,
-            "Solo puedo responder sobre promociones, exclusiones y dónde conviene comprar.",
+            "Solo puedo responder sobre promociones, exclusiones, beneficios y precios publicados de suplementos.",
         )
 
     retry_after = _db.consume_assistant_quota(
@@ -621,7 +622,7 @@ def ask_public_assistant(body: AssistantQuestionBody, request: Request):
     if not is_allowed_promo_question(body.question):
         raise HTTPException(
             422,
-            "Solo puedo responder sobre promociones, exclusiones y dónde conviene comprar.",
+            "Solo puedo responder sobre promociones, exclusiones, beneficios y precios publicados de suplementos.",
         )
 
     retry_after = _db.consume_public_assistant_quota(
