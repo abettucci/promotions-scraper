@@ -28,6 +28,24 @@ jobs:
           python-version: '3.11'
           cache: 'pip'
 
+      # Evita descargar Chromium en cada runner efímero. La key incluye la
+      # versión de Playwright declarada en requirements.txt.
+      - name: Cache Playwright browser
+        uses: actions/cache@v4
+        with:
+          path: ~/.cache/ms-playwright
+          key: playwright-${{ runner.os }}-${{ hashFiles('requirements.txt') }}
+
+      # Guarda únicamente huellas SHA-256 de resultados normalizados. El job
+      # sigue consultando cada fuente para no servir promociones vencidas.
+      - name: Restore scraper result cache
+        uses: actions/cache/restore@v4
+        with:
+          path: .scraper-cache
+          key: scraper-results-restore-${{ runner.os }}-${{ github.run_id }}-${{ github.run_attempt }}
+          restore-keys: |
+            scraper-results-${{ runner.os }}-
+
       - name: Install Python dependencies
         run: |
           pip install --upgrade pip
@@ -70,6 +88,24 @@ jobs:
           git push
         env:
           GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+
+      # Se guarda sólo después de que la DB quedó publicada. De esta forma una
+      # huella nunca puede hacer que se saltee una actualización que no llegó
+      # al repositorio por un fallo de push.
+      - name: Build scraper cache key
+        id: scraper-cache-key
+        if: success()
+        run: |
+          if [ -f .scraper-cache/results-v1.json ]; then
+            echo "key=scraper-results-${RUNNER_OS}-$(sha256sum .scraper-cache/results-v1.json | cut -d ' ' -f 1)" >> "$GITHUB_OUTPUT"
+          fi
+
+      - name: Save scraper result cache
+        if: success() && steps.scraper-cache-key.outputs.key != ''
+        uses: actions/cache/save@v4
+        with:
+          path: .scraper-cache
+          key: ${{ steps.scraper-cache-key.outputs.key }}
 
       - name: Trigger Railway redeploy
         if: success()

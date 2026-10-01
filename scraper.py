@@ -20,6 +20,7 @@ import random
 
 import config
 from database import Database
+from scrape_result_cache import ScrapeResultCache
 from terms_parser import TermsParser
 from notifier import TelegramNotifier
 
@@ -54,6 +55,10 @@ except ImportError:
 class PromoScraper:
     def __init__(self, verbose: bool = False, use_ai: bool = False):
         self.db = Database()
+        self.result_cache = ScrapeResultCache(config.SCRAPER_RESULT_CACHE_PATH)
+        # Fuentes que fueron verificadas en esta ejecución pero cuyo resultado
+        # no cambió. Se protege su contenido del TTL sin tocar scraped_at.
+        self.verified_supermarket_ids: set[int] = set()
         self.terms_parser = TermsParser()
         self.verbose = verbose
         self.use_ai = use_ai
@@ -212,6 +217,17 @@ class PromoScraper:
             if raw_count != len(promotions):
                 self.log(f"   🧹 Dedup: {raw_count} → {len(promotions)} promociones únicas")
 
+            if self.result_cache.unchanged(supermarket_key, promotions):
+                self._mark_verified_cache_targets(
+                    supermarket_id, promotions, is_aggregator, supermarket_data.get('default_brand'),
+                )
+                self.stats['total_promotions'] += len(promotions)
+                self.stats['successful_scrapes'] += 1
+                self.log(
+                    f"🗃️  {supermarket_data['name']}: sin cambios — se conserva la base y se omite escritura"
+                )
+                return
+
             # Deactivate all existing promos before re-inserting so old duplicates are cleared
             self.db.deactivate_all_for_supermarket(supermarket_id)
 
@@ -283,6 +299,15 @@ class PromoScraper:
                 self.log(f"✅ {supermarket_data['name']}: {inserted} promociones guardadas" +
                          (f", {deactivated} desactivadas" if deactivated > 0 else ""))
 
+            # Solo se actualiza después de haber persistido la extracción.
+            # Si el proceso falla, el cache no puede ocultar un reintento.
+            try:
+                self.result_cache.remember(supermarket_key, promotions)
+            except Exception as cache_error:
+                # El cache es una optimización: una falla al guardarlo no puede
+                # invalidar una extracción que ya quedó correctamente guardada.
+                self.log(f"⚠️ No se pudo actualizar cache de {supermarket_key}: {cache_error}", 'WARNING')
+
             # Actualizar stats
             self.stats['total_promotions'] += inserted
             self.stats['successful_scrapes'] += 1
@@ -310,6 +335,27 @@ class PromoScraper:
             )
             
             self.stats['failed_scrapes'] += 1
+
+    def _mark_verified_cache_targets(
+        self, supermarket_id: int, promotions: list[dict], is_aggregator: bool,
+        default_brand: str | None,
+    ) -> None:
+        """Marca como frescas las promos comprobadas sin reescribir la DB."""
+        if not is_aggregator:
+            self.verified_supermarket_ids.add(supermarket_id)
+            return
+        brands: set[str] = set()
+        for promo in promotions:
+            raw_brands = promo.get('merchant_brands') or []
+            if isinstance(raw_brands, str):
+                raw_brands = [raw_brands]
+            brands.update(str(brand) for brand in raw_brands if brand)
+        if not brands and default_brand:
+            brands.add(default_brand)
+        for brand in brands:
+            brand_id = self.db.get_supermarket_id(str(brand))
+            if brand_id is not None:
+                self.verified_supermarket_ids.add(brand_id)
     
     @staticmethod
     def _deduplicate_promotions(promotions: list) -> list:
@@ -415,7 +461,9 @@ class PromoScraper:
 
         # Limpiar promos que quedaron activas por scrapes fallidos (TTL = 2 días)
         # Cubre: scrape retorna 0 resultados, excepción en el scrape, anti-bot, etc.
-        self.db.deactivate_stale_promotions(max_age_days=2)
+        self.db.deactivate_stale_promotions(
+            max_age_days=2, verified_supermarket_ids=self.verified_supermarket_ids,
+        )
 
         # Notificación Telegram (si está habilitada o se pidió explícitamente)
         if getattr(self, 'notify', False) or config.TELEGRAM_NOTIFY_ON_SCRAPE:

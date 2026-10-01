@@ -5,7 +5,7 @@ import sqlite3
 import re
 import unicodedata
 from datetime import datetime
-from typing import List, Dict, Optional
+from typing import List, Dict, Optional, Iterable
 import json
 import config
 
@@ -414,6 +414,8 @@ class Database:
             INSERT INTO supermarkets (name, url, category)
             VALUES (?, ?, ?)
             ON CONFLICT(name) DO UPDATE SET url=excluded.url, category=excluded.category
+            WHERE supermarkets.url IS NOT excluded.url
+               OR supermarkets.category IS NOT excluded.category
         """, (name, url, category))
 
         supermarket_id = cursor.lastrowid or cursor.execute(
@@ -424,6 +426,15 @@ class Database:
         conn.close()
 
         return supermarket_id
+
+    def get_supermarket_id(self, name: str) -> Optional[int]:
+        """Obtiene un merchant existente sin crearlo ni actualizar su metadata."""
+        conn = self.get_connection()
+        try:
+            row = conn.execute("SELECT id FROM supermarkets WHERE name = ?", (name,)).fetchone()
+            return int(row[0]) if row else None
+        finally:
+            conn.close()
     
     def update_supermarket_scraped(self, supermarket_id: int):
         """Actualiza última fecha de scraping"""
@@ -694,7 +705,9 @@ class Database:
 
         return deactivated
 
-    def deactivate_stale_promotions(self, max_age_days: int = 2) -> int:
+    def deactivate_stale_promotions(
+        self, max_age_days: int = 2, verified_supermarket_ids: Optional[Iterable[int]] = None,
+    ) -> int:
         """Desactiva promociones que no fueron actualizadas en los últimos N días.
 
         Cubre el caso donde un scrape falla o retorna 0 resultados: sin este TTL,
@@ -703,11 +716,16 @@ class Database:
         """
         conn = self.get_connection()
         cursor = conn.cursor()
-        cursor.execute(
-            "UPDATE promotions SET is_active = 0 "
-            "WHERE is_active = 1 AND scraped_at < datetime('now', ?)",
-            (f"-{max_age_days} days",),
-        )
+        verified_ids = sorted({int(value) for value in (verified_supermarket_ids or [])})
+        query = "UPDATE promotions SET is_active = 0 WHERE is_active = 1 AND scraped_at < datetime('now', ?)"
+        params: list[object] = [f"-{max_age_days} days"]
+        # Si esta misma ejecución comprobó que la fuente sigue idéntica, sus
+        # promos siguen vigentes aunque no reescribamos scraped_at. Así el
+        # cache no convierte información actual en información obsoleta.
+        if verified_ids:
+            query += f" AND supermarket_id NOT IN ({','.join('?' * len(verified_ids))})"
+            params.extend(verified_ids)
+        cursor.execute(query, params)
         deactivated = cursor.rowcount
         conn.commit()
         conn.close()

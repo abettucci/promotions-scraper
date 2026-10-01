@@ -24,6 +24,13 @@ DATA_DIR.mkdir(exist_ok=True)
 # Base de datos de promociones (viene de git, se sobreescribe en cada deploy)
 DATABASE_PATH = DATA_DIR / "promotions.db"
 
+# Huellas de resultados de scraping. En GitHub Actions este directorio se
+# restaura/guarda como cache; no contiene HTML, credenciales ni datos de usuarios.
+SCRAPER_RESULT_CACHE_PATH = Path(os.getenv(
+    "SCRAPER_RESULT_CACHE_PATH",
+    str(BASE_DIR / ".scraper-cache" / "results-v1.json"),
+))
+
 # Base de datos de usuarios (persistida en Railway Volume en /app/userdata)
 _USERS_DB_DIR = Path(os.getenv("USERS_DB_DIR", str(BASE_DIR / "userdata")))
 _USERS_DB_DIR.mkdir(exist_ok=True)
