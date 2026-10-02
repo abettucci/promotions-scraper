@@ -52,6 +52,18 @@ try:
 except ImportError:
     AI_AVAILABLE = False
 
+def _persistence_code_version() -> str:
+    import hashlib
+    digest = hashlib.sha256()
+    for name in ('scraper.py', 'database.py'):
+        with open(os.path.join(script_dir, name), 'rb') as fh:
+            digest.update(fh.read())
+    return digest.hexdigest()[:12]
+
+
+_PERSISTENCE_CODE_VERSION = _persistence_code_version()
+
+
 class PromoScraper:
     def __init__(self, verbose: bool = False, use_ai: bool = False):
         self.db = Database()
@@ -225,7 +237,7 @@ class PromoScraper:
             if raw_count != len(promotions):
                 self.log(f"   🧹 Dedup: {raw_count} → {len(promotions)} promociones únicas")
 
-            if self.result_cache.unchanged(supermarket_key, promotions):
+            if self.result_cache.unchanged(self._cache_key(supermarket_key), promotions):
                 self._mark_verified_cache_targets(
                     supermarket_id, promotions, is_aggregator, supermarket_data.get('default_brand'),
                 )
@@ -342,7 +354,7 @@ class PromoScraper:
                 self.stats['failed_scrapes'] += 1
                 return
             try:
-                self.result_cache.remember(supermarket_key, promotions)
+                self.result_cache.remember(self._cache_key(supermarket_key), promotions)
             except Exception as cache_error:
                 # El cache es una optimización: una falla al guardarlo no puede
                 # invalidar una extracción que ya quedó correctamente guardada.
@@ -375,6 +387,17 @@ class PromoScraper:
             )
             
             self.stats['failed_scrapes'] += 1
+
+    @staticmethod
+    def _cache_key(supermarket_key: str) -> str:
+        """Clave del cache atada a la versión del código que persiste.
+
+        El cache saltea la escritura si la fuente devolvió lo mismo; pero si
+        cambió cómo se guarda (dedup entre fuentes, ruteo, exclusiones), las
+        filas viejas quedaban activas. Con la huella de scraper.py y
+        database.py, cualquier cambio de esa lógica fuerza una reescritura.
+        """
+        return f"{supermarket_key}@{_PERSISTENCE_CODE_VERSION}"
 
     def _mark_verified_cache_targets(
         self, supermarket_id: int, promotions: list[dict], is_aggregator: bool,

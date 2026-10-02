@@ -539,9 +539,11 @@ def _assistant_promotions() -> list[dict]:
           AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
           AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
         ORDER BY s.name, p.scraped_at DESC
-        LIMIT 500
+        LIMIT 1000
         """,
-        (today_iso, today_iso),
+        # Incluye las que empiezan en las próximas 2 semanas: "¿qué hay con
+        # Galicia en Shell?" tiene que poder contestar "el día 10".
+        (today_iso, (date.today() + timedelta(days=14)).isoformat()),
     ).fetchall()
     conn.close()
     return [row_to_dict(row) for row in rows]

@@ -18,7 +18,7 @@ import html
 import json
 import re
 import sqlite3
-from datetime import date, datetime
+from datetime import date, datetime, timedelta
 from typing import Optional
 
 import config
@@ -60,6 +60,7 @@ def _query_promotions(
     discount_filter: Optional[str] = None,
     payment_filter: Optional[str] = None,
     limit: int = 200,
+    starts_within_days: int = 0,
 ) -> list[dict]:
     """Single query helper para todos los comandos. Solo activas y vigentes."""
     conn = _promos_conn()
@@ -69,7 +70,9 @@ def _query_promotions(
         "(p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)",
         "(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)",
     ]
-    params: list = [today_iso, today_iso]
+    # starts_within_days > 0 suma las promos que todavía no empezaron (las
+    # usa el asistente para planificar; los comandos muestran sólo vigentes).
+    params: list = [today_iso, (date.today() + timedelta(days=starts_within_days)).isoformat()]
 
     if category:
         if _HAS_SUPERMARKET_CATEGORY:
@@ -377,7 +380,7 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "• /banco &lt;nombre&gt; — filtrar por banco/wallet\n"
         "• /super &lt;nombre&gt; — filtrar por super o marca\n"
         "• /combustible — promos de combustible hoy\n"
-        "• Escribime una pregunta — ej. <i>¿El vino Alaris está excluido en Coto hoy?</i>\n"
+        "• Escribime una pregunta — ej. <i>¿Cuál es el mejor descuento en nafta el sábado?</i>\n"
         "• /stats — estadísticas\n\n"
         "<b>Comandos personalizados</b> (requieren cuenta):\n"
         "• /mis — promos para tus medios de pago\n"
@@ -403,9 +406,15 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "<code>/super ypf</code> — Promos en YPF.\n\n"
         "<code>/combustible</code> — Solo promos de combustible vigentes hoy.\n\n"
         "<b>Preguntas en lenguaje natural</b>\n\n"
-        "También podés escribirme sin comando. Por ejemplo:\n"
-        "<i>¿El vino Alaris está excluido de la promo de Coto hoy?</i>\n"
-        "<i>¿En qué súper me conviene comprar vino hoy?</i>\n\n"
+        "También podés escribirme sin comando. Entiendo comercio, banco o "
+        "billetera, día (hoy, mañana, sábado, finde), súper o nafta, QR/NFC y "
+        "online o tiendas. Por ejemplo:\n"
+        "<i>¿Qué promos hay hoy en Coto?</i>\n"
+        "<i>¿Cuál es el mejor descuento en nafta el sábado?</i>\n"
+        "<i>Promos con Cuenta DNI esta semana</i>\n"
+        "<i>Descuentos con QR de Mercado Pago en Día</i>\n"
+        "<i>¿El vino Alaris está excluido en Coto?</i>\n"
+        "<i>¿Dónde está más barata la proteína Star Nutrition 2 lb?</i>\n\n"
         "Las recomendaciones usan tus medios vinculados si tenés cuenta y aclaran "
         "cuando los T&amp;C no permiten confirmar un producto.\n\n"
         "<code>/stats</code> — Total de promos, supers y bancos.\n\n"
@@ -855,13 +864,14 @@ def handle_message(update: dict, user_db: UserDatabase, notifier: TelegramNotifi
     if not text.startswith("/"):
         from promo_questions import answer_promo_question
 
-        # Para preguntas abiertas se consulta solo la información vigente hoy.
-        # Si el chat está vinculado, la comparación usa sus medios de pago.
+        # Se pasan todas las promos vigentes: la pregunta decide el día
+        # ("hoy", "el sábado", "esta semana"). Si el chat está vinculado, la
+        # comparación usa sus medios de pago.
         user = user_db.get_user_by_telegram_chat_id(chat_id)
         methods = user_db.get_user_payment_methods(user["id"]) if user else []
         reply_text = answer_promo_question(
             text,
-            _query_promotions(today_only=True, limit=500),
+            _query_promotions(limit=1000, starts_within_days=14),
             methods,
         )
         if reply_text:

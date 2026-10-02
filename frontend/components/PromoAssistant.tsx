@@ -8,9 +8,10 @@ import { api } from "@/lib/api"
 type Message = { role: "user" | "assistant"; text: string }
 
 const EXAMPLES = [
-  "¿El vino Alaris está excluido en Coto hoy?",
-  "¿En qué súper me conviene comprar vino hoy?",
-  "¿Qué promos de combustible hay con Galicia?",
+  "¿Qué promos hay hoy en Coto?",
+  "¿Cuál es el mejor descuento en nafta el sábado?",
+  "Descuentos con QR de Mercado Pago en Día",
+  "¿El vino Alaris está excluido en Coto?",
 ]
 
 export function PromoAssistant({ token }: { token: string | null }) {
@@ -91,7 +92,7 @@ export function PromoAssistant({ token }: { token: string | null }) {
 
             {messages.length === 0 ? (
               <div className="pb-1">
-                <p className="text-sm leading-relaxed text-[#50657a]">Preguntá por exclusiones, condiciones o dónde conviene comprar. Te respondo solo con la información scrapeada.</p>
+                <p className="text-sm leading-relaxed text-[#50657a]">Preguntá por comercio, banco, día, nafta o súper, exclusiones o precios de suplementos. Te respondo solo con la información scrapeada.</p>
                 <div className="mt-4 flex flex-wrap gap-2">
                   {EXAMPLES.map((example) => (
                     <button key={example} type="button" onClick={() => submit(undefined, example)} className="rounded-full border border-[#d7e3ef] bg-white px-3 py-2 text-left text-[11px] font-semibold leading-snug text-[#244565] transition-colors hover:border-[#8ab45f] hover:bg-[#f3faeb]">

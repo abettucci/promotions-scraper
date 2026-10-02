@@ -1,8 +1,9 @@
 """Respuestas confiables a preguntas en lenguaje natural sobre promociones.
 
-No usa un modelo generativo: interpreta dos consultas frecuentes y responde solo
-con la evidencia que existe en la base scrapeada. Esto es importante para no
-afirmar que un producto está incluido cuando los T&C no lo mencionan.
+No usa un modelo generativo: interpreta la pregunta en filtros (comercio,
+banco/billetera, día, rubro, método de pago, canal) y responde solo con la
+evidencia que existe en la base scrapeada. Esto es importante para no afirmar
+que un producto está incluido cuando los T&C no lo mencionan.
 """
 from __future__ import annotations
 
@@ -10,6 +11,8 @@ import html
 import re
 import unicodedata
 from collections import defaultdict
+from dataclasses import dataclass, field
+from datetime import date, timedelta
 from typing import Optional
 
 from supplement_prices import find_supplement_price
@@ -41,6 +44,172 @@ _SUPPLEMENT_TERMS = (
 )
 
 
+_WEEKDAYS = ("lunes", "martes", "miercoles", "jueves", "viernes", "sabado", "domingo")
+_WEEKDAY_LABELS = ("lunes", "martes", "miércoles", "jueves", "viernes", "sábado", "domingo")
+
+# Formas coloquiales → texto que aparece en bank/wallet/payment_method/título.
+_ENTITY_ALIASES = {
+    "bna": "nacion", "banco nacion": "nacion", "nacion": "nacion",
+    "provincia": "provincia", "bapro": "provincia", "cuenta dni": "cuenta dni",
+    "mp": "mercado pago", "mercadopago": "mercado pago", "mercado pago": "mercado pago",
+    "naranja": "naranja", "galicia": "galicia", "santander": "santander", "bbva": "bbva",
+    "frances": "bbva", "macro": "macro", "ciudad": "ciudad", "buepp": "buepp",
+    "icbc": "icbc", "supervielle": "supervielle", "patagonia": "patagonia",
+    "comafi": "comafi", "credicoop": "credicoop", "columbia": "columbia",
+    "hipotecario": "hipotecario", "brubank": "brubank", "uala": "uala",
+    "personal pay": "personal pay", "modo": "modo", "prex": "prex",
+    "cencopay": "cencopay", "jubilad": "jubilad", "anses": "anses",
+    "club la nacion": "club la nacion", "la nacion": "club la nacion",
+    "amex": "american express", "american express": "american express",
+    "visa": "visa", "mastercard": "mastercard", "cabal": "cabal",
+}
+# Alias de comercio → nombre en la base.
+_MERCHANT_ALIASES = {
+    "dia": "Supermercados Día", "chango": "Más Online (ChangoMás)",
+    "changomas": "Más Online (ChangoMás)", "masonline": "Más Online (ChangoMás)",
+    "mas online": "Más Online (ChangoMás)", "masgo": "Más Online (ChangoMás)",
+    "jumbo": "Jumbo (Cencosud)", "cencosud": "Jumbo (Cencosud)",
+    "coto": "Coto Digital", "carrefour": "Carrefour", "ypf": "YPF",
+    "shell": "Shell", "axion": "Axion", "puma": "Puma Energy",
+}
+_FUEL_WORDS = r"\b(nafta|naftas|combustible|combustibles|estacion(?:es)?(?: de servicio)?|cargar|gasoil|diesel|infinia|v-?power|surtidor)\b"
+_SUPER_WORDS = r"\b(super|supers|supermercado|supermercados|mercado|almacen)\b"
+_BEST_WORDS = r"\b(mejor(?:es)?|mas descuento|mayor descuento|maximo|conviene|mas me conviene|cual rinde|el mas alto)\b"
+
+
+@dataclass
+class PromoQuery:
+    """Filtros que se entendieron de una pregunta."""
+    merchant: Optional[str] = None
+    entity: Optional[str] = None
+    days: Optional[set] = None          # índices 0=lunes … 6=domingo
+    day_label: str = ""
+    target_date: Optional[date] = None  # sólo para "hoy" / "mañana"
+    category: Optional[str] = None      # supermarket | fuel
+    method: Optional[str] = None        # qr | nfc | debito | credito | cuotas
+    channel: Optional[str] = None       # online | tiendas
+    best: bool = False
+    understood: list = field(default_factory=list)
+
+    @property
+    def has_filters(self) -> bool:
+        return any((self.merchant, self.entity, self.days is not None, self.category, self.method, self.channel))
+
+
+def _parse_days(normalized: str, today: date) -> tuple[Optional[set], str, Optional[date]]:
+    if re.search(r"\bpasado manana\b", normalized):
+        target = today + timedelta(days=2)
+        return {target.weekday()}, f"pasado mañana ({_WEEKDAY_LABELS[target.weekday()]})", target
+    if re.search(r"\bmanana\b", normalized):
+        target = today + timedelta(days=1)
+        return {target.weekday()}, f"mañana ({_WEEKDAY_LABELS[target.weekday()]})", target
+    if re.search(r"\b(hoy|ahora|esta noche)\b", normalized):
+        return {today.weekday()}, f"hoy ({_WEEKDAY_LABELS[today.weekday()]})", today
+    if re.search(r"\bfin(?:de)? de semana\b|\bfinde\b", normalized):
+        return {5, 6}, "el fin de semana", None
+    named = {i for i, day in enumerate(_WEEKDAYS) if re.search(rf"\b{day}s?\b", normalized)}
+    if named:
+        return named, ", ".join(_WEEKDAY_LABELS[i] for i in sorted(named)), None
+    return None, "", None
+
+
+def _promo_days(promo: dict) -> set:
+    """Días en que aplica la promo según valid_days ('' = todos)."""
+    text = _norm(promo.get("valid_days"))
+    if not text or "todos los dias" in text or "todos" == text:
+        return set(range(7))
+    days = {i for i, day in enumerate(_WEEKDAYS) if re.search(rf"\b{day}s?\b", text)}
+    for start, end in re.findall(rf"\b({'|'.join(_WEEKDAYS)})s? a ({'|'.join(_WEEKDAYS)})s?\b", text):
+        a, b = _WEEKDAYS.index(start), _WEEKDAYS.index(end)
+        days.update(range(a, b + 1) if a <= b else list(range(a, 7)) + list(range(0, b + 1)))
+    # "Día 10 de cada mes (Sábado)" y similares: si no hay día reconocible,
+    # no se puede descartar por día.
+    return days or set(range(7))
+
+
+def parse_promo_query(question: str, promotions: list[dict], today: Optional[date] = None) -> PromoQuery:
+    normalized = _norm(question)
+    today = today or date.today()
+    query = PromoQuery()
+    query.merchant = _find_supermarket(question, promotions)
+    if not query.merchant:
+        for alias, name in sorted(_MERCHANT_ALIASES.items(), key=lambda kv: -len(kv[0])):
+            if re.search(rf"(?<!\w){re.escape(alias)}(?!\w)", normalized):
+                query.merchant = name
+                break
+    for alias, needle in sorted(_ENTITY_ALIASES.items(), key=lambda kv: -len(kv[0])):
+        # "La Nación" (club) no debe confundirse con Banco Nación.
+        if needle == "nacion" and "la nacion" in normalized:
+            continue
+        if re.search(rf"(?<!\w){re.escape(alias)}\w*", normalized):
+            query.entity = needle
+            break
+    query.days, query.day_label, query.target_date = _parse_days(normalized, today)
+    if re.search(_FUEL_WORDS, normalized):
+        query.category = "fuel"
+    elif re.search(_SUPER_WORDS, normalized):
+        query.category = "supermarket"
+    if re.search(r"\bqr\b", normalized):
+        query.method = "qr"
+    elif re.search(r"\bnfc\b|sin contacto|contactless|apple pay|google pay", normalized):
+        query.method = "nfc"
+    elif re.search(r"\bdebito\b", normalized):
+        query.method = "debito"
+    elif re.search(r"\bcuotas?\b", normalized):
+        query.method = "cuotas"
+    elif re.search(r"\bcredito\b", normalized):
+        query.method = "credito"
+    if re.search(r"\b(online|web|por internet|envio|delivery|app del super)\b", normalized):
+        query.channel = "online"
+    elif re.search(r"\b(presencial|en tienda|en el local|sucursal|en la caja)\b", normalized):
+        query.channel = "tiendas"
+    query.best = bool(re.search(_BEST_WORDS, normalized))
+    return query
+
+
+def _matches_query(promo: dict, query: PromoQuery) -> bool:
+    if query.merchant and promo.get("supermarket_name") != query.merchant:
+        return False
+    if query.category and _norm(promo.get("category") or "supermarket") != query.category:
+        return False
+    if query.entity:
+        haystack = _norm(" ".join(str(promo.get(f) or "") for f in ("bank", "wallet", "payment_method", "title")))
+        if query.entity not in haystack:
+            return False
+        # "nacion" está dentro de "Club La Nación": no es Banco Nación.
+        if query.entity == "nacion" and "la nacion" in haystack and not re.search(r"banco nacion|\bbna\b", haystack):
+            return False
+    if query.days is not None and not (_promo_days(promo) & query.days):
+        return False
+    if query.target_date:
+        iso = query.target_date.isoformat()
+        if (promo.get("valid_from") or "") > iso or (promo.get("valid_until") or "9999") < iso:
+            return False
+    method_text = _norm(" ".join(str(promo.get(f) or "") for f in ("payment_method", "card_type", "discount", "title")))
+    if query.method == "qr" and "qr" not in method_text:
+        return False
+    if query.method == "nfc" and not re.search(r"nfc|sin contacto|contactless", method_text):
+        return False
+    if query.method == "debito" and "debito" not in method_text:
+        return False
+    if query.method == "credito" and "credito" not in method_text:
+        return False
+    if query.method == "cuotas" and "cuota" not in method_text:
+        return False
+    stores = _norm(promo.get("store_types"))
+    if query.channel == "online" and stores and "online" not in stores:
+        return False
+    if query.channel == "tiendas" and stores and not re.search(r"tienda|sucursal|presencial", stores):
+        return False
+    return True
+
+
+def _benefit_rank(promo: dict) -> tuple:
+    discount = str(promo.get("discount") or "")
+    cuotas = re.search(r"(\d{1,2})\s*cuotas", discount, re.I)
+    return (_discount_value(discount), int(cuotas.group(1)) if cuotas else 0, not promo.get("tope"))
+
+
 def is_allowed_promo_question(question: object) -> bool:
     """Allowlist de preguntas que el asistente puede contestar.
 
@@ -62,7 +231,12 @@ def is_allowed_promo_question(question: object) -> bool:
         normalized,
     ))
     price_comparison = bool(_PRICE_INTENT_RE.search(normalized))
-    return exclusion or recommendation or promo_data or price_comparison
+    # "¿Qué hay hoy en Coto con Galicia?" no dice "promo" pero es una consulta
+    # de promos: alcanza con nombrar un comercio, banco/billetera o rubro.
+    query = parse_promo_query(raw, [])
+    scoped = bool(query.merchant or query.entity or query.category)
+    help_request = bool(re.search(r"\b(ayuda|que podes|que puedes|que sabes|como funciona|como te uso|hola)\b", normalized))
+    return exclusion or recommendation or promo_data or price_comparison or scoped or help_request
 
 # Términos que pueden justificar una exclusión por categoría. Son más
 # estrechos que los usados para recomendar: "bodega" por sí solo no permite
@@ -339,11 +513,30 @@ def _scope_may_cover_product(promo: dict, product: str) -> bool:
 
 def _promo_line(promo: dict) -> str:
     entity = promo.get("bank") or promo.get("wallet") or promo.get("payment_method") or "medio de pago informado"
+    if promo.get("bank") and promo.get("wallet") and _norm(promo["wallet"]) not in _norm(promo["bank"]):
+        entity = f"{promo['bank']} vía {promo['wallet']}"
     details = [f"<b>{_esc(promo.get('discount') or 'Beneficio')}</b> con {_esc(entity)}"]
-    if promo.get("tope"):
-        details.append(f"tope {_esc(promo['tope'])}")
     if promo.get("valid_days"):
         details.append(_esc(promo["valid_days"]))
+    if promo.get("tope"):
+        tope = str(promo["tope"])
+        details.append("sin tope" if _norm(tope) == "sin tope" else f"tope {_esc(tope)}")
+    if promo.get("min_purchase"):
+        details.append(f"mín. {_esc(promo['min_purchase'])}")
+    stores = _norm(promo.get("store_types"))
+    if stores == "online":
+        details.append("solo online")
+    elif stores and "online" not in stores:
+        details.append("solo tiendas")
+    valid_from, valid_until = promo.get("valid_from") or "", promo.get("valid_until") or ""
+    if valid_from and valid_from == valid_until:
+        details.append(f"solo el {_esc(valid_from)}")
+    else:
+        if valid_from > date.today().isoformat():
+            # Promos próximas: el asistente las muestra para planificar la compra.
+            details.append(f"desde {_esc(valid_from)}")
+        if valid_until:
+            details.append(f"hasta {_esc(valid_until)}")
     return " · ".join(details)
 
 
@@ -430,51 +623,92 @@ def _answer_recommendation(question: str, promotions: list[dict], methods: list[
     return "\n".join(lines)
 
 
-def _answer_data_question(question: str, promotions: list[dict]) -> str:
-    """Lista información scrapeada para preguntas como "¿qué hay en Shell?"."""
-    supermarket = _find_supermarket(question, promotions)
-    normalized = _norm(question)
-    candidates = list(promotions)
-    if supermarket:
-        candidates = [p for p in candidates if p.get("supermarket_name") == supermarket]
-    elif any(word in normalized for word in ("combustible", "nafta", "gasoil", "diesel")):
-        candidates = [p for p in candidates if _norm(p.get("category")) == "fuel"]
+_CATEGORY_LABELS = {"fuel": "combustible", "supermarket": "supermercados"}
+_ENTITY_LABELS = {
+    "nacion": "Banco Nación", "provincia": "Banco Provincia", "cuenta dni": "Cuenta DNI",
+    "mercado pago": "Mercado Pago", "naranja": "Naranja X", "galicia": "Banco Galicia",
+    "bbva": "BBVA", "macro": "Banco Macro", "ciudad": "Banco Ciudad", "icbc": "ICBC",
+    "modo": "MODO", "jubilad": "jubilados", "anses": "ANSES", "uala": "Ualá",
+    "club la nacion": "Club La Nación", "personal pay": "Personal Pay",
+}
+_METHOD_LABELS = {"qr": "con QR", "nfc": "con NFC", "debito": "con débito", "credito": "con crédito", "cuotas": "en cuotas"}
 
-    # Reconoce el banco/billetera si coincide con alguno de los registros
-    # actuales. Así "¿qué hay con Galicia en Shell?" no requiere un comando.
-    entities = {
-        str(p.get(field) or "").strip()
-        for p in candidates for field in ("bank", "wallet", "payment_method")
-        if str(p.get(field) or "").strip()
-    }
-    entity = next((name for name in sorted(entities, key=len, reverse=True)
-                   if _norm(name) in normalized), None)
-    if entity:
-        entity_norm = _norm(entity)
-        candidates = [p for p in candidates if entity_norm in _norm(" ".join(
-            str(p.get(field) or "") for field in ("bank", "wallet", "payment_method", "title")
-        ))]
 
+def _describe_query(query: PromoQuery) -> str:
+    parts = []
+    if query.merchant:
+        parts.append(query.merchant)
+    elif query.category:
+        parts.append(_CATEGORY_LABELS[query.category])
+    if query.entity:
+        parts.append(f"con {_ENTITY_LABELS.get(query.entity, query.entity.title())}")
+    if query.method:
+        parts.append(_METHOD_LABELS[query.method])
+    if query.channel:
+        parts.append("online" if query.channel == "online" else "en tiendas")
+    if query.day_label:
+        parts.append(query.day_label)
+    return " · ".join(parts) or "supermercados y combustibles"
+
+
+def _answer_search(query: PromoQuery, promotions: list[dict], methods: list[dict]) -> str:
+    """Busca con todos los filtros entendidos y explica qué se buscó."""
+    candidates = [p for p in promotions if _matches_query(p, query)]
+    personalized = bool(methods) and not query.entity
+    if personalized:
+        mine = [p for p in candidates if _matches_payment_method(p, methods)]
+        if mine:
+            candidates = mine
+        else:
+            personalized = False
+    scope = _describe_query(query)
     if not candidates:
-        scope = f" para <b>{_esc(supermarket)}</b>" if supermarket else ""
-        return f"No encontré promociones vigentes hoy{scope}."
+        # Explicar qué filtro dejó la búsqueda vacía ayuda a reformular.
+        hint = ""
+        if query.days is not None:
+            relaxed = PromoQuery(**{**query.__dict__, "days": None, "day_label": "", "target_date": None})
+            other_days = [p for p in promotions if _matches_query(p, relaxed)]
+            if other_days:
+                found = sorted({d for p in other_days for d in _promo_days(p)})
+                hint = ("\nSí hay otros días: " + ", ".join(_WEEKDAY_LABELS[d] for d in found) + ".")
+        return f"No encontré promos vigentes para <b>{_esc(scope)}</b>.{hint}"
 
-    scope = supermarket or ("combustibles" if candidates and all(_norm(p.get("category")) == "fuel" for p in candidates)
-                            else "supermercados y combustibles")
-    if entity:
-        scope += f" con {entity}"
-    lines = [f"📋 <b>Promos vigentes hoy — {_esc(scope)}</b>"]
-    for promo in candidates[:6]:
-        name = promo.get("supermarket_name")
-        prefix = f"<b>{_esc(name)}</b>: " if not supermarket else "• "
+    candidates.sort(key=_benefit_rank, reverse=True)
+    limit = 3 if query.best else 8
+    title = "🏆 <b>Mejores promos" if query.best else "📋 <b>Promos vigentes"
+    lines = [f"{title} — {_esc(scope)}</b>" + (" (con tus medios de pago)" if personalized else "")]
+    for promo in candidates[:limit]:
+        prefix = "• " if query.merchant else f"<b>{_esc(promo.get('supermarket_name'))}</b>: "
         lines.append(f"{prefix}{_promo_line(promo)}")
-    if len(candidates) > 6:
-        lines.append(f"\n<i>Mostrando 6 de {len(candidates)} promociones.</i>")
+    if len(candidates) > limit:
+        lines.append(f"\n<i>Mostrando {limit} de {len(candidates)}. Sumá un banco, día o comercio para afinar.</i>")
+    lines.append("<i>Ordenado por beneficio publicado; revisá topes y condiciones antes de pagar.</i>")
     return "\n".join(lines)
 
 
-def answer_promo_question(question: str, promotions: list[dict], methods: Optional[list[dict]] = None) -> Optional[str]:
-    """Devuelve una respuesta HTML o ``None`` cuando el mensaje no parece consulta."""
+_HELP = (
+    "Puedo buscar promos vigentes de supermercados y combustible, y precios de suplementos. Probá:\n\n"
+    "• <i>¿Qué promos hay hoy en Coto?</i>\n"
+    "• <i>¿Cuál es el mejor descuento en nafta el sábado?</i>\n"
+    "• <i>Promos con Galicia en Shell</i>\n"
+    "• <i>¿Qué hay con Cuenta DNI esta semana?</i>\n"
+    "• <i>Descuentos con QR de Mercado Pago en Día</i>\n"
+    "• <i>¿En qué súper me conviene comprar carne hoy?</i>\n"
+    "• <i>¿El vino Alaris está excluido en Coto?</i>\n"
+    "• <i>¿Dónde está más barata la proteína Star Nutrition 2 lb?</i>\n\n"
+    "También podés usar /ayuda para ver los comandos."
+)
+
+
+def answer_promo_question(
+    question: str, promotions: list[dict], methods: Optional[list[dict]] = None,
+    today: Optional[date] = None,
+) -> Optional[str]:
+    """Devuelve una respuesta HTML o ``None`` cuando el mensaje no parece consulta.
+
+    ``promotions`` debe traer todas las promos vigentes (no sólo las de hoy):
+    el día lo filtra esta función según lo que pida la pregunta.
+    """
     normalized = _norm(question)
     if not normalized:
         return None
@@ -485,21 +719,31 @@ def answer_promo_question(question: str, promotions: list[dict], methods: Option
     ))
     if _is_price_comparison_question(question):
         return _answer_price_comparison(question)
+    query = parse_promo_query(question, promotions, today)
     if exclusion_intent:
         return _answer_exclusion(question, promotions)
-    if recommendation_intent:
-        return _answer_recommendation(question, promotions, methods or [])
+    product = _extract_recommendation_product(question)
+    if recommendation_intent and product and not _is_only_filters(product, query):
+        # El producto lo evalúa _answer_recommendation; el resto de lo que se
+        # entendió (súper vs nafta, comercio, banco, día) filtra antes.
+        scoped = [p for p in promotions if _matches_query(p, query)]
+        return _answer_recommendation(question, scoped, methods or [])
     data_intent = bool(re.search(
-        r"\b(promo|promocion|descuento|beneficio|reintegro|cuota|combustible|nafta|gasoil|diesel)\w*",
+        r"\b(promo|promocion|descuento|beneficio|reintegro|cuota|ofert|tope|minimo|ahorr|hay)\w*",
         normalized,
     ))
-    if data_intent:
-        return _answer_data_question(question, promotions)
-    if "?" in question or "¿" in question:
-        return (
-            "Puedo responder preguntas sobre promos vigentes y sus T&C.\n\n"
-            "• <i>¿El vino Alaris está excluido en Coto hoy?</i>\n"
-            "• <i>¿En qué súper me conviene comprar vino hoy?</i>\n\n"
-            "También podés usar /ayuda para ver los comandos."
-        )
+    if query.has_filters or query.best or data_intent:
+        return _answer_search(query, promotions, methods or [])
+    if "?" in question or "¿" in question or re.search(r"\b(ayuda|que podes|que puedes|hola)\b", normalized):
+        return _HELP
     return None
+
+
+def _is_only_filters(product: str, query: PromoQuery) -> bool:
+    """'comprar nafta' o 'comprar en Coto' no nombran un producto: es una búsqueda."""
+    leftover = _norm(product)
+    leftover = re.sub(_FUEL_WORDS + "|" + _SUPER_WORDS, " ", leftover)
+    for alias in list(_MERCHANT_ALIASES) + list(_ENTITY_ALIASES):
+        leftover = re.sub(rf"(?<!\w){re.escape(alias)}\w*", " ", leftover)
+    leftover = re.sub(rf"\b(en|con|el|la|los|las|de|hoy|manana|{'|'.join(_WEEKDAYS)})s?\b", " ", leftover)
+    return not leftover.strip()
