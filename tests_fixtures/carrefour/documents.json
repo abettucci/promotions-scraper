@@ -1,0 +1,1686 @@
+{
+ "data": {
+  "documents": [
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "433c8d83-db37-418a-a59c-a4d4d031b531"
+     },
+     {
+      "key": "title",
+      "value": "20% de descuento en un pago con Cuenta Digital de Carrefour Banco"
+     },
+     {
+      "key": "sub_title",
+      "value": "Descuento aplicado en el acto. Tope de devolución $10.000.  NO INCLUYE CARNICERÍA, FRUTAS, VERDURAS, ELECTROS, BAZAR, TEXTIL, OFERTÓN POR BULTO, PACK FAMILIAR NI PRECIO SÚPER BAJO TODOS LOS DÍAS."
+     },
+     {
+      "key": "discount_percentage",
+      "value": "20"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "De descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "cuentaDigital.webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "carrefour-banco (2).webp"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "0"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-10-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Jueves de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "false"
+     },
+     {
+      "key": "market",
+      "value": "false"
+     },
+     {
+      "key": "ecommerce",
+      "value": "true"
+     },
+     {
+      "key": "express",
+      "value": "false"
+     },
+     {
+      "key": "maxi",
+      "value": "false"
+     },
+     {
+      "key": "legal",
+      "value": "DESCUENTO EXCLUSIVO ABONANDO CON CUENTA DIGITAL DE CARREFOUR BANCO. VÁLIDO TODOS LOS JUEVES DE OCTUBRE 2026 PARA LAS COMPRAS ONLINE EN CARREFOUR.COM.AR Y EN LA APP DE CARREFOUR. APLICABLE TANTO A COMPRAS CON ENTREGA INMEDIATA COMO A COMPRAS CON ENTREGA PROGRAMADA. NO VÁLIDO EN LAS TIENDAS HIPERMERCADOS CARREFOUR, CARREFOUR MARKET, CARREFOUR EXPRESS, CARREFOUR MAXI NI EN COMERCIANTE.CARREFOUR.COM.AR. EL DESCUENTO SE HARÁ EFECTIVO EN EL ACTO, CON TOPE DE DESCUENTO DE $10.000 POR SEMANA, EXCLUSIVO SOLO PARA CONSUMO FAMILIAR. ACUMULABLE CON TODAS LAS PROMOCIONES VIGENTES. QUEDAN EXCLUIDOS DEL DESCUENTO ELECTRODOMÉSTICOS Y TECNOLOGÍA; CARNICERÍA: CARNE DE VACA, CERDO, POLLO, ACHURAS Y EMBUTIDOS; LECHES INFANTILES Y MATERNIZADAS ETAPA 1 Y 2; FRUTAS Y VERDURAS; BAZAR; TEXTIL; PRODUCTOS DE VENTA AL BULTO Y PACK FAMILIAR; ENVASES; BODEGAS CHANDON, CASA DE HERRERO, LUCA BESO DE DANTE, NICO BY LUCA"
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "false"
+     },
+     {
+      "key": "thursday",
+      "value": "true"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "null"
+     },
+     {
+      "key": "idCard",
+      "value": "c442ddb1-e72d-4151-81bd-984dc9d543fe"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "dc756f22-f479-11ef-b37f-f45bce4a2de1"
+     },
+     {
+      "key": "title",
+      "value": "20% de descuento en un pago con Tarjeta de crédito de Carrefour Banco y Cuenta Digital de Carrefour Banco"
+     },
+     {
+      "key": "sub_title",
+      "value": "Descuento aplicado en el acto. Tope de devolución $10.000"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "20"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "carrefour-Credito (1).webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "1"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-10-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Comprando todos los Jueves de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "false"
+     },
+     {
+      "key": "market",
+      "value": "false"
+     },
+     {
+      "key": "ecommerce",
+      "value": "true"
+     },
+     {
+      "key": "express",
+      "value": "false"
+     },
+     {
+      "key": "maxi",
+      "value": "false"
+     },
+     {
+      "key": "legal",
+      "value": "DESCUENTO EXCLUSIVO ABONANDO CON TARJETA DE CRÉDITO MASTERCARD DE CARREFOUR BANCO. VÁLIDO TODOS LOS JUEVES DE OCTUBRE 2026 PARA LAS COMPRAS ONLINE EN CARREFOUR.COM.AR Y EN LA APP DE CARREFOUR. APLICABLE TANTO A COMPRAS CON ENTREGA INMEDIATA COMO A COMPRAS CON ENTREGA PROGRAMADA. NO VÁLIDO EN LAS TIENDAS HIPERMERCADOS CARREFOUR, CARREFOUR MARKET, CARREFOUR EXPRESS, CARREFOUR MAXI NI EN COMERCIANTE.CARREFOUR.COM.AR. EL DESCUENTO SE HARÁ EFECTIVO EN EL ACTO, PARA COMPRAS EN UN (1) PAGO, CON TOPE DE DESCUENTO DE $10.000 POR SEMANA, EXCLUSIVO SOLO PARA CONSUMO FAMILIAR. NO VÁLIDO PARA COMPRAS EN CUOTAS. ACUMULABLE CON TODAS LAS PROMOCIONES VIGENTES. QUEDAN EXCLUIDOS DEL DESCUENTO ELECTRODOMÉSTICOS Y TECNOLOGÍA; CARNICERÍA: CARNE DE VACA, CERDO, POLLO, ACHURAS Y EMBUTIDOS; LECHES INFANTILES Y MATERNIZADAS ETAPA 1 Y 2; ENVASES; BODEGAS CHANDON, CASA DE HERRERO, LUCA BESO DE DANTE, NICO BY LUCA,"
+     },
+     {
+      "key": "valid",
+      "value": "-"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "false"
+     },
+     {
+      "key": "thursday",
+      "value": "true"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "null"
+     },
+     {
+      "key": "idCard",
+      "value": "9217c372-7dad-11eb-82ac-0e9340244943"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "23af46b4-aad8-4ab6-9716-29bda4307a1b"
+     },
+     {
+      "key": "title",
+      "value": "10% de descuento en tu compra ¡Sin Tope!"
+     },
+     {
+      "key": "sub_title",
+      "value": "Exclusivo con dinero en cuenta. Ver exclusiones en el legal"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "10"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de Ahorro"
+     },
+     {
+      "key": "img_card",
+      "value": "mercado-pago -1 (1) (1).webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "1"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Viernes de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "false"
+     },
+     {
+      "key": "market",
+      "value": "false"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "false"
+     },
+     {
+      "key": "maxi",
+      "value": "true"
+     },
+     {
+      "key": "legal",
+      "value": "BENEFICIO VÁLIDO EXCLUSIVAMENTE EN LA REPÚBLICA ARGENTINA, HASTA EL 31/10/2026. PARA PAGOS REALIZADOS A TRAVÉS DEL SERVICIO DE PROCESAMIENTO DE PAGOS DE MERCADO PAGO OPERADO POR MERCADOLIBRE S.R.L. “MERCADO PAGO” A TRAVÉS DEL ESCANEO DEL CÓDIGO QR CON LA APP DE MERCADO PAGO LA “APP”, ELIGIENDO COMO MEDIO DE PAGO DINERO EN CUENTA. EL BENEFICIO CONSISTE EN UN 10% DE DESCUENTO, SIN TOPE DE REINTEGRO, EN TODA TU COMPRA EN TODAS LAS SUCURSALES DE CARREFOUR MAXI  \"EL “BENEFICIO”. NO VALIDO PARA WWW.CARREFOUR.COM.AR. EL BENEFICIO ESTARÁ A CARGO DE INC S.A. Y SE REALIZARÁ EN LÍNEA DE CAJAS SOBRE EL PRECIO DE CONTADO. MERCADO PAGO NO ES UNA ENTIDAD FINANCIERA. LOS FONDOS EN CUENTAS DE PAGO NO SON DEPÓSITOS GARANTIZADOS. MERCADOLIBRE S.R.L. CUIT 30703088534, CASEROS 3039, PISO 2o, CABA”. PROMOCIÓN NO VÁLIDA PARA COMPRAS EN CUOTAS CON TARJETAS DE CRÉDITO EMITIDAS EN EL EXTERIOR, TARJETAS DE COMPRA "
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "false"
+     },
+     {
+      "key": "thursday",
+      "value": "false"
+     },
+     {
+      "key": "friday",
+      "value": "true"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "b16eed64-2df2-11ec-82ac-12aeae09a3ef"
+     },
+     {
+      "key": "idCard",
+      "value": "null"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "b5c992e9-296a-4f82-b712-823f6fcd1c4d"
+     },
+     {
+      "key": "title",
+      "value": "10% de descuento en tu compra con Cuenta Digital de Carrefour Banco."
+     },
+     {
+      "key": "sub_title",
+      "value": "Acumulable con todas las promos ¡Sin Tope!. Ver exclusiones en el legal"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "10"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "Cuenta-Digital.webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "2"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Sábados y Domingos de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "true"
+     },
+     {
+      "key": "market",
+      "value": "true"
+     },
+     {
+      "key": "ecommerce",
+      "value": "true"
+     },
+     {
+      "key": "express",
+      "value": "true"
+     },
+     {
+      "key": "maxi",
+      "value": "false"
+     },
+     {
+      "key": "legal",
+      "value": "DESCUENTO EXCLUSIVO ABONANDO CON CUENTA DIGITAL DE CARREFOUR BANCO. VÁLIDO TODOS LOS SÁBADOS Y DOMINGOS DEL 1 AL 31 DE OCTUBRE DE 2026 EN LAS TIENDAS \"HIPERMERCADOS CARREFOUR\", \"CARREFOUR MARKET\", \"CARREFOUR EXPRESS\". Y PARA COMPRAS ONLINE EN CARREFOUR.COM.AR, NO VÁLIDO PARA AQUELLOS PRODUCTOS CUYA LEYENDA INDIQUE QUE SON VENDIDOS Y ENTREGADOS DIRECTAMENTE POR EL DISTRIBUIDOR/FABRICANTE, A TRAVÉS DE LA PLATAFORMA MARKETPLACE DE CARREFOUR. EL DESCUENTO SE HARÁ EFECTIVO EN EL ACTO SIN TOPE, EXCLUSIVO SOLO PARA CONSUMO FAMILIAR. NO INCLUYE CARNICERÍA, HUEVOS DE GALLINA, FRUTAS, VERDURAS, ELECTROS, BAZAR, FERRETERÍA, AUTOMOTOR, JUGUETERÍA LIBRERÍA, COCINA, JARDINERÍA, TEXTIL, OFERTÓN POR BULTO, PACK FAMILIAR NI PRECIO SÚPER BAJO, NI PRODUCTOS DE LA CAMPAÑA \"BAJAMOS LOS PRECIOS\". ACUMULABLE CON TODAS LAS PROMOCIONES VIGENTES. PARA MAS INFORMACION INGRESAR A CARREFOUR.COM.AR O BANCODESERVICIOS"
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "false"
+     },
+     {
+      "key": "thursday",
+      "value": "false"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "true"
+     },
+     {
+      "key": "sunday",
+      "value": "true"
+     },
+     {
+      "key": "idBank",
+      "value": "null"
+     },
+     {
+      "key": "idCard",
+      "value": "c442ddb1-e72d-4151-81bd-984dc9d543fe"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "2be11499-17aa-4d95-8937-45a2837c3d51"
+     },
+     {
+      "key": "title",
+      "value": "15% de Ahorro con tarjeta de débito y en un pago con tarjeta de credito Visa, Mastercard y Amex."
+     },
+     {
+      "key": "sub_title",
+      "value": "Tope de devolución (POR MES Y POR CUENTA) $10.000 - Exclusivo para clientes con plan sueldo. Ver exclusiones en el legal."
+     },
+     {
+      "key": "discount_percentage",
+      "value": "15"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de Ahorro"
+     },
+     {
+      "key": "img_card",
+      "value": "-_Promo-bancaria_patagonia.webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "3"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Miércoles de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "true"
+     },
+     {
+      "key": "market",
+      "value": "true"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "true"
+     },
+     {
+      "key": "maxi",
+      "value": "true"
+     },
+     {
+      "key": "legal",
+      "value": "PROMOCIÓN VÁLIDA LOS DÍAS MIERCOLES HASTA EL 31/10/2026. PARA COMPRAS REALIZADAS CON TARJETA DE DÉBITO Y EN 1 PAGO CON TARJETAS DE CRÉDITO VISA EMITIDAS POR EL BANCO PATAGONIA QUE COBREN SUS HABERES EN LA ENTIDAD. VÁLIDO PARA HIPERMERCADOS CARREFOUR, CARREFOUR MARKET, CARREFOUR EXPRESS Y CARREFOUR MAXI. (1)\r\n20% DE AHORRO CON TOPE DE $15.000 POR MES Y POR CUENTA EN UN PAGO CON TARJETAS DE DÉBITO Y CRÉDITO VISA DEL BANCO PATAGONIA EXCLUSIVO PARA CLIENTES CON\r\nPLAN SUELDO. (2) 25% DE AHORRO CON TOPE DE $20.000 POR MES Y POR CUENTA EN UN PAGO CON TARJETAS DE DÉBITO Y CRÉDITO VISA DEL BANCO PATAGONIA EXCLUSIVO PARA\r\nCLIENTES CON PLAN SUELDO CARTERA PATAGONIA PLUS. (3) 35% DE AHORRO CON TOPE DE $25.000 POR MES Y POR CUENTA EN UN PAGO CON TARJETAS DE DÉBITO Y CRÉDITO VISA DEL BANCO PATAGONIA EXCLUSIVO PARA CLIENTES CON PLAN SUELDO CARTERA PATAGONIA SINGULAR. EL IMPORTE BONIFICADO POR LAS COMPR"
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "true"
+     },
+     {
+      "key": "thursday",
+      "value": "false"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "962da28b-7dae-11eb-82ac-02f0e64629af"
+     },
+     {
+      "key": "idCard",
+      "value": "5a3c378c-7dad-11eb-82ac-0e5742ad38db"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "03141397-1da7-4b15-9365-699cced2e41f"
+     },
+     {
+      "key": "title",
+      "value": "Hasta 3 cuotas sin interés. Pagando con QR."
+     },
+     {
+      "key": "sub_title",
+      "value": "Exclusivo con tarjeta de crédito de Mercado Pago. En compras a partir de $150.000"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "null"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "3"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "sin interés"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "null"
+     },
+     {
+      "key": "img_card",
+      "value": "mercado-pago -1.webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "6"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los días de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "true"
+     },
+     {
+      "key": "market",
+      "value": "true"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "true"
+     },
+     {
+      "key": "maxi",
+      "value": "true"
+     },
+     {
+      "key": "legal",
+      "value": "BENEFICIO VÁLIDO EXCLUSIVAMENTE EN LA REPÚBLICA ARGENTINA HASTA EL 31/10/2026. 3 CUOTAS SIN INTERÉS VÁLIDO EN COMPRAS A PARTIR DE LOS $150.000 PAGANDO CON QR DE MERCADO PAGO, EN TODA TU COMPRA EN TODAS LAS SUCURSALES DE HIPERMER\r\nCADOS CARREFOUR, CARREFOUR MARKET, CARREFOUR EXPRESS Y CARREFOUR MAXI. MERCADO PAGO NO ES UNA  ENTIDAD FINANCIERA. LOS FONDOS EN CUENTAS DE PAGO NO SON DEPÓSITOS GARANTIZA DOS.\r\nMERCADOLIBRE S.R.L. CUIT 30-70308853-4, CASEROS 3039, PISO 2°, C.A.B.A"
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "true"
+     },
+     {
+      "key": "tuesday",
+      "value": "true"
+     },
+     {
+      "key": "wednesday",
+      "value": "true"
+     },
+     {
+      "key": "thursday",
+      "value": "true"
+     },
+     {
+      "key": "friday",
+      "value": "true"
+     },
+     {
+      "key": "saturday",
+      "value": "true"
+     },
+     {
+      "key": "sunday",
+      "value": "true"
+     },
+     {
+      "key": "idBank",
+      "value": "b16eed64-2df2-11ec-82ac-12aeae09a3ef"
+     },
+     {
+      "key": "idCard",
+      "value": "null"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "4f9ac242-778f-11f0-b37f-f9b6f2b5c87b"
+     },
+     {
+      "key": "title",
+      "value": "Si sos empleado/a público todos los jueves"
+     },
+     {
+      "key": "sub_title",
+      "value": "En Alimentos secos, Congelados, Lácteos, Fiambres,  Bebidas, Limpieza y Perfumería. Tope máximo de descuento mensual $ 20.000"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "15"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "Logo-MiCRF-Clasico_382x12511.png"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "6"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los jueves de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "true"
+     },
+     {
+      "key": "market",
+      "value": "true"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "true"
+     },
+     {
+      "key": "maxi",
+      "value": "true"
+     },
+     {
+      "key": "legal",
+      "value": "PROMOCIÓN VÁLIDA LOS DIAS JUEVES HASTA EL 31/10/2026, EXCLUSIVO EN HIPERMERCADOS CARREFOUR Y CARREFOUR MARKET DE LAS PROVINCIAS DE: SANTA FE, FORMOSA, NEUQUÉN, SALTA, RÍO NEGRO, TIERRA DEL\r\nFUEGO, Y DE LAS CUIDADES DE: MAR DEL PLATA, TANDIL, BALCARCE, PERGAMINO, BAHÍA BLANCA, OLAVARRÍA Y SAN NICOLÁS.. VÁLIDO PARA EMPLEADAS/OS PÚBLICOS QUE TRABAJEN EN: EDUCACIÓN, JUSTICIA,\r\nREGISTRO, ENERGÍA , CULTURA, SALUD, TURISMO, PREFECTURA, TRÁNSITO, DEPORTE, TRANSPORTE, DESARROLLO SOCIAL, CUALQUIER DEPENDENCIA NACIONAL, PROVINCIAL O MUNICIPAL. NO VÁLIDO EN CARREFOUR\r\nEXPRESS, CARREFOUR MAXI NI EN CARREFOUR.COM.AR. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES. SÓLO PARA CONSUMO FAMILIAR. TOPE MÁXIMO DE DESCUENTO MENSUAL $ 20.000. CONSULTA BASES\r\nY CONDICIONES EN ATENCIÓN AL CLIENTE. PARA MÁS INFORMACIÓN CONSULTE EN WWW.CARREFOUR.COM.AR O COMUNÍQUESE AL TELÉFONO 0-800-444-8484."
+     },
+     {
+      "key": "valid",
+      "value": "-"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "false"
+     },
+     {
+      "key": "thursday",
+      "value": "true"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "null"
+     },
+     {
+      "key": "idCard",
+      "value": "null"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "ad2d57fe-3e0f-494e-9ee1-ec4ff9b0f8d4"
+     },
+     {
+      "key": "title",
+      "value": "30% de Ahorro con tarjeta de débito y en un pago con tarjeta de credito Visa, Mastercard y Amex"
+     },
+     {
+      "key": "sub_title",
+      "value": "Tope de devolución (POR MES Y POR CUENTA) $20.000 - Exclusivo para clientes con plan sueldo singular. Ver exclusiones en el legal"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "30"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de Ahorro"
+     },
+     {
+      "key": "img_card",
+      "value": "-_Promo-bancaria_patagonia.webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "7"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Miércoles de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "true"
+     },
+     {
+      "key": "market",
+      "value": "true"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "true"
+     },
+     {
+      "key": "maxi",
+      "value": "true"
+     },
+     {
+      "key": "legal",
+      "value": "PROMOCIÓN VÁLIDA LOS DÍAS MIERCOLES HASTA EL 31/10/2026. PARA COMPRAS REALIZADAS CON TARJETA DE DÉBITO Y EN 1 PAGO CON TARJETAS DE CRÉDITO VISA EMITIDAS POR EL BANCO PATAGONIA QUE COBREN SUS HABERES EN LA ENTIDAD. VÁLIDO PARA HIPERMERCADOS CARREFOUR, CARREFOUR MARKET, CARREFOUR EXPRESS Y CARREFOUR MAXI. (1) 20% DE AHORRO CON TOPE DE $15.000 POR MES Y POR CUENTA EN UN PAGO CON TARJETAS DE DÉBITO Y CRÉDITO VISA DEL BANCO PATAGONIA EXCLUSIVO PARA CLIENTES CON PLAN SUELDO. (2) 25% DE AHORRO CON TOPE DE $20.000 POR MES Y POR CUENTA EN UN PAGO CON TARJETAS DE DÉBITO Y CRÉDITO VISA DEL BANCO PATAGONIA EXCLUSIVO PARA CLIENTES CON PLAN SUELDO CARTERA PATAGONIA PLUS. (3) 35% DE AHORRO CON TOPE DE $25.000 POR MES Y POR CUENTA EN UN PAGO CON TARJETAS DE DÉBITO Y CRÉDITO VISA DEL BANCO PATAGONIA EXCLUSIVO PARA CLIENTES CON PLAN SUELDO CARTERA PATAGONIA SINGULAR. EL IMPORTE BONIFICADO POR LAS COMPRAS "
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "true"
+     },
+     {
+      "key": "thursday",
+      "value": "false"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "962da28b-7dae-11eb-82ac-02f0e64629af"
+     },
+     {
+      "key": "idCard",
+      "value": "5a3c378c-7dad-11eb-82ac-0e5742ad38db"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "35d30d5f-567a-11f0-b37f-c2cb70a90ede"
+     },
+     {
+      "key": "title",
+      "value": "10% de descuento en tu compra con Cuenta DNI ¡Sin Tope!. Y si sos jubilado, tenes 5% de descuento adicional."
+     },
+     {
+      "key": "sub_title",
+      "value": "Mínimo de compra $15.000. Promoción acumulable. Si sos jubilado tope de $5.000. Ver exclusiones en el legal"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "10"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "Cuenta_dni.png"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "10"
+     },
+     {
+      "key": "active_from",
+      "value": "2025-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Miércoles de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "true"
+     },
+     {
+      "key": "market",
+      "value": "true"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "true"
+     },
+     {
+      "key": "maxi",
+      "value": "false"
+     },
+     {
+      "key": "legal",
+      "value": "PROMOCIÓN VÁLIDA TODOS LOS MIÉRCOLES HASTA EL 31/10/2026 INCLUSIVE. PARA COMPRAS REALIZADAS A TRAVÉS DE LA FUNCIONALIDAD \"PAGO CLAVE DNI\" Y/O QR DE LA APLICACIÓN CUENTA DNI EN TODAS LAS TIENDAS HIPERMERCADOS CARREFOUR, CARREFOUR MARKET Y CARREFOUR EXPRESS. LA NÓMINA DE ADHERIDOS SE PODRÁ CONSULTAR EN WWW.BANCOPROVINCIA.COM.AR. BONIFICACIÓN DEL 10%. SIN TOPE DE REINTEGRO. EL BENEFICIO ESTARÁ A CARGO DE CARREFOUR. EL DESCUENTO SE REALIZARÁ EN EL MOMENTO DE LA COMPRA, EN EL MISMO INSTANTE EN QUE SE COBRE AL CLIENTE POR LA LÍNEA DE CAJA DEL ESTABLECIMIENTO. VÁLIDA ÚNICAMENTE PARA VENTA MINORISTA, SE EXCLUYEN DE LA PROMOCIÓN NO INCLUYE CARNICERÍA, HUEVOS DE GALLINA, FRUTAS, VERDURAS, ELECTROS, BAZAR, TEXTIL, OFERTÓN POR BULTO, PACK FAMILIAR, PRECIO SÚPER BAJO TODOS LOS DÍAS, NI PRODUCTOS DE LA CAMPAÑA \"BAJAMOS LOS PRECIOS\". PARA MÁS INFORMACIÓN CONSULTE EN EL SITIO WEB DE SU ENTIDAD BANCARIA."
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "true"
+     },
+     {
+      "key": "thursday",
+      "value": "false"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "8153eb03-198c-4e73-b5a1-07ac54c4e42e"
+     },
+     {
+      "key": "idCard",
+      "value": "null"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "804da576-8555-478d-b33b-b82663eab002"
+     },
+     {
+      "key": "title",
+      "value": "10% de descuento en tu compra con Cuenta DNI ¡Sin Tope!. Y si sos jubilado, tenes 5% de descuento adicional."
+     },
+     {
+      "key": "sub_title",
+      "value": "No acumulable con otras promociones y/o folletos vigentes. Ver exclusiones en el legal."
+     },
+     {
+      "key": "discount_percentage",
+      "value": "10"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "Cuenta_dni.png"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "11"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Miércoles de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "false"
+     },
+     {
+      "key": "market",
+      "value": "false"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "false"
+     },
+     {
+      "key": "maxi",
+      "value": "true"
+     },
+     {
+      "key": "legal",
+      "value": "PROMOCIÓN VÁLIDA TODOS LOS MIÉRCOLES HASTA EL 31/10/2026 INCLUSIVE. PARA COMPRAS REALIZADAS A TRAVÉS DE LA FUNCIONALIDAD \"PAGO CLAVE DNI\" Y/O QR DE LA APLICACIÓN CUENTA DNI EN TODAS LAS TIENDAS CARREFOUR MAXI. LA NÓMINA DE ADHERIDOS SE PODRÁ CONSULTAR EN WWW.BANCOPROVINCIA.COM.AR. BONIFICACIÓN DEL 10%. SIN TOPE DE REINTEGRO. EL BENEFICIO ESTARÁ A CARGO DE CARREFOUR. EL DESCUENTO SE REALIZARÁ EN EL MOMENTO DE LA COMPRA, EN EL MISMO INSTANTE EN QUE SE COBRE AL CLIENTE POR LA LÍNEA DE CAJA DEL ESTABLECIMIENTO. VÁLIDA ÚNICAMENTE PARA VENTA MINORISTA, SE EXCLUYEN DE LA PROMOCIÓN NO INCLUYE CARNICERÍA, HUEVOS DE GALLINA, FRUTAS, VERDURAS, ELECTROS, BAZAR, TEXTIL, OFERTÓN POR BULTO, PACK FAMILIAR NI PRECIO SÚPER BAJO TODOS LOS DÍAS. PARA MÁS INFORMACIÓN CONSULTE EN EL SITIO WEB DE SU ENTIDAD BANCARIA. LA PROMOCIÓN NO APLICA A COMPRAS REALIZADAS CON CUENTA DNI MEDIANTE LA LECTURA DEL CÓDIGO QR D"
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "true"
+     },
+     {
+      "key": "thursday",
+      "value": "false"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "8153eb03-198c-4e73-b5a1-07ac54c4e42e"
+     },
+     {
+      "key": "idCard",
+      "value": "null"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "80535941-4718-4886-b580-f2b8f5861963"
+     },
+     {
+      "key": "title",
+      "value": "10% de descuento en tu compra con Cuenta Digital de Carrefour Banco."
+     },
+     {
+      "key": "sub_title",
+      "value": "Acumulable con todas las promos ¡Sin Tope!. Ver exclusiones en el legal."
+     },
+     {
+      "key": "discount_percentage",
+      "value": "10"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "Cuenta-Digital.webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "null"
+     },
+     {
+      "key": "img_card_3",
+      "value": "null"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "null"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "15"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-09-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Todos los Sábados y Domingos de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "false"
+     },
+     {
+      "key": "market",
+      "value": "false"
+     },
+     {
+      "key": "ecommerce",
+      "value": "false"
+     },
+     {
+      "key": "express",
+      "value": "false"
+     },
+     {
+      "key": "maxi",
+      "value": "true"
+     },
+     {
+      "key": "legal",
+      "value": "10% DE DESCUENTO EXCLUSIVO ABONANDO CON CUENTA DIGITAL DE CARREFOUR BANCO. VÁLIDO TODOS LOS SÁBADOS Y DOMINGOS DE OCTUBRE DE 2026 EN LAS TIENDAS CARREFOUR MAXI DE TODO EL PAÍS. NO INCLUYE CARNICERÍA, HUEVOS DE GALLINA, FRUTAS, VERDURAS, ELECTROS, BAZAR, FERRETERÍA, AUTOMOTOR, JUGUETERÍA LIBRERÍA, COCINA, JARDINERÍA, TEXTIL, OFERTÓN POR BULTO, PACK FAMILIAR, PRECIO SÚPER BAJO, NI PRODUCTOS DE LA CAMPAÑA \"BAJAMOS LOS PRECIOS\", PARA MÁS INFORMACIÓN INGRESAR A BANCODESERVICIOSFINANCIEROS.COM.AR. OTORGA BANCO DE SERVICIOS FINANCIEROS CARREFOUR S.A.U CUIT 30-69726589-5, INSCRIPTA EN EL RPC EL 14/07/1998, CON No 5705, L II DE SA, BERUTI 2915, CABA (C1425BBI)."
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "false"
+     },
+     {
+      "key": "thursday",
+      "value": "false"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "true"
+     },
+     {
+      "key": "sunday",
+      "value": "true"
+     },
+     {
+      "key": "idBank",
+      "value": "null"
+     },
+     {
+      "key": "idCard",
+      "value": "c442ddb1-e72d-4151-81bd-984dc9d543fe"
+     }
+    ]
+   },
+   {
+    "fields": [
+     {
+      "key": "id",
+      "value": "60dcece5-9907-44c3-9951-e661a72af7db"
+     },
+     {
+      "key": "title",
+      "value": "10% OFF Todos los Medios de Pago - EXCLUSIVO ONLINE"
+     },
+     {
+      "key": "sub_title",
+      "value": "Tope de descuento de $8000 por semana"
+     },
+     {
+      "key": "discount_percentage",
+      "value": "10"
+     },
+     {
+      "key": "discounts_amount_installments",
+      "value": "null"
+     },
+     {
+      "key": "discounts_text_installments",
+      "value": "null"
+     },
+     {
+      "key": "discount_text_info",
+      "value": "de descuento"
+     },
+     {
+      "key": "img_card",
+      "value": "carrefour-banco-2.webp"
+     },
+     {
+      "key": "img_card_2",
+      "value": "visa.webp"
+     },
+     {
+      "key": "img_card_3",
+      "value": "mc.webp"
+     },
+     {
+      "key": "img_card_4",
+      "value": "null"
+     },
+     {
+      "key": "img_card_5",
+      "value": "mercado-pago.webp"
+     },
+     {
+      "key": "img_card_6",
+      "value": "null"
+     },
+     {
+      "key": "order",
+      "value": "null"
+     },
+     {
+      "key": "active_from",
+      "value": "2026-10-01T00:00:00+00:00"
+     },
+     {
+      "key": "active_to",
+      "value": "2026-11-01T00:00:00+00:00"
+     },
+     {
+      "key": "active",
+      "value": "true"
+     },
+     {
+      "key": "validText",
+      "value": "Válido en el mes de Octubre"
+     },
+     {
+      "key": "hyper",
+      "value": "false"
+     },
+     {
+      "key": "market",
+      "value": "false"
+     },
+     {
+      "key": "ecommerce",
+      "value": "true"
+     },
+     {
+      "key": "express",
+      "value": "false"
+     },
+     {
+      "key": "maxi",
+      "value": "false"
+     },
+     {
+      "key": "legal",
+      "value": "DESCUENTO EXCLUSIVO PARA COMPRAS REALIZADAS EN 1 PAGO, ABONANDO CON CUALQUIER MEDIO DE PAGO. VÁLIDO TODOS LOS JUEVES DE OCTUBRE 2026 PARA LAS COMPRAS ONLINE EN CARREFOUR.COM.AR Y EN LA APP DE CARREFOUR. APLICABLE TANTO A COMPRAS CON ENTREGA INMEDIATA COMO A COMPRAS CON ENTREGA PROGRAMADA. NO VÁLIDO EN LAS TIENDAS HIPERMERCADOS CARREFOUR, CARREFOUR MARKET, CARREFOUR EXPRESS, CARREFOUR MAXI NI EN COMERCIANTE.CARREFOUR.COM.AR. EL DESCUENTO SE HARÁ EFECTIVO EN EL ACTO, CON TOPE DE DESCUENTO DE $8.000 POR SEMANA, EXCLUSIVO SOLO PARA CONSUMO FAMILIAR. ACUMULABLE CON TODAS LAS PROMOCIONES VIGENTES. QUEDAN EXCLUIDOS DEL DESCUENTO ELECTRODOMÉSTICOS Y TECNOLOGÍA; CARNICERÍA: CARNE DE VACA, CERDO, POLLO, ACHURAS Y EMBUTIDOS; LECHES INFANTILES Y MATERNIZADAS ETAPA 1 Y 2; ENVASES; BODEGAS CHANDON, CASA DE HERRERO, LUCA BESO DE DANTE, NICO BY LUCA, RUTINI, SAN FELIPE. NICOLÁS CATENA, ARAUCANA, BIRTH O"
+     },
+     {
+      "key": "valid",
+      "value": "null"
+     },
+     {
+      "key": "monday",
+      "value": "false"
+     },
+     {
+      "key": "tuesday",
+      "value": "false"
+     },
+     {
+      "key": "wednesday",
+      "value": "false"
+     },
+     {
+      "key": "thursday",
+      "value": "true"
+     },
+     {
+      "key": "friday",
+      "value": "false"
+     },
+     {
+      "key": "saturday",
+      "value": "false"
+     },
+     {
+      "key": "sunday",
+      "value": "false"
+     },
+     {
+      "key": "idBank",
+      "value": "null"
+     },
+     {
+      "key": "idCard",
+      "value": "null"
+     }
+    ]
+   }
+  ]
+ }
+}

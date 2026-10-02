@@ -20,6 +20,20 @@ _MONTH_ES = {
     'septiembre': '09', 'octubre': '10', 'noviembre': '11', 'diciembre': '12',
 }
 
+def _as_text(value) -> str:
+    """Serializa listas/dicts para SQLite.
+
+    Varios scrapers devuelven exclusions/requirements como listas; sqlite3 no
+    acepta listas como parámetro y el INSERT fallaba en silencio, dejando la
+    fuente con 0 promociones guardadas.
+    """
+    if isinstance(value, (list, tuple, dict)):
+        if not value:
+            return ''
+        return json.dumps(list(value) if isinstance(value, tuple) else value, ensure_ascii=False)
+    return value or ''
+
+
 def normalize_date_iso(value) -> Optional[str]:
     """Normaliza una fecha a formato ISO (YYYY-MM-DD) para que las comparaciones de strings funcionen.
 
@@ -167,6 +181,26 @@ class Database:
             conn.commit()
         except Exception:
             pass  # Column already exists
+
+        # Fuente que publicó la promo (clave de config.SUPERMARKETS). Permite
+        # que un aggregator (MODO, Cuenta DNI...) y el scraper propio del
+        # comercio escriban sobre el mismo comercio sin borrarse entre sí.
+        try:
+            cursor.execute("ALTER TABLE promotions ADD COLUMN source TEXT")
+            conn.commit()
+        except Exception:
+            pass  # Column already exists
+
+        # "Combustible (genérico)" lo creaba el ruteo de aggregators cuando la
+        # IA no identificaba la marca; sus filas eran basura y ya nadie las
+        # refresca, así que se apagan en vez de esperar al TTL.
+        cursor.execute("""
+            UPDATE promotions SET is_active = 0
+            WHERE is_active = 1 AND supermarket_id IN (
+                SELECT id FROM supermarkets WHERE name = 'Combustible (genérico)'
+            )
+        """)
+        conn.commit()
 
         # Ensure one terms_conditions row per promotion (for existing DBs)
         try:
@@ -405,10 +439,21 @@ class Database:
         conn.close()
         return [dict(r) for r in rows]
 
-    def insert_supermarket(self, name: str, url: str, category: str = 'supermarket') -> int:
-        """Inserta o actualiza un supermercado / merchant. category: 'supermarket' | 'fuel' | 'benefits'."""
+    def insert_supermarket(self, name: str, url: str, category: str = 'supermarket',
+                           update_existing: bool = True) -> int:
+        """Inserta o actualiza un supermercado / merchant. category: 'supermarket' | 'fuel' | 'benefits'.
+
+        update_existing=False lo usan los aggregators: si el comercio ya existe
+        no le pisan la URL/categoría propias (p. ej. Cuenta DNI → Carrefour).
+        """
         conn = self.get_connection()
         cursor = conn.cursor()
+
+        if not update_existing:
+            row = cursor.execute("SELECT id FROM supermarkets WHERE name = ?", (name,)).fetchone()
+            if row:
+                conn.close()
+                return row[0]
 
         cursor.execute("""
             INSERT INTO supermarkets (name, url, category)
@@ -472,8 +517,9 @@ class Database:
                 INSERT INTO promotions
                 (supermarket_id, title, discount, bank, wallet, card_type,
                  payment_method, store_types, valid_days, valid_from, valid_until,
-                 url, image_url, terms_raw, exclusions, requirements, tope, acumulable, min_purchase)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 url, image_url, terms_raw, exclusions, requirements, tope, acumulable, min_purchase,
+                 source)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(supermarket_id, title, bank) DO UPDATE SET
                     discount = excluded.discount,
                     payment_method = excluded.payment_method,
@@ -487,6 +533,10 @@ class Database:
                     tope = excluded.tope,
                     acumulable = excluded.acumulable,
                     min_purchase = excluded.min_purchase,
+                    wallet = excluded.wallet,
+                    card_type = excluded.card_type,
+                    url = excluded.url,
+                    source = COALESCE(excluded.source, promotions.source),
                     is_active = 1,
                     scraped_at = CURRENT_TIMESTAMP
             """, (
@@ -505,11 +555,12 @@ class Database:
                 promo_data.get('url', ''),
                 promo_data.get('image_url', ''),
                 promo_data.get('terms_raw', ''),
-                promo_data.get('exclusions', ''),
-                promo_data.get('requirements', ''),
+                _as_text(promo_data.get('exclusions')),
+                _as_text(promo_data.get('requirements')),
                 promo_data.get('tope', ''),
                 promo_data.get('acumulable'),
                 min_purchase,
+                promo_data.get('source'),
             ))
             
             promotion_id = cursor.lastrowid
@@ -519,7 +570,7 @@ class Database:
                 result = cursor.execute("""
                     SELECT id FROM promotions
                     WHERE supermarket_id = ? AND title = ? AND bank = ?
-                """, (supermarket_id, title, promo_data.get('bank', ''))).fetchone()
+                """, (supermarket_id, title, promo_data.get('bank') or '')).fetchone()
                 
                 if result:
                     promotion_id = result[0]
@@ -546,6 +597,15 @@ class Database:
             if isinstance(value, list):
                 return value
             if isinstance(value, str):
+                # Algunos scrapers ya entregan la lista serializada como JSON.
+                # Sin esto la UI mostraba el array crudo ('["a", "b"]').
+                if value.strip().startswith('['):
+                    try:
+                        parsed = json.loads(value)
+                        if isinstance(parsed, list):
+                            return [str(item).strip() for item in parsed if str(item).strip()]
+                    except json.JSONDecodeError:
+                        pass
                 return [item.strip() for item in value.split("|") if item.strip()]
             return []
 
@@ -684,6 +744,22 @@ class Database:
         cursor.execute("UPDATE promotions SET is_active = 0 WHERE supermarket_id = ?", (supermarket_id,))
         conn.commit()
         conn.close()
+
+    def deactivate_for_source(self, supermarket_id: int, source: str, include_legacy: bool = False) -> int:
+        """Desactiva sólo las promos que publicó `source` en este comercio.
+
+        include_legacy=True también desactiva filas sin source (creadas antes
+        de existir la columna); lo usa el scraper propio del comercio.
+        """
+        conn = self.get_connection()
+        cursor = conn.cursor()
+        query = "UPDATE promotions SET is_active = 0 WHERE supermarket_id = ? AND is_active = 1 AND (source = ?"
+        query += " OR source IS NULL)" if include_legacy else ")"
+        cursor.execute(query, (supermarket_id, source))
+        deactivated = cursor.rowcount
+        conn.commit()
+        conn.close()
+        return deactivated
 
     def deactivate_old_promotions(self, supermarket_id: int, current_titles: List[str]):
         """Desactiva promociones que ya no están en el sitio"""

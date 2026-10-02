@@ -4,6 +4,11 @@ Fuente: https://promociones.mercadopago.com.ar/
 
 Esta fuente contiene campañas públicas de Mercado Pago. No intenta acceder a
 la sección Beneficios de la app ni a campañas dirigidas a una cuenta.
+
+Es un AGGREGATOR: se consulta sólo la categoría Supermercado del sitio (no hay
+categoría de combustible) y cada promo lleva merchant_brands. El sitio suele
+quedar con campañas viejas publicadas (p. ej. Hot Sale "del 11 al 17 de mayo",
+sin año): las que no tienen fecha legible o ya vencieron se descartan.
 """
 from __future__ import annotations
 
@@ -13,6 +18,23 @@ from html.parser import HTMLParser
 from typing import Dict, List, Optional
 
 from .base_scraper import BaseScraper
+
+
+_LIST_URL = "https://promociones.mercadopago.com.ar/?_sft_vendedores_category=supermercado&_sf_ppp=100"
+
+# Nombre del vendedor (minúsculas, sin tildes) → marca canónica.
+_BRANDS = {
+    "carrefour": "Carrefour", "coto": "Coto Digital", "coto digital": "Coto Digital",
+    "dia": "Supermercados Día", "supermercados dia": "Supermercados Día",
+    "jumbo": "Jumbo (Cencosud)", "disco": "Disco", "vea": "Vea",
+    "changomas": "Más Online (ChangoMás)", "chango mas": "Más Online (ChangoMás)",
+    "masonline": "Más Online (ChangoMás)", "mas online": "Más Online (ChangoMás)",
+}
+
+
+def _fold(text: str) -> str:
+    table = str.maketrans("áéíóúüÁÉÍÓÚÜ", "aeiouuaeiouu")
+    return (text or "").translate(table).lower().strip()
 
 
 _MONTHS = {
@@ -85,6 +107,7 @@ class MercadoPagoScraper(BaseScraper):
             name="Mercado Pago",
             url="https://promociones.mercadopago.com.ar/",
         )
+        self.list_url = _LIST_URL
 
     async def scrape(self, page=None) -> List[Dict]:
         """Obtiene la página pública sin autenticar ni usar datos de usuarios."""
@@ -95,7 +118,7 @@ class MercadoPagoScraper(BaseScraper):
             return []
         try:
             response = requests.get(
-                self.url,
+                self.list_url,
                 headers={
                     "User-Agent": "Mozilla/5.0 (compatible; promotions-scraper/1.0)",
                     "Accept-Language": "es-AR,es;q=0.9",
@@ -108,10 +131,10 @@ class MercadoPagoScraper(BaseScraper):
             return []
 
         parsed_promotions = self.parse_html(response.text)
-        promotions = [promo for promo in parsed_promotions if self._is_current_or_undated(promo)]
+        promotions = [promo for promo in parsed_promotions if self._is_current(promo)]
         skipped = len(parsed_promotions) - len(promotions)
         if skipped:
-            print(f"   ℹ️ Mercado Pago: {skipped} campaña(s) vencida(s) omitida(s)")
+            print(f"   ℹ️ Mercado Pago: {skipped} campaña(s) vencida(s) o sin fecha omitida(s)")
         print(f"✅ {self.name}: {len(promotions)} promociones públicas")
         return promotions
 
@@ -138,13 +161,20 @@ class MercadoPagoScraper(BaseScraper):
             seen.add(key)
 
             dates = self._extract_spanish_dates(legal)
+            brand = _BRANDS.get(_fold(title)) or title
+            discount = self._discount_from_badges(badges, full_text)
+            pct = re.search(r"(\d+)\s*%", discount)
+            label = f"{'Hasta ' if 'hasta' in discount.lower() else ''}{pct.group(1)}%" if pct else discount
             promotions.append({
-                "title": title,
-                "discount": self._discount_from_badges(badges, full_text),
+                "title": f"Mercado Pago {label} en {title}",
+                "merchant_brands": [brand],
+                "merchant_category": "supermarket",
+                "source_id": f"mercadopago:{_fold(title)}:{dates['valid_from'] or ''}:{label.lower()}",
+                "discount": discount,
                 "bank": None,
                 "wallet": "Mercado Pago",
-                "card_type": "Tarjeta Mercado Pago" if "tarjeta de mercado pago" in full_text.lower() else None,
-                "payment_method": "Mercado Pago",
+                "card_type": None,
+                "payment_method": "Tarjeta de Mercado Pago" if "tarjeta de mercado pago" in full_text.lower() else "Mercado Pago",
                 "store_types": "Online" if "online" in full_text.lower() else None,
                 "valid_days": "Todos los días",
                 "valid_from": dates["valid_from"],
@@ -180,14 +210,31 @@ class MercadoPagoScraper(BaseScraper):
         return f"${match.group(1).rstrip('.,')}" if match else None
 
     @staticmethod
-    def _is_current_or_undated(promo: Dict) -> bool:
+    def _is_current(promo: Dict) -> bool:
+        """Sólo campañas con vigencia legible y no vencida.
+
+        El sitio deja publicadas campañas viejas; una promo sin fecha no se
+        puede asumir vigente (antes "Válido 11/05, 13/05" pasaba como actual).
+        """
         valid_until = promo.get("valid_until")
         if not valid_until:
-            return True
+            return False
         try:
             return date.fromisoformat(valid_until) >= date.today()
         except ValueError:
-            return True
+            return False
+
+    @staticmethod
+    def _infer_year(month: int, day: int) -> int:
+        """Año de una fecha sin año: el actual, salvo que quede a más de ~6
+        meses en el futuro (entonces es del año pasado: en enero se lee una
+        campaña de diciembre)."""
+        today = date.today()
+        try:
+            candidate = date(today.year, month, day)
+        except ValueError:
+            return today.year
+        return today.year - 1 if (candidate - today).days > 183 else today.year
 
     @staticmethod
     def _extract_spanish_dates(text: str) -> Dict[str, Optional[str]]:
@@ -199,11 +246,23 @@ class MercadoPagoScraper(BaseScraper):
             normalized,
         )
         if not match:
-            return {"valid_from": None, "valid_until": None}
+            # "Válido 11/05, 13/05" / "Válido 11/05 al 13/05/2026": fechas dd/mm.
+            pairs = re.findall(r"(?<![\d/])(\d{1,2})/(\d{1,2})(?:/(\d{2,4}))?(?![\d/])", normalized)
+            found = []
+            for d, m, y in pairs:
+                try:
+                    day, month = int(d), int(m)
+                    year = int(y if len(y or "") == 4 else f"20{y}") if y else MercadoPagoScraper._infer_year(month, day)
+                    found.append(date(year, month, day))
+                except ValueError:
+                    continue
+            if not found:
+                return {"valid_from": None, "valid_until": None}
+            return {"valid_from": min(found).isoformat(), "valid_until": max(found).isoformat()}
         month = _MONTHS.get(match.group(3))
         if not month:
             return {"valid_from": None, "valid_until": None}
-        year = int(match.group(4) or date.today().year)
+        year = int(match.group(4)) if match.group(4) else MercadoPagoScraper._infer_year(month, int(match.group(2)))
         try:
             return {
                 "valid_from": date(year, month, int(match.group(1))).isoformat(),

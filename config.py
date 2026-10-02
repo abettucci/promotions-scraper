@@ -82,7 +82,7 @@ SUPERMARKETS = {
     },
     'coto': {
         'name': 'Coto Digital',
-        'url': 'https://www.cotodigital.com.ar/sitios/cdigi/terminos-descuentos',
+        'url': 'https://www.coto.com.ar/descuentos',
         'enabled': True
     },
     'cencosud': {
@@ -101,36 +101,48 @@ SUPERMARKETS = {
         'url': 'https://www.brubank.com/beneficios',
         'enabled': True,
         'category': 'benefits',
+        # Rutea cada promo al comercio (merchant_brands/merchant_category).
+        'aggregator': True,
     },
     'personalpay': {
         'name': 'Personal Pay',
         'url': 'https://www.personal.com.ar/pay/beneficios',
         'enabled': True,
         'category': 'benefits',
+        # Rutea cada promo al comercio (merchant_brands/merchant_category).
+        'aggregator': True,
     },
     'mercadopago': {
         'name': 'Mercado Pago',
         'url': 'https://promociones.mercadopago.com.ar/',
         'enabled': True,
         'category': 'benefits',
+        # Rutea cada promo al comercio (merchant_brands/merchant_category).
+        'aggregator': True,
     },
     'clublanacion': {
         'name': 'Club La Nación',
         'url': 'https://club.lanacion.com.ar/beneficios',
         'enabled': True,
         'category': 'benefits',
+        # Rutea cada promo al comercio (merchant_brands/merchant_category).
+        'aggregator': True,
     },
     'buepp': {
         'name': 'Buepp',
         'url': 'https://www.buepp.com.ar/beneficios',
         'enabled': True,
         'category': 'benefits',
+        # Rutea cada promo al comercio (merchant_brands/merchant_category).
+        'aggregator': True,
     },
     'cuentadni': {
         'name': 'Cuenta DNI',
         'url': 'https://www.bancoprovincia.com.ar/cuentadni/contenidos/cdniBeneficios/',
         'enabled': True,
         'category': 'benefits',
+        # Rutea cada promo al comercio (merchant_brands/merchant_category).
+        'aggregator': True,
     },
     # ── Estaciones de servicio ──────────────────────────────────────────────
     'shell': {
@@ -141,7 +153,7 @@ SUPERMARKETS = {
     },
     'axion': {
         'name': 'Axion',
-        'url': 'https://www.axionenergy.com/Paginas/beneficios/beneficiosypromociones.aspx',
+        'url': 'https://www.axionenergy.com/beneficios-y-promociones/',
         'enabled': True,
         'category': 'fuel',
     },
@@ -156,15 +168,17 @@ SUPERMARKETS = {
     # NO se insertan como supermarket — sus promos van bajo la marca correspondiente.
     'modo': {
         'name': 'MODO',
-        'url': 'https://www.modo.com.ar/promos/combustibles',
+        'url': 'https://www.modo.com.ar/promos',
         'enabled': True,
         'category': 'fuel',
         'aggregator': True,
     },
+    # La página de Macro tiene challenge anti-bot y publica legales vencidos;
+    # sus promos de combustible (Macro Selecta → YPF) salen de la API de MODO.
     'macro': {
         'name': 'Banco Macro',
         'url': 'https://www.macro.com.ar/selecta/combustible',
-        'enabled': True,
+        'enabled': False,
         'category': 'fuel',
         'aggregator': True,
     },
@@ -181,7 +195,7 @@ SUPERMARKETS = {
         'enabled': True,
         'category': 'fuel',
         'aggregator': True,
-        # BNA es solo YPF — si la IA no extrae la marca, asumir esto
+        # BNA es solo YPF (BnaScraper ya setea merchant_brands; esto es respaldo)
         'default_brand': 'YPF',
     },
     # Deshabilitados por ahora (sin scraper específico)

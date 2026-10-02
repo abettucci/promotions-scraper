@@ -1,0 +1,305 @@
+{
+ "15956": {
+  "list": {
+   "distancia": 0,
+   "latitud": -34.603672,
+   "longitud": -58.382122,
+   "idBeneficio": 15956,
+   "idSucursal": 0,
+   "descuento": 25,
+   "comercio_nombre": "Coto",
+   "css_icono_rubro": "icon-bcba_beneficios_supermercados",
+   "titulo": "25% de descuento",
+   "subtitulo": "Tope de reintegro de $30.000 por semana.",
+   "idImagen": 72,
+   "comercio_id": 56,
+   "comercio_logo": "56/logo",
+   "diasBeneficio": "L------",
+   "sin_tope": false,
+   "nuevo": false,
+   "medioUnicoTipo": false,
+   "medios_pago": [
+    {
+     "id": 4,
+     "nombre": "MASTERCARD",
+     "credito": "S"
+    },
+    {
+     "id": 1,
+     "nombre": "VISA",
+     "credito": "S"
+    },
+    {
+     "id": 7,
+     "nombre": "BUEPP",
+     "credito": "N"
+    },
+    {
+     "id": 8,
+     "nombre": "APP CIUDAD",
+     "credito": "N"
+    }
+   ],
+   "visitas": 3268,
+   "rubro": {
+    "id": 10,
+    "idRubroPadre": null,
+    "nombre": "Supermercados",
+    "icono": "icon-bcba_beneficios_supermercados",
+    "orden": null,
+    "nombreUrl": "Supermercados"
+   },
+   "aplica_tienda_online": true
+  },
+  "detail": {
+   "beneficio": {
+    "id": 15956,
+    "titulo": "25% de descuento",
+    "subtitulo": "Tope de reintegro de $30.000 por semana.",
+    "descuento": 25,
+    "medios_pago": [
+     {
+      "id": 4,
+      "nombre": "MASTERCARD",
+      "credito": "S"
+     },
+     {
+      "id": 1,
+      "nombre": "VISA",
+      "credito": "S"
+     },
+     {
+      "id": 7,
+      "nombre": "BUEPP",
+      "credito": "N"
+     },
+     {
+      "id": 8,
+      "nombre": "APP CIUDAD",
+      "credito": "N"
+     }
+    ],
+    "css_icono_rubro": "icon-bcba_beneficios_supermercados",
+    "idRubro": 10,
+    "dias": "L------",
+    "sin_tope": false,
+    "nuevo": false,
+    "visitas": 3268,
+    "shopping": false,
+    "medioUnicoTipo": false,
+    "descAdicional": "",
+    "aplica_tienda_online": true,
+    "resumen": "25% de descuento los días lunes, con tope de $30.000 por semana en compras realizadas en comercios adheridos pagando con QR MODO a través de App Ciudad o Buepp con tarjetas de crédito del Ciudad en un pago en locales físicos adheridos.  Y en la tienda online pagando con tarjetas de crédito. Ver productos excluidos.",
+    "legales": "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<p>Promoci&oacute;n ofrecida por el Banco de la Ciudad de Buenos Aires, CUIT 30-99903208-3 (Banco Ciudad) los d&iacute;as lunes desde el 07/09/2026 al 31/12/2026, en toda la Rep&uacute;blica Argentina, se otorgar&aacute; un 25% (veinticinco) de descuento durante dicha vigencia sobre el importe bruto de los productos participantes (excluyendo aquellos con promociones vigentes) con tope de reintegro de $30.000 por semana, en compras realizadas en locales f&iacute;sicos adheridos de COTO CICSA, pagando con QR MODO a trav&eacute;s de App Ciudad o Buepp, tarjetas de cr&eacute;dito Visa, Mastercard y Cabal de Banco Ciudad y en la tienda online en www.cotodigital.com.ar. pagando con tarjetas de cr&eacute;dito Visa, Mastercard y Cabal de Banco Ciudad. Aplica para compras en un pago. <span>El descuento podr&aacute; visualizarse v&iacute;a reintegro, a acreditar en la cuenta del cliente dentro de los 15 d&iacute;as posteriores a la fecha de realizada la compra. Si el cliente tuviera m&aacute;s de una cuenta, el cr&eacute;dito se realizar&aacute; en cualquiera de ellas a elecci&oacute;n del banco. </span>Ser&aacute; requisito excluyente, previo a realizarse la compra, tener asociada a MODO la cuenta del Banco Ciudad. Para compras realizadas por titulares de tarjetas adicionales, el tarjetahabiente adicional deber&aacute; poseer una caja de ahorro del Banco Ciudad asociada a MODO. Quedan excluidas de la promoci&oacute;n las cuentas en mora y/o bloqueadas por motivos administrativos. La presente promoci&oacute;n es v&aacute;lida solo para consumos de tipo familiar. Si el cliente tuviera m&aacute;s de una cuenta, el cr&eacute;dito se realizar&aacute; en cualquiera de ellas a elecci&oacute;n del banco. En caso de duda sobre el destino del consumo, no se acreditar&aacute; el monto de la bonificaci&oacute;n hasta tanto se aclare el mismo. Para obtener el descuento en las compras efectuadas a trav&eacute;s de internet (Coto Digital) debe realizar la compra el d&iacute;a lunes, independientemente del d&iacute;a de entrega. La compra online est&aacute; sujeta a disponibilidad de env&iacute;o por parte del supermercado. Excusiones informadas por el comercio: electrodom&eacute;sticos, rodados, neum&aacute;ticos. No incluye productos de bodegas Catena Zapata, Nicola Catena, Bodega Ernesto Catena (Alma Negra, Padrillos, Animal, Enemigo y Gran Enemigo), malbec DV Catena bot. X 1,5 lt., malbec la rioja DV Catena, malbec salta DV Catena, Saint Felicien, Nicasia, Tilia, bodega Leoncio Arizu (Luigi Bosca), Bodega La Rural (Rutini, Trumpeter, San Felipe y cepa tradicional semillon/malbec-malbec/tinto blend), Chandon ni terrazas de los Andes (Latitud 33&deg;, Castel, Altos del Plata, Valmont, Beltour, Cheval y Clos du Moulin), bodega norton (lote negro, quorum vi, privada family blend), bodega cadus wines (cadus), Casa Pirque (Altaland, La Posta, Petit Caro, malbec/cabernet franc, Casa de Herrero, malbec ojo de buen cubero y malbec/cabernet franc/ pinot noir Cuchillo de Palo, malbec r&iacute;o de los Ciervos Araucana, malbec nico y blend beso de dante luca, aruma y luca), bodega Bianchi (vino chardonnay reservado mar&iacute;a carmen, vino gran corte Enzo Bianchi, vinos malbec y cabernet sauvignon particular Bianchi), bodega Valent&iacute;n Bianchi (vino tinto corte y malbec iv generaci&oacute;n), bodega Monteviejo (festivo y petite fleur), ni vinos en tetrabrik ni generosos. El descuento en champa&ntilde;as y espumantes no inlcuye productos de bodegas Chandon, mercier, Catena Zapata, Bar&oacute;n B, dom Perignon, Pommery, M&ouml;et Chandon, la grande dame ni Krug, no incluye cortes de carnes de novillo, novillito, ternera, menudencias ni carnes elaboradas, porcinos y embutidos. No incluye pollo entero ni trozado, fresco ni congelado, no incluye leches infantiles etapas 1 y 2 (flu&iacute;das ni en polvo), ni harinas en todas sus presentaciones, ni az&uacute;car en todas sus presentaciones, ni aceite de girasol y mezcla girasol-soja en todas sus presentaciones, ni productos incluidos en programas de precios del gobierno y/o aplicables por normativa vigente. Se excluyen todas las presentaciones de las siguientes marcas: Coca Cola, Coca Cola Light, Coca Cola sin az&uacute;car, Crush, Fanta, Fanta sin az&uacute;car, Schweppes, Sprite y Sprite sin az&uacute;car, Aquarius, Smartwater, Cepita, Benedictino, Powerade, Ades, hi-c ni monster. No valido para venta on line. Precios y promociones para consumo familiar. Esta publicaci&oacute;n no acumula con otros descuentos, ofertas y/o promociones bancarias. Coto c.i.c.s.a. - paysand&uacute; 1842 - c1416cdp - capital federal - fonocoto 0800-888-4848 - <a href=\"http://WWW.COTO.COM.AR\">WWW.COTO.COM.AR</a></p>\n<p>Los descuentos publicados no son acumulables con otras promociones, ni tarjetas de programas de ayuda social. Conforme RES. 915 e/2017, 51- E/2017 y 240 E/2017. T.N.A., T.E.A. Y C.F.T.N.A (IVA Incluido): 0,00% Fijo. T.N.A: Tasa Nominal Anual, T.E.A: Tasa Efectiva Anual, C.F.T.N.A: Costo Financiero Total expresado en forma de tasa nominal anual con IVA. El producto ofrecido corresponde a la cartera de consumo.&nbsp;</p>\n</body>\n</html>",
+    "legales_genericas": "No aplica para tarjetas corporativas. La URL de los comercios adheridos se publica a título ilustrativo. El Banco no asume responsabilidad sobre los contenidos publicados en tales sitios. Los beneficios sobre consumos online realizados en sitios web ajenos al Banco (tiendas online, tiendas virtuales, e-commerce, entre otros) solo aplicarán en el caso de que así se indique en los términos y condiciones de la promoción del Banco Ciudad. El titular de los datos personales podrá en cualquier momento solicitar el retiro o bloqueo total o parcial de su nombre de nuestros bancos de datos, comunicándose al 0800-22-20-400, de conformidad con el art. 27, inc 3 de la ley 25.326 y art. 27 del Anexo I del Decreto 1558/01.",
+    "cft": "0.0",
+    "mostrar_cft": false,
+    "legalesGenericas": true,
+    "con_archivo_pdf": false,
+    "nombre_pdf": "",
+    "fechaDesde": "2026-09-07T03:00:00.000+00:00",
+    "fechaHasta": "2026-12-31T03:00:00.000+00:00",
+    "idImagen": 72,
+    "nombreRubro": "Supermercados",
+    "ato": false
+   },
+   "comercio": {
+    "nombre": "Coto",
+    "web": ""
+   },
+   "googleMapsKey": "AIzaSyA68ASmQydvNRY_DyB0LSg7q4p-8BP3qv8"
+  }
+ },
+ "15942": {
+  "list": {
+   "distancia": 0,
+   "latitud": -34.603264,
+   "longitud": -58.492798,
+   "idBeneficio": 15942,
+   "idSucursal": 0,
+   "descuento": 20,
+   "comercio_nombre": "MásGO",
+   "css_icono_rubro": "icon-bcba_beneficios_supermercados",
+   "titulo": "20% de descuento",
+   "subtitulo": "Tope de reintegro de $20.000 mensual por cliente en compras mínimas de $30.000",
+   "idImagen": 728,
+   "comercio_id": 6513,
+   "comercio_logo": "6513/logo",
+   "diasBeneficio": "------D",
+   "sin_tope": false,
+   "nuevo": false,
+   "medioUnicoTipo": true,
+   "medios_pago": [
+    {
+     "id": 8,
+     "nombre": "APP CIUDAD",
+     "credito": "N"
+    },
+    {
+     "id": 7,
+     "nombre": "BUEPP",
+     "credito": "N"
+    }
+   ],
+   "visitas": 1555,
+   "rubro": {
+    "id": 10,
+    "idRubroPadre": null,
+    "nombre": "Supermercados",
+    "icono": "icon-bcba_beneficios_supermercados",
+    "orden": null,
+    "nombreUrl": "Supermercados"
+   },
+   "aplica_tienda_online": true
+  },
+  "detail": {
+   "beneficio": {
+    "id": 15942,
+    "titulo": "20% de descuento",
+    "subtitulo": "Tope de reintegro de $20.000 mensual por cliente en compras mínimas de $30.000",
+    "descuento": 20,
+    "medios_pago": [
+     {
+      "id": 8,
+      "nombre": "APP CIUDAD",
+      "credito": "N"
+     },
+     {
+      "id": 7,
+      "nombre": "BUEPP",
+      "credito": "N"
+     }
+    ],
+    "css_icono_rubro": "icon-bcba_beneficios_supermercados",
+    "idRubro": 10,
+    "dias": "------D",
+    "sin_tope": false,
+    "nuevo": false,
+    "visitas": 1556,
+    "shopping": false,
+    "medioUnicoTipo": true,
+    "descAdicional": "",
+    "aplica_tienda_online": true,
+    "resumen": "Aprovechá 20% todos los domingos, con tope de reintegro $20.000 por cliente pagando con qr MODO a través de App Ciudad o Buepp con tarjetas de Banco Ciudad para compras en tiendas físicas. Mínimo de compra: $30.000. Ver comercios adheridos",
+    "legales": "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<p><span>Promoci&oacute;n ofrecida por el Banco de la Ciudad de Buenos Aires, CUIT 30-99903208-3 (Banco Ciudad) v&aacute;lida los domingos, desde el 16/08/2026 al 31/10/2026 en la Rep&uacute;blica Argentina, para compras realizadas en comercios adheridos de M&aacute;sGO, con tarjetas de d&eacute;bito Visa y Maestro y de cr&eacute;dito Visa o Mastercard de Banco Ciudad, escaneando el QR de MODO, desde Buepp o App Ciudad, o desde Buepp o Modo utilizando la funcionalidad NFC (disponible &uacute;nicamente para dispositivos Android). Se otorgar&aacute; un 20% (veinte por ciento) de descuento con tope de reintegro de $20.000 mensual por cliente en compras m&iacute;nimas de $30.000. El reintegro se acreditar&aacute; en la cuenta del cliente en un plazo de 15 (quince) d&iacute;as h&aacute;biles posteriores a la fecha de realizado el pago. Para compras realizadas por titulares de tarjetas adicionales, el tarjetahabiente adicional deber&aacute; poseer una caja de ahorro del Banco Ciudad asociada a MODO. El producto ofrecido corresponde a la cartera de consumo.</span></p>\n</body>\n</html>",
+    "legales_genericas": "No aplica para tarjetas corporativas. La URL de los comercios adheridos se publica a título ilustrativo. El Banco no asume responsabilidad sobre los contenidos publicados en tales sitios. Los beneficios sobre consumos online realizados en sitios web ajenos al Banco (tiendas online, tiendas virtuales, e-commerce, entre otros) solo aplicarán en el caso de que así se indique en los términos y condiciones de la promoción del Banco Ciudad. El titular de los datos personales podrá en cualquier momento solicitar el retiro o bloqueo total o parcial de su nombre de nuestros bancos de datos, comunicándose al 0800-22-20-400, de conformidad con el art. 27, inc 3 de la ley 25.326 y art. 27 del Anexo I del Decreto 1558/01.",
+    "cft": "0.0",
+    "mostrar_cft": false,
+    "legalesGenericas": true,
+    "con_archivo_pdf": false,
+    "nombre_pdf": "",
+    "fechaDesde": "2026-08-16T03:00:00.000+00:00",
+    "fechaHasta": "2026-10-31T03:00:00.000+00:00",
+    "idImagen": 728,
+    "nombreRubro": "Supermercados",
+    "ato": false
+   },
+   "comercio": {
+    "nombre": "MásGO",
+    "web": ""
+   },
+   "googleMapsKey": "AIzaSyA68ASmQydvNRY_DyB0LSg7q4p-8BP3qv8"
+  }
+ },
+ "15949": {
+  "list": {
+   "distancia": 0,
+   "latitud": -34.605724,
+   "longitud": -58.374573,
+   "idBeneficio": 15949,
+   "idSucursal": 0,
+   "descuento": 35,
+   "comercio_nombre": "Mas Go",
+   "css_icono_rubro": "icon-bcba_beneficios_supermercados",
+   "titulo": "35% de descuento",
+   "subtitulo": "Tope hasta $20.000 mensual por cliente",
+   "idImagen": 728,
+   "comercio_id": 6518,
+   "comercio_logo": "6518/logo",
+   "diasBeneficio": "---J---",
+   "sin_tope": false,
+   "nuevo": false,
+   "medioUnicoTipo": false,
+   "medios_pago": [
+    {
+     "id": 4,
+     "nombre": "MASTERCARD",
+     "credito": "S"
+    },
+    {
+     "id": 7,
+     "nombre": "BUEPP",
+     "credito": "N"
+    },
+    {
+     "id": 8,
+     "nombre": "APP CIUDAD",
+     "credito": "N"
+    }
+   ],
+   "visitas": 810,
+   "rubro": {
+    "id": 10,
+    "idRubroPadre": null,
+    "nombre": "Supermercados",
+    "icono": "icon-bcba_beneficios_supermercados",
+    "orden": null,
+    "nombreUrl": "Supermercados"
+   },
+   "aplica_tienda_online": false
+  },
+  "detail": {
+   "beneficio": {
+    "id": 15949,
+    "titulo": "35% de descuento",
+    "subtitulo": "Tope hasta $20.000 mensual por cliente",
+    "descuento": 35,
+    "medios_pago": [
+     {
+      "id": 4,
+      "nombre": "MASTERCARD",
+      "credito": "S"
+     },
+     {
+      "id": 7,
+      "nombre": "BUEPP",
+      "credito": "N"
+     },
+     {
+      "id": 8,
+      "nombre": "APP CIUDAD",
+      "credito": "N"
+     }
+    ],
+    "css_icono_rubro": "icon-bcba_beneficios_supermercados",
+    "idRubro": 10,
+    "dias": "---J---",
+    "sin_tope": false,
+    "nuevo": false,
+    "visitas": 810,
+    "shopping": false,
+    "medioUnicoTipo": false,
+    "descAdicional": "",
+    "aplica_tienda_online": false,
+    "resumen": "Ahorrá -35% de descuento todos los jueves en supermercads Mas Go, pagando con tarjetas de crédito Mastercard a través de App Ciudad y Buepp. Tope mensual: $20.000 por cliente.",
+    "legales": "<!DOCTYPE html>\n<html>\n<head>\n</head>\n<body>\n<p>PROMOCI&Oacute;N OFRECIDA POR EL BANCO DE LA CIUDAD DE BUENOS AIRES, CUIT 30-99903208-3 (BANCO CIUDAD), V&Aacute;LIDA DESDE EL 27/08/2026 HASTA EL 31/12/2026 INCLUSIVE, TODOS LOS JUEVES, EN COMERCIOS F&Iacute;SICOS ADHERIDOS. PAGANDO EXCLUSIVAMENTE CON QR MODO A TRAV&Eacute;S DE APP CIUDAD O BUEPP CON TARJETAS DE CR&Eacute;DITO MASTERCARD BANCO CIUDAD. SE OTORGAR&Aacute; UN 35% (TREINTA Y CINCO POR CIENTO) DE DESCUENTO SOBRE EL IMPORTE DE LA COMPRA, CON UN TOPE DE HASTA $20.000 (VEINTE MIL) MENSUAL POR CLIENTE. EL BENEFICIO PODR&Aacute; VISUALIZARSE V&Iacute;A REINTEGRO, EL CUAL SER&Aacute; ACREDITADO EN LA CUENTA DEL CLIENTE DENTRO DE LOS 15 D&Iacute;AS H&Aacute;BILES POSTERIORES A LA FECHA DE REALIZADA LA COMPRA. PARA COMPRAS REALIZADAS POR TITULARES DE TARJETAS ADICIONALES, EL TARJETAHABIENTE ADICIONAL DEBER&Aacute; POSEER UNA CAJA DE AHORRO DEL BANCO CIUDAD ASOCIADA A MODO. LA PRESENTE PROMOCI&Oacute;N ES V&Aacute;LIDA S&Oacute;LO PARA CONSUMOS DE TIPO FAMILIAR. CONFORME RES. 51-E/2017, 240-E/2017 Y 12/24 DE LA SECRETAR&Iacute;A DE COMERCIO. T.N.A., T.E.A. Y C.F.T.N.A. (IVA INCLUIDO): 0,00% FIJO. T.N.A.: TASA NOMINAL ANUAL; T.E.A.: TASA EFECTIVA ANUAL; C.F.T.N.A.: COSTO FINANCIERO TOTAL EXPRESADO EN FORMA DE TASA NOMINAL ANUAL CON IVA. EL PRODUCTO OFRECIDO CORRESPONDE A LA CARTERA DE CONSUMO. PARA M&Aacute;S INFORMACI&Oacute;N CONSULTE EN&nbsp;<a href=\"https://nam02.safelinks.protection.outlook.com/?url=http%3A%2F%2Fwww.bancociudad.com.ar%2F&amp;data=05%7C02%7CMOsorio%40bancociudad.com.ar%7C16b7de4ac2334b65688c08deccabca58%7C99d6b2c51dda4246b042ef21eb53f345%7C0%7C0%7C639173235457614615%7CUnknown%7CTWFpbGZsb3d8eyJFbXB0eU1hcGkiOnRydWUsIlYiOiIwLjAuMDAwMCIsIlAiOiJXaW4zMiIsIkFOIjoiTWFpbCIsIldUIjoyfQ%3D%3D%7C0%7C%7C%7C&amp;sdata=VP0lv7MiL9qj5uh0MF3GqQ3m9487Fmb0BgTZqTL7WBA%3D&amp;reserved=0\">WWW.BANCOCIUDAD.COM.AR</a></p>\n</body>\n</html>",
+    "legales_genericas": "No aplica para tarjetas corporativas. La URL de los comercios adheridos se publica a título ilustrativo. El Banco no asume responsabilidad sobre los contenidos publicados en tales sitios. Los beneficios sobre consumos online realizados en sitios web ajenos al Banco (tiendas online, tiendas virtuales, e-commerce, entre otros) solo aplicarán en el caso de que así se indique en los términos y condiciones de la promoción del Banco Ciudad. El titular de los datos personales podrá en cualquier momento solicitar el retiro o bloqueo total o parcial de su nombre de nuestros bancos de datos, comunicándose al 0800-22-20-400, de conformidad con el art. 27, inc 3 de la ley 25.326 y art. 27 del Anexo I del Decreto 1558/01.",
+    "cft": "0.0",
+    "mostrar_cft": false,
+    "legalesGenericas": true,
+    "con_archivo_pdf": false,
+    "nombre_pdf": "",
+    "fechaDesde": "2026-07-20T03:00:00.000+00:00",
+    "fechaHasta": "2026-12-31T03:00:00.000+00:00",
+    "idImagen": 728,
+    "nombreRubro": "Supermercados",
+    "ato": false
+   },
+   "comercio": {
+    "nombre": "Mas Go",
+    "web": ""
+   },
+   "googleMapsKey": "AIzaSyA68ASmQydvNRY_DyB0LSg7q4p-8BP3qv8"
+  }
+ }
+}

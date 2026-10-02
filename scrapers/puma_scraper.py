@@ -7,8 +7,10 @@ No se necesita browser headless ni AI Vision.
 Flujo:
   1. GET /promociones  → BeautifulSoup extrae todos los href /promocion/ID
   2. Para cada ID, GET /promocion/ID en paralelo via asyncio.to_thread + requests
-  3. Parsear title (p.heading), descripción (p.details), imagen, link T&C
-  4. Extraer banco, billetera, descuento, días y fechas del texto libre
+  3. Parsear titular (p.heading), detalle (p.details), imagen, link T&C
+  4. Extraer banco, billetera, descuento, días, fechas, tramos de tope y tipo
+     de tarjeta del detalle; el título se normaliza a "<Entidad> <beneficio>
+     [tramo] - <días>" (el titular del sitio es poco legible: "Promo BNA | 20% off").
 
 No usa Gemini/Claude Vision — cero coste de AI.
 """
@@ -22,6 +24,7 @@ from bs4 import BeautifulSoup
 
 from .base_scraper import BaseScraper
 from fuel_conditions import extract_fuel_conditions
+from .shell_scraper import _BANKS, _WEEKDAYS, _money, _period, parse_dates
 
 BASE_URL = 'https://pumaenergyarg.com.ar'
 _LISTING_URL = f'{BASE_URL}/promociones'
@@ -125,22 +128,16 @@ class PumaScraper(BaseScraper):
         soup = BeautifulSoup(html, 'html.parser')
 
         # Título — buscar dentro de light-bg para evitar el nav
-        heading = soup.select_one('div.light-bg p.heading')
-        if not heading:
-            heading = soup.find('p', class_='heading')
+        heading = soup.select_one('div.light-bg p.heading') or soup.find('p', class_='heading')
         if not heading:
             return None
-        title = self.clean_text(heading.get_text())
-        if not title:
+        heading_text = self.clean_text(heading.get_text(' ', strip=True))
+        if not heading_text:
             return None
 
         # Descripción / detalle (puede tener HTML anidado con <span>)
-        details_el = soup.select_one('div.light-bg p.details')
-        if not details_el:
-            details_el = soup.find('p', class_='details')
-        details_text = ''
-        if details_el:
-            details_text = self.clean_text(details_el.get_text(' ', strip=True))
+        details_el = soup.select_one('div.light-bg p.details') or soup.find('p', class_='details')
+        details = self.clean_text(details_el.get_text(' ', strip=True)) if details_el else ''
 
         # Imagen de alta resolución
         img_el = soup.select_one('div.light-bg img.img-fluid')
@@ -149,94 +146,127 @@ class PumaScraper(BaseScraper):
             src = img_el.get('src', '') or ''
             image_url = src if src.startswith('http') else f"{BASE_URL}{src}"
 
-        # Link a Términos y Condiciones (a.stations → PDF)
-        terms_link = soup.find('a', class_='stations')
+        # Link a Términos y Condiciones (PDF) — puede haber "Ver estaciones" y "Ver T&C"
         terms_url = ''
-        if terms_link:
-            href = terms_link.get('href', '') or ''
-            terms_url = href if href.startswith('http') else f"{BASE_URL}{href}"
+        for a in soup.select('a.stations[href]'):
+            href = a.get('href', '') or ''
+            href = href if href.startswith('http') else f"{BASE_URL}{href}"
+            if 'rminos' in a.get_text() or not terms_url:
+                terms_url = href
 
-        # Extracción de entidades del texto completo
-        full_text = f"{title} {details_text}"
+        return self.build_promo(heading_text, details, url, image_url, terms_url)
 
-        bank         = self.extract_bank(full_text)
-        wallet       = self.extract_wallet(full_text)
-        discount     = self._extract_discount_puma(full_text)
-        valid_days   = self._extract_days(full_text)
-        card_type    = self._extract_card_type(full_text)
-        tope         = self._extract_tope(full_text)
-        min_purchase = self._extract_min_purchase(full_text)
+    def build_promo(self, heading: str, details: str, url: str,
+                    image_url: str = '', terms_url: str = '') -> Optional[Dict]:
+        """Arma la promo normalizada a partir del titular y el detalle."""
+        full_text = f"{heading} {details}"
+        upper = full_text.upper()
+
+        # ── Entidad ──────────────────────────────────────────────────────────
+        bank = None
+        for pattern, name in _BANKS:
+            if re.search(pattern, upper):
+                bank = name
+                break
+        wallet = None
+        payment_method = None
+        if re.search(r'PUMA\s+PRIS', upper):
+            wallet, payment_method = 'Puma Pris', 'App Puma Pris'
+        elif re.search(r'\bMODO\b', upper):
+            wallet = 'MODO'
+            payment_method = 'MODO BNA+' if re.search(r'BNA\s*\+', upper) else 'QR MODO'
+        card_label = None
+        m = re.search(r'tarjeta\s+de\s+cr[eé]dito\s+(visa\s+\w+)', details, re.I)
+        if m and not bank:
+            # Tarjetas co-branded sin banco (p. ej. "VISA AL2")
+            card_label = ' '.join(w if w.isupper() or any(c.isdigit() for c in w) else w.capitalize()
+                                  for w in m.group(1).split())
+            card_label = re.sub(r'(?i)^visa', 'Visa', card_label)
+            payment_method = f"Tarjeta de Crédito {card_label}"
+
+        discount = self._discount(details or heading)
+        if not discount:
+            return None
+        valid_days = self._extract_days(full_text) or 'Todos los días'
+        dates = parse_dates(details)
+        card_type = self._extract_card_type(details)
+        tope = self._extract_tope(details)
+        qualifier = self._qualifier(heading, bank)
+
+        entity = bank or wallet or card_label or heading
+        title = f"{entity} {discount.split(' (')[0]}"
+        if qualifier:
+            title += f" {qualifier}"
+        title += f" - {valid_days}"
+
         requirements, exclusions = extract_fuel_conditions(full_text)
-        dates        = self.extract_dates(details_text)
-
+        if qualifier:
+            requirements.append(f"Clientes {qualifier}")
+        pid = re.search(r'/promocion/(\d+)', url or '')
         return {
             'title':          title,
+            'description':    heading,
             'discount':       discount,
             'bank':           bank,
             'wallet':         wallet,
             'card_type':      card_type,
-            'payment_method': None,
+            'payment_method': payment_method,
             'store_types':    None,
             'valid_days':     valid_days,
             'url':            url,
             'image_url':      image_url,
-            'terms_raw':      details_text,
+            'terms_raw':      details or heading,
             'terms_url':      terms_url,
             'tope':           tope,
-            'min_purchase':   min_purchase,
+            'min_purchase':   self._extract_min_purchase(full_text),
             'exclusions':     ' | '.join(exclusions),
             'requirements':   ' | '.join(requirements),
-            'valid_from':     dates.get('valid_from'),
-            'valid_until':    dates.get('valid_until'),
+            'valid_from':     dates[0],
+            'valid_until':    dates[1],
+            'source_id':      f"puma:{pid.group(1)}" if pid else f"puma:{heading.lower()}",
         }
 
     # ─────────────────────────────────────────────────────────────────────────
     # Text extraction helpers (Puma-specific patterns)
     # ─────────────────────────────────────────────────────────────────────────
 
-    def _extract_discount_puma(self, text: str) -> str:
-        """Extrae porcentaje de descuento/reintegro del texto."""
+    def _discount(self, text: str) -> str:
+        """'20%'; si hay % por producto distinto → '5% (10% Ion Diesel)'."""
         if not text:
             return ''
-        # "20% de descuento", "10% de reintegro", "10% cashback", "5% off"
-        m = re.search(
-            r'(\d+)\s*%\s*(?:de\s+)?(?:descuento|reintegro|cashback|off)',
-            text, re.IGNORECASE
-        )
-        if m:
-            return f"{m.group(1)}%"
-        # porcentaje genérico
-        m = re.search(r'(\d+)\s*%', text)
-        if m:
-            return f"{m.group(1)}%"
-        return self.extract_discount(text)
+        products = re.findall(r'([A-Z][\w ]*?)\s*\((\d{1,2})\s*%\s*de\s+descuento', text)
+        if products:
+            pcts = [p for _, p in products]
+            base = max(pcts, key=lambda x: (pcts.count(x), -pcts.index(x)))
+            extras = [f"{p}% {name.strip()}" for name, p in products if p != base]
+            return f"{base}%" + (f" ({', '.join(extras)})" if extras else '')
+        m = re.search(r'(\d{1,2})\s*%\s*(?:de\s+)?(?:descuento|reintegro|cashback|off)', text, re.I) \
+            or re.search(r'(\d{1,2})\s*%', text)
+        return f"{m.group(1)}%" if m else ''
 
     def _extract_days(self, text: str) -> Optional[str]:
-        """Extrae los días de validez del texto de la promo."""
+        """'todos los viernes' → 'Viernes'; 'todos los días' → 'Todos los días'."""
         if not text:
             return None
-        patterns = [
-            r'todos\s+los\s+d[íi]as',
-            r'de\s+lunes\s+a\s+viernes',
-            r'todos\s+los\s+(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)',
-            r'los\s+(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?\s+y\s+domingos?)',
-            (r'(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?)'
-             r'\s+y\s+'
-             r'(?:lunes|martes|mi[eé]rcoles|jueves|viernes|s[aá]bados?|domingos?)'),
-        ]
-        for pat in patterns:
-            m = re.search(pat, text, re.IGNORECASE)
-            if m:
-                return self.clean_text(m.group(0))
-        return None
+        low = text.lower()
+        if re.search(r'todos\s+los\s+d[íi]as', low):
+            return 'Todos los días'
+        if re.search(r'de\s+lunes\s+a\s+viernes', low):
+            return 'Lunes, Martes, Miércoles, Jueves, Viernes'
+        found = []
+        for wd in _WEEKDAYS:
+            stem = wd.lower().replace('é', '[eé]').replace('á', '[aá]')
+            if re.search(r'\b' + stem, low):
+                found.append(wd)
+        return ', '.join(found) or None
 
     def _extract_card_type(self, text: str) -> Optional[str]:
         """Detecta si la promo aplica a Débito, Crédito o ambas."""
-        tl = text.lower()
-        has_debito  = 'débito' in tl or 'debito' in tl
-        has_credito = 'crédito' in tl or 'credito' in tl
+        tl = (text or '').lower()
+        has_debito = bool(re.search(r'd[eé]bito', tl))
+        has_credito = bool(re.search(r'cr[eé]dito', tl))
         if has_debito and has_credito:
-            return 'Crédito y Débito'
+            return 'Crédito, Débito'
         if has_debito:
             return 'Débito'
         if has_credito:
@@ -244,31 +274,43 @@ class PumaScraper(BaseScraper):
         return None
 
     def _extract_tope(self, text: str) -> Optional[str]:
-        """Extrae el tope máximo de reintegro/descuento."""
+        """Tope de reintegro: monto, tramos por cartera, litros o por producto."""
         if not text:
             return None
-        m = re.search(r'tope\s+de\s+\$\s*([\d.,]+)', text, re.IGNORECASE)
+        # Tramos: "tope de $5.000 semanal por cliente si sos de Cartera General, ..."
+        tiers = re.findall(
+            r'tope\s+de\s+\$\s*([\d.]+)\s*(semanal|mensual)?[^,.$]*?si\s+sos\s+(?:de\s+|cliente\s+)?(?:cartera\s+)?([^,.]+)',
+            text, re.I)
+        if len(tiers) > 1:
+            parts = []
+            for amount, period, who in tiers:
+                who = ' '.join(w.capitalize() if w.isupper() else w for w in who.split())
+                parts.append(f"{_money(amount)} {period.lower()}".strip() + f" ({who})")
+            return '; '.join(parts)
+        # Por producto: "Diesel (5% de descuento o 200lts o 3 transacciones), ..."
+        prods = re.findall(r'([A-Z][\w ]*?)\s*\(\d{1,2}\s*%\s*de\s+descuento\s+o\s+(\d+)\s*lts?\s+o\s+(\d+)\s+transacciones\)', text)
+        if prods:
+            items = ', '.join(f"{name.strip()} {lts} L" for name, lts, _ in prods)
+            return f"Por producto: {items} (máx. {prods[0][2]} transacciones)"
+        m = re.search(r'tope[^$.]{0,40}?hasta\s+(\d+)\s*litros(?:\s+por\s+(\w+))?', text, re.I)
         if m:
-            return f"${m.group(1)}"
+            return f"{m.group(1)} L" + (f" por {m.group(2)}" if m.group(2) else '')
+        m = re.search(r'tope[^$]{0,40}?\$\s*([\d.]+)\s*(semanal|mensual|por\s+semana|por\s+mes)?', text, re.I)
+        if m:
+            period = _period(m.group(2) or '')
+            return f"{_money(m.group(1))} {period}".strip()
         return None
+
+    def _qualifier(self, heading: str, bank: Optional[str]) -> str:
+        """'PATAGONIA - PLUS PLAN SUELDO' → 'Plus Plan Sueldo' (tramo del banco)."""
+        m = re.match(r'^[^-|]+-\s*(.+)$', heading or '')
+        if not m or not bank:
+            return ''
+        return ' '.join(w.capitalize() for w in m.group(1).split())
 
     def _extract_min_purchase(self, text: str) -> Optional[str]:
         """Extrae el pago/compra mínima requerida."""
         if not text:
             return None
-        m = re.search(r'pago\s+m[íi]nimo\s+de\s+\$\s*([\d.,]+)', text, re.IGNORECASE)
-        if m:
-            return f"${m.group(1)}"
-        m = re.search(r'compra\s+m[íi]nima\s+de\s+\$\s*([\d.,]+)', text, re.IGNORECASE)
-        if m:
-            return f"${m.group(1)}"
-        return None
-
-    def _extract_exclusions(self, text: str) -> Optional[str]:
-        """Extrae texto de no-acumulabilidad o exclusiones."""
-        if not text:
-            return None
-        m = re.search(r'(no\s+acumulable\s+con\s+[^.]+)', text, re.IGNORECASE)
-        if m:
-            return self.clean_text(m.group(0))
-        return None
+        m = re.search(r'(?:pago|compra)\s+m[íi]nim[ao]\s+de\s+\$\s*([\d.,]+)', text, re.IGNORECASE)
+        return _money(m.group(1)) if m else None

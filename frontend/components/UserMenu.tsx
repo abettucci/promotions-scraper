@@ -23,10 +23,15 @@ export function UserMenu() {
   if (!user) {
     return (
       <div className="flex items-center gap-2">
-        <Button variant="ghost" size="sm" asChild>
+        {/* En mobile sólo entra un botón junto al selector de categoría; el
+            login ya enlaza al registro. */}
+        <Button variant="ghost" size="sm" asChild className="hidden sm:inline-flex">
           <Link href="/login">Iniciar sesión</Link>
         </Button>
-        <Button size="sm" asChild>
+        <Button size="sm" asChild className="sm:hidden">
+          <Link href="/login">Ingresar</Link>
+        </Button>
+        <Button size="sm" asChild className="hidden sm:inline-flex">
           <Link href="/register">Registrarse</Link>
         </Button>
       </div>

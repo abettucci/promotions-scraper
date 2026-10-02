@@ -91,7 +91,7 @@ export default function Home() {
           <div className="flex min-w-0 items-center gap-3 sm:gap-7">
             <Link href="/" className="display flex shrink-0 items-center gap-2 text-base font-semibold tracking-[-0.05em] text-[#102a4c]" aria-label="Ir al inicio de PromoAR">
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#102a4c] text-xs font-bold text-[#b8f36b]">P</span>
-              PROMOAR
+              <span className="hidden sm:inline">PROMOAR</span>
             </Link>
             <nav aria-label="Categorías" className="flex items-center gap-1 rounded-xl border border-[#dbe4ee] bg-white p-1">
               <button onClick={() => chooseCategory("supermarket")} aria-pressed={category === "supermarket"} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "supermarket" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
@@ -124,7 +124,7 @@ export default function Home() {
             </div>
             <aside className="grid gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-1" aria-label="Resumen de PromoAR">
               <div className="p-4"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Categoría</p><p className="mt-1 text-lg font-semibold">{category === "fuel" ? "Combustible" : "Supermercados"}</p></div>
-              <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Promos activas</p><p className="mt-1 text-lg font-semibold">{statsLoading ? "…" : (stats?.total_promotions ?? 0).toLocaleString("es-AR")}</p></div>
+              <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Promos activas</p><p className="mt-1 text-lg font-semibold">{statsLoading ? "…" : (stats?.by_category?.[category] ?? stats?.total_promotions ?? 0).toLocaleString("es-AR")}</p></div>
               <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Buscá por</p><p className="mt-1 text-sm font-medium">Banco, día o comercio</p></div>
             </aside>
           </div>

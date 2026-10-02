@@ -23,7 +23,9 @@ export function StatsBar({ stats, loading }: Props) {
   if (!stats) return null
 
   const lastUpdated = stats.last_updated
-    ? new Date(stats.last_updated).toLocaleDateString("es-AR", {
+    // SQLite guarda CURRENT_TIMESTAMP en UTC sin zona ("2026-10-02 05:17:54");
+    // sin la "Z" el navegador lo interpretaba como hora local (+3h en AR).
+    ? new Date(/[zZ]|[+-]\d\d:?\d\d$/.test(stats.last_updated) ? stats.last_updated : `${stats.last_updated.replace(" ", "T")}Z`).toLocaleDateString("es-AR", {
         day: "2-digit",
         month: "short",
         hour: "2-digit",
@@ -33,7 +35,7 @@ export function StatsBar({ stats, loading }: Props) {
 
   const items = [
     { icon: Tag, label: "Promociones activas", value: stats.total_promotions.toLocaleString("es-AR") },
-    { icon: Building2, label: "Supermercados", value: stats.total_supermarkets },
+    { icon: Building2, label: "Comercios", value: stats.total_supermarkets },
     { icon: Landmark, label: "Bancos / Wallets", value: stats.total_banks },
     { icon: Clock, label: "Actualizado", value: lastUpdated },
   ]

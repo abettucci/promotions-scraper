@@ -234,9 +234,8 @@ async def expand_all_details(page) -> int:
         '[class*="verLegal"]',
         '[class*="show-more"]',
         '[class*="showmore"]',
-        '[class*="expand"]',
-        '[class*="toggle"]',
-        '[aria-expanded="false"]',
+        # Nota: '[class*="expand"]', '[class*="toggle"]' y '[aria-expanded]'
+        # abrían el mega-menú/encuestas (Galicia, Macro) y tapaban el contenido.
         # Buttons / links que contienen estos textos
         'button:has-text("Ver más")',
         'button:has-text("Ver Más")',

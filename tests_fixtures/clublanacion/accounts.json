@@ -1,0 +1,473 @@
+{
+ "accounts": [
+  {
+   "id": "1d95ac3a-a855-f011-8153-0ab6811d4821",
+   "slug": "/supermercados/supermercados/descuentos-en-carrefour-A38832",
+   "crmid": "A38832",
+   "ecommerce": false,
+   "virtualCard": false,
+   "name": "CARREFOUR",
+   "exclusiveBlack": false,
+   "images": [
+    {
+     "id": "45079",
+     "type": "",
+     "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/A768333_57b63bd572.jpg",
+     "highlighted": false,
+     "thumb": false
+    }
+   ],
+   "displayBenefit": {
+    "id": "1c7390ea-5a57-f011-8153-0ab6811d4821",
+    "type": "15%",
+    "typeWeight": 290,
+    "existOtherTypeWeight": true
+   },
+   "displayBranch": null
+  },
+  {
+   "id": "6d0e5666-34e3-ef11-814d-0ab6811d4821",
+   "slug": "/supermercados/tiendas/descuentos-en-en-combo-A05781946",
+   "crmid": "A05781946",
+   "ecommerce": true,
+   "virtualCard": false,
+   "name": "EN COMBO",
+   "exclusiveBlack": false,
+   "images": [
+    {
+     "id": "46050",
+     "type": "",
+     "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/en_combo_28fa48f152.jpg",
+     "highlighted": false,
+     "thumb": false
+    }
+   ],
+   "displayBenefit": {
+    "id": "f24c14c6-e043-f111-8155-0ab6811d4821",
+    "type": "25%",
+    "typeWeight": 270,
+    "existOtherTypeWeight": false
+   },
+   "displayBranch": null
+  },
+  {
+   "id": "2518bb4a-8fb2-eb11-8146-0ab6811d4821",
+   "slug": "/supermercados/tiendas/descuentos-en-nescafe-dolce-gusto-A05382823",
+   "crmid": "A05382823",
+   "ecommerce": true,
+   "virtualCard": false,
+   "name": "NESCAFÉ DOLCE GUSTO",
+   "exclusiveBlack": false,
+   "images": [
+    {
+     "id": "44090",
+     "type": "",
+     "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/B774783_a04a9d131b.jpg",
+     "highlighted": false,
+     "thumb": false
+    }
+   ],
+   "displayBenefit": {
+    "id": "8a2b3e46-23e0-f011-8155-0ab6811d4821",
+    "type": "15%",
+    "typeWeight": 290,
+    "existOtherTypeWeight": true
+   },
+   "displayBranch": null
+  },
+  {
+   "id": "20c6b1ec-cacb-e711-812f-0ab6811d4821",
+   "slug": "/automovil/combustible/descuentos-en-ypf-A10677",
+   "crmid": "A10677",
+   "ecommerce": false,
+   "virtualCard": false,
+   "name": "YPF",
+   "exclusiveBlack": false,
+   "images": [
+    {
+     "id": "43769",
+     "type": "",
+     "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/A767538_cb405cd8e2.jpg",
+     "highlighted": false,
+     "thumb": false
+    }
+   ],
+   "displayBenefit": {
+    "id": "3be38442-c1c3-ef11-814d-0ab6811d4821",
+    "type": "30%",
+    "typeWeight": 260,
+    "existOtherTypeWeight": true
+   },
+   "displayBranch": null
+  }
+ ],
+ "benefits": {
+  "A38832": {
+   "data": [
+    {
+     "id": "290fae82-a586-4e36-a765-2c2b3b3bc78e",
+     "type": "15%",
+     "typeWeight": 290,
+     "title": "EXCLUSIVO ONLINE - ¡Sobre el total de la factura en tu compra online!",
+     "description": "Descargá tu cupón e ingresalo antes de finalizar la compra en CARREFOUR, o asociá tu credencial y accedé al beneficio automático en el carrito. Hacelo desde MI CUENTA > Beneficios. Válido únicamente para compras realizadas los días LUNES.  Sin tope de reintegro.",
+     "legal": "Beneficio válido en el territorio de Argentina, para socios Club LA NACION Classic, Premium, Black. Se deberá presentar la tarjeta Club LA NACION y DNI vigente. Beneficio: Descargá tu cupón e ingresalo antes de finalizar la compra en CARREFOUR, o asociá tu credencial y accedé al beneficio automático en el carrito. Hacelo desde MI CUENTA > Beneficios. Válido únicamente para compras realizadas los días LUNES.  Sin tope de reintegro.. El beneficio no se superpone con otras promociones en las que intervenga otra marca, programa o promoción. Los datos y ofertas mencionados revisten carácter informativo y no suponen que los establecimientos, productos y/o servicios indicados, y la calidad de los mismos, son responsabilidad de S.A. LA NACION. Beneficios sujetos a modificaciones.",
+     "category": {
+      "id": "supermercados",
+      "slug": "/supermercados",
+      "alias": "Mercados",
+      "aliasApps": "Mercados",
+      "description": "Supermercados"
+     },
+     "subcategory": {
+      "id": "supermercados_supermercados",
+      "slug": "/supermercados/supermercados",
+      "alias": "Supermercados",
+      "aliasApps": "Supermercados",
+      "description": "Supermercados"
+     },
+     "fromDate": 1790650800000,
+     "toDate": 1793501999999,
+     "promocode": true,
+     "virtualCard": false,
+     "onlinePurchase": true,
+     "externalUrl": "https://www.carrefour.com.ar?utm_source=referral-club-la-nacion&utm_medium=sitio-club-la-nacion&utm_campaign=cupon-club-la-nacion",
+     "branchPurchase": false,
+     "flash": false,
+     "days": [
+      "monday"
+     ],
+     "images": [
+      {
+       "id": "45079",
+       "type": "",
+       "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/A768333_57b63bd572.jpg",
+       "highlighted": false,
+       "thumb": false
+      }
+     ],
+     "programs": [
+      {
+       "id": 3,
+       "description": "Black"
+      },
+      {
+       "id": 2,
+       "description": "Premium"
+      },
+      {
+       "id": 1,
+       "description": "Classic"
+      }
+     ],
+     "branchesCount": 0
+    },
+    {
+     "id": "1c7390ea-5a57-f011-8153-0ab6811d4821",
+     "type": "15%",
+     "typeWeight": 290,
+     "title": "EXCLUSIVO TIENDAS FÍSICAS - ¡Carrefour Hiper, Market y Express!",
+     "description": "Accedé al beneficio los días lunes, presentando tu credencial Club LA NACION y DNI en todas de las tiendas Carrefour Hiper, Market y Express. Sin tope de reintegro. Aplican Exclusiones. No válido para tiendas Maxi.",
+     "legal": "PROMOCIÓN VÁLIDA TODOS LOS LUNES HASTA EL 30/06/2027, PRESENTANDO DNI DEL TITULAR DE CLUB LA NACIÓN EN LÍNEA DE CAJAS. VÁLIDO EN TODAS LAS TIENDAS “HIPERMERCADOS CARREFOUR”, “CARREFOUR MARKET” Y “CARREFOUR EXPRESS” DE TODO EL PAÍS Y EN CARREFOUR.COM.AR. NO VÁLIDO EN CARREFOUR MAXI. EL DESCUENTO SE HARÁ EFECTIVO EN EL ACTO SIN TOPE, DESCUENTO NO VALIDO ABONANDO A TRAVÉS DE PLATAFORMAS DIGITALES DE PAGO. EXCLUSIVO SOLO PARA CONSUMO FAMILIAR. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES. QUEDAN EXCLUIDOS DEL DESCUENTO ELECTRODOMÉSTICOS, TELEFONÍA, FOTOGRAFÍA, INFORMÁTICA, IMAGEN, SONIDO, PRODUCTOS DE LAS SIGUIENTES BODEGAS Y MARCAS: ÁLAMOS, ALTALAND, ANGÉLICA ZAPATA, ARUMA, CARO, CASA DE HERRERO, CHANDON, CUCHILLO DE PALO, D.V. CATENA, EL ENEMIGO, LA POSTA, LUCA, LUIGI BOSCA, NICASIA, OJO DE BUEN CUBERO, RUTINI, SAINT FELICIEN, SAN FELIPE Y VALMONT, LECHES INFANTILES Y MATERNIZADAS ETAPAS 1 Y 2, CARNICERÍA (CARNE VACUNA, POLLO, CERDO Y EMBUTIDOS) Y CONSERVADORAS DE CERVEZA. PARA MÁS INFORMACIÓN CONSULTE EN WWW.CARREFOUR.COM.AR. O COMUNÍQUESE GRATUITAMENTE AL TELÉFONO 0-800-444-8484.",
+     "category": {
+      "id": "supermercados",
+      "slug": "/supermercados",
+      "alias": "Mercados",
+      "aliasApps": "Mercados",
+      "description": "Supermercados"
+     },
+     "subcategory": {
+      "id": "supermercados_supermercados",
+      "slug": "/supermercados/supermercados",
+      "alias": "Supermercados",
+      "aliasApps": "Supermercados",
+      "description": "Supermercados"
+     },
+     "fromDate": 1751857200000,
+     "toDate": 1814410799999,
+     "promocode": false,
+     "virtualCard": false,
+     "onlinePurchase": false,
+     "externalUrl": "",
+     "branchPurchase": true,
+     "flash": false,
+     "days": [
+      "monday"
+     ],
+     "images": [
+      {
+       "id": "45078",
+       "type": "",
+       "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/B775831_27343c31bc.jpg",
+       "highlighted": false,
+       "thumb": false
+      }
+     ],
+     "programs": [
+      {
+       "id": 3,
+       "description": "Black"
+      },
+      {
+       "id": 2,
+       "description": "Premium"
+      },
+      {
+       "id": 1,
+       "description": "Classic"
+      }
+     ],
+     "branchesCount": 697
+    },
+    {
+     "id": "9e1272ba-4fea-f011-8155-0ab6811d4821",
+     "type": "10%",
+     "typeWeight": 300,
+     "title": "EXCLUSIVO ENTREGA INMEDIATA - En el total de la factura en tu compra online",
+     "description": "Comprá en www.carrefour.com.ar y recibila en 1 hora. Ingresá el cupón antes de finalizar la compra con ENTREGA INMEDIATA. Martes a domingos en zonas de cobertura (CABA, V. Ballester, V. López, San Isidro, Tandil, Córdoba Cap, Mendoza Cap,).",
+     "legal": "DESCUENTO EXCLUSIVO PARA CLIENTES DE CLUB LA NACION. LAS PERSONAS QUE QUIERAN ACCEDER AL BENEFICIO DEBEN ESTAR REGISTRADAS AL PROGRAMA DE CLUB LA NACION AL MENOS 24 HORAS ANTES DEL COMIENZO DEL MISMO. VÁLIDO DE MARTES A DOMINGOS DE 2026, INGRESANDO EL CUPÓN DE DESCUENTO OBTENIDO EN CLUB LA NACION. EXCLUSIVO PARA COMPRAS ONLINE EN CARREFOUR.COM.AR Y EN LA APP DE CARREFOUR UTILIZANDO EL SERVICIO DE “ENTREGA INMEDIATA” SUJETO A LA ZONA DE COBERTURA GEOGRÁFICA DE DICHO SERVICIO Y UNIDADES MÁXIMAS PERMITIDAS. NO VÁLIDO EN LAS TIENDAS HIPERMERCADOS CARREFOUR, CARREFOUR MARKET, CARREFOUR EXPRESS, CARREFOUR MAXI NI EN COMERCIANTE.CARREFOUR.COM.AR. EL DESCUENTO SE HARÁ EFECTIVO EN EL ACTO, SIN TOPE, EXCLUSIVO SOLO PARA CONSUMO FAMILIAR. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES. UN USO POR CLIENTE POR DÍA. QUEDAN EXCLUIDOS DEL DESCUENTO ELECTRODOMÉSTICOS, TELEFONÍA, FOTOGRAFÍA, INFORMÁTICA, IMAGEN, SONIDO, PRODUCTOS DE LAS SIGUIENTES BODEGAS Y MARCAS: ÁLAMOS, ALTALAND, ANGÉLICA ZAPATA, ARUMA, CARO, CASA DE HERRERO, CHANDON, CUCHILLO DE PALO, D.V. CATENA, EL ENEMIGO, LA POSTA, LUCA, LUIGI BOSCA, NICASIA, OJO DE BUEN CUBERO, RIBERA DEL CUARZO, RUTINI, SAINT FELICIEN, SAN FELIPE Y VALMONT, LECHES INFANTILES Y MATERNIZADAS ETAPAS 1 Y 2, CARNICERÍA (CARNE VACUNA, POLLO, CERDO Y EMBUTIDOS) Y CONSERVADORAS DE CERVEZA. NO VÁLIDO PARA AQUELLOS PRODUCTOS CUYA LEYENDA INDIQUE QUE SON VENDIDOS Y ENTREGADOS DIRECTAMENTE POR EL DISTRIBUIDOR/FABRICANTE, A TRAVÉS DE LA PLATAFORMA MARKETPLACE DE CARREFOUR.",
+     "category": {
+      "id": "supermercados",
+      "slug": "/supermercados",
+      "alias": "Mercados",
+      "aliasApps": "Mercados",
+      "description": "Supermercados"
+     },
+     "subcategory": {
+      "id": "supermercados_supermercados",
+      "slug": "/supermercados/supermercados",
+      "alias": "Supermercados",
+      "aliasApps": "Supermercados",
+      "description": "Supermercados"
+     },
+     "fromDate": 1767668400000,
+     "toDate": 1798772399999,
+     "promocode": true,
+     "virtualCard": false,
+     "onlinePurchase": true,
+     "externalUrl": "http://www.carrefour.com.ar",
+     "branchPurchase": false,
+     "flash": false,
+     "days": [
+      "friday",
+      "saturday",
+      "sunday",
+      "thursday",
+      "tuesday",
+      "wednesday"
+     ],
+     "images": [
+      {
+       "id": "45449",
+       "type": "",
+       "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/carrefour_ei_e9a819e1db.jpg",
+       "highlighted": false,
+       "thumb": false
+      }
+     ],
+     "programs": [
+      {
+       "id": 3,
+       "description": "Black"
+      },
+      {
+       "id": 2,
+       "description": "Premium"
+      },
+      {
+       "id": 1,
+       "description": "Classic"
+      }
+     ],
+     "branchesCount": 0
+    }
+   ],
+   "meta": {
+    "total": 3
+   }
+  },
+  "A10677": {
+   "data": [
+    {
+     "id": "3be38442-c1c3-ef11-814d-0ab6811d4821",
+     "type": "30%",
+     "typeWeight": 260,
+     "title": "¡Sobre lubricante sintético en BOXES, a través de APP YPF!",
+     "description": "Reservando tu turno a través de APP YPF, accedé a un 30% de descuento sobre lubricante sintético en BOXES, todos los días. Incluye café de cortesía con el servicio. Tope de descuento de $25.000/semana.",
+     "legal": "Promoción exclusiva para Socios Serviclub y Club la Nación. Beneficio válido en el territorio de Argentina, desde el 01/01/2025 hasta el 31/12/2026, para socios Club La Nación Classic, Premium y Black. Se deberá presentar la tarjeta Club La Nación y DNI vigente. Beneficio: 30% de descuento sobre lubricante sintético en BOXES, hasta en dos envases, todos los días, sobre las reservas realizadas con APP YPF. Tope de descuento de $25.000/semana. El servicio incluye Café de cortesía. Válida para socios ServiClub y Club la Nación que realicen su reserva desde la APP YPF en YPF BOXES. Promoción no acumulable con otros descuentos o promociones excepto que expresamente se indique lo contrario. YPF S.A. CUIT 30-54668997-9.",
+     "category": {
+      "id": "automovil",
+      "slug": "/automovil",
+      "alias": "Automóvil",
+      "aliasApps": "Automóvil",
+      "description": "Automóvil"
+     },
+     "subcategory": {
+      "id": "automovil_combustible",
+      "slug": "/automovil/combustible",
+      "alias": "Combustible",
+      "aliasApps": "Combustible",
+      "description": "Combustible"
+     },
+     "fromDate": 1735700400000,
+     "toDate": 1798772399999,
+     "promocode": false,
+     "virtualCard": false,
+     "onlinePurchase": false,
+     "externalUrl": "https://boxes.ypf.com/home.html",
+     "branchPurchase": true,
+     "flash": false,
+     "days": [
+      "friday",
+      "monday",
+      "saturday",
+      "sunday",
+      "thursday",
+      "tuesday",
+      "wednesday"
+     ],
+     "images": [],
+     "programs": [
+      {
+       "id": 3,
+       "description": "Black"
+      },
+      {
+       "id": 2,
+       "description": "Premium"
+      },
+      {
+       "id": 1,
+       "description": "Classic"
+      }
+     ],
+     "branchesCount": 1719
+    },
+    {
+     "id": "6981b2c8-589b-41fa-94b8-ed7d1d4aad42",
+     "type": "15%",
+     "typeWeight": 290,
+     "title": "¡De descuento en tiendas YPF Full!",
+     "description": "Accedé al beneficio abonando a través de la APP YPF, presentando tu credencial de Club LA NACION y DNI vigente en tiendas.",
+     "legal": "15% descuento Club la Nación en Tienda Full – App YPF: Promoción exclusiva Socios Serviclub y Club la Nación. Válida desde el 01/07/2026 hasta el 31/12/2026 o hasta agotar stock de 40.000 descuentos otorgados, lo que ocurra primero. Se realizará un 15% de descuento todos los días, sobre las compras realizadas con APP YPF en las Tiendas Full. Tope de descuento por socio de $2.000 por mes durante la vigencia de la promoción. La promoción es aplicable a la adquisición de productos en la Tienda Full, excepto cigarrillos. Válida para socios ServiClub y Club la Nación que paguen sus compras desde la APP YPF en Tiendas Full que acepten pago vía APP YPF y que están específicamente marcadas en el mapa de la aplicación con un logo QR. Promoción no acumulable con otros descuentos o promociones excepto que expresamente se indique lo contrario. YPF S.A. CUIT 30-54668997-9.",
+     "category": {
+      "id": "automovil",
+      "slug": "/automovil",
+      "alias": "Automóvil",
+      "aliasApps": "Automóvil",
+      "description": "Automóvil"
+     },
+     "subcategory": {
+      "id": "automovil_combustible",
+      "slug": "/automovil/combustible",
+      "alias": "Combustible",
+      "aliasApps": "Combustible",
+      "description": "Combustible"
+     },
+     "fromDate": 1782874800000,
+     "toDate": 1798772399999,
+     "promocode": false,
+     "virtualCard": false,
+     "onlinePurchase": false,
+     "externalUrl": "",
+     "branchPurchase": true,
+     "flash": false,
+     "days": [
+      "friday",
+      "monday",
+      "saturday",
+      "sunday",
+      "thursday",
+      "tuesday",
+      "wednesday"
+     ],
+     "images": [
+      {
+       "id": "43769",
+       "type": "",
+       "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/A767538_cb405cd8e2.jpg",
+       "highlighted": false,
+       "thumb": false
+      }
+     ],
+     "programs": [
+      {
+       "id": 3,
+       "description": "Black"
+      },
+      {
+       "id": 2,
+       "description": "Premium"
+      },
+      {
+       "id": 1,
+       "description": "Classic"
+      }
+     ],
+     "branchesCount": 1716
+    },
+    {
+     "id": "25639344-fd56-4e87-805a-442ca38d605a",
+     "type": "10%",
+     "typeWeight": 300,
+     "title": "¡En la carga de Infinia, pagando con dinero en cuenta a través de App YPF!",
+     "description": "Pagando con dinero en cuenta a través de App YPF, accedé a un 10% de descuento sobre el total de tu carga de Infinia. Tope de descuento de $3.000/semana.",
+     "legal": "Promoción exclusiva para socios Club La Nación que sean socios ServiClub y utilicen como medio de pago Dinero en tu Cuenta través de la App YPF en las estaciones de servicio adheridas en la República Argentina. Válida desde el 01/07/2026 hasta el 31/12/2026. Se realizará un 10% de descuento sobre la compra de combustible INFINIA. Aplica un tope semanal de $3.000 durante la vigencia de la promoción. El tope no es acumulable. Sólo válido para socios Club La Nación y ServiClub que paguen sus compras desde la App YPF (no aplica opción “pagar con efectivo, pago al vendedor, Precompra YPF”). La promoción es válida únicamente en las estaciones de servicio que acepten pago vía App YPF y que estén específicamente marcadas en el mapa de la aplicación con un logo QR. Promoción no acumulable con otros descuentos o promociones de la App YPF, excepto que expresamente se indique lo contrario en los términos y condiciones de dicha promoción. El beneficio no se superpone con otras promociones en las que intervenga otra marca o programa. YPF S.A. CUIT 30-54668997-9.",
+     "category": {
+      "id": "automovil",
+      "slug": "/automovil",
+      "alias": "Automóvil",
+      "aliasApps": "Automóvil",
+      "description": "Automóvil"
+     },
+     "subcategory": {
+      "id": "automovil_combustible",
+      "slug": "/automovil/combustible",
+      "alias": "Combustible",
+      "aliasApps": "Combustible",
+      "description": "Combustible"
+     },
+     "fromDate": 1782874800000,
+     "toDate": 1798772399999,
+     "promocode": false,
+     "virtualCard": false,
+     "onlinePurchase": false,
+     "externalUrl": "",
+     "branchPurchase": true,
+     "flash": false,
+     "days": [
+      "monday",
+      "saturday",
+      "sunday"
+     ],
+     "images": [
+      {
+       "id": "43769",
+       "type": "",
+       "url": "https://backwebclub-media.glanacion.com/Club.LN-Strapi/A767538_cb405cd8e2.jpg",
+       "highlighted": false,
+       "thumb": false
+      }
+     ],
+     "programs": [
+      {
+       "id": 3,
+       "description": "Black"
+      },
+      {
+       "id": 2,
+       "description": "Premium"
+      },
+      {
+       "id": 1,
+       "description": "Classic"
+      }
+     ],
+     "branchesCount": 1713
+    }
+   ],
+   "meta": {
+    "total": 3
+   }
+  }
+ }
+}

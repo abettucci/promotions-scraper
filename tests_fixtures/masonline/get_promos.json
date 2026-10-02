@@ -1,0 +1,2976 @@
+{
+"data": {
+"documents": [
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "f5296ce0-dffe-11ef-b37f-87fa2b74005f",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "SIN TOPE DE REINTEGRO",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Pagando con QR. No acumulable con otras promociones.  Aplican exclusiones. (MP)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "15",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de descuento",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "logo mercado pago valido.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "0",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2025-12-02T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los Martes",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PARA PAGOS REALIZADOS LOS DIAS VIERNES, SABADOS Y DOMINGOS DE OCTUBRE 2026 A TRAVÉS DEL SERVICIO DE PROCESAMIENTO DE PAGOS DE MERCADO PAGO OPERADO POR MERCADOLIBRE S.R.L. (“MERCADO PAGO.”) MEDIANTE EL ESCANEO DEL CÓDIGO QR CON LA APP DE MERCADO PAGO (LA “APP”) EL BENEFICIO CONSISTE EN UN 15% DE DESCUENTO SIN TOPE, COMPRANDO EN TODAS LAS SUCURSALES DE HIPERCHANGOMAS, CHANGOMAS Y MASGO, DE FORMA PRESENCIAL Y A TRAVÉS DE MASONLINE ÚNICAMENTE ELIGIENDO LA OPCIÓN PAGO ONLINE, APLICA PARA TIENDAS. EL BENEFICIO ESTARÁ A CARGO DE DORINKA S.R.L. Y SE REALIZARÁ SOBRE EL PRECIO DE CONTADO. MERCADO PAGO NO ES UNA ENTIDAD FINANCIERA. LOS FONDOS EN CUENTAS DE PAGO NO SON DEPÓSITOS GARANTIZADOS. MERCADOLIBRE S.R.L. CUIT 30-70308853-4, CASEROS 3039, PISO 2º, CABA”. EXCLUIDOS- CARNICERIA, GRANJA, ELABORADOS, EMBUTIDOS, QUESOS: (QUESOS BLANDOS, QUESOS DUROS, QUESOS FETEADOS, QUESOS RALLADOS, QUESOS SEMIDUROS), FRUTAS Y VERDURAS, HUEVOS. ACEITES COMESTIBLES, HARINAS, LECHES FLUIDAS, AZÚCARES. BEBIDAS BLANCAS, VINOS, FERNET, CERVEZAS Y GASEOSAS DE “CERVECERIA Y MALTERIA QUILMES” (STELLA ARTOIS, BUDWEISER, CORONA, QUILMES, BRAHMA, MICHELOB, PATAGONIA, EAZY, GOOSE ISLAND, ANDES, TEMPLE, PEPSI, SEVEN UP, PASO DE LOS TOROS, GATORADE, GLACIAR, ECO DE LOS ANDES, H20, AGUAS NESTLÉ, AWAFRUT, MIRINDA, RED BULL, ROCKSTAR), LÍNEA COCA COLA (ORIGINAL, LIGHT, ZERO SIN AZUCAR, SABOR LIVIANO), FANTA, SPRITE (ORIGINAL, SIN AZÚCAR), SCHWEPPES, POWERADE, CEPITA, ADES, AQUARIUS, BENEDICTINO, BONAQUA, SMART WATER, MONSTER, CRUSH, FIGURITAS Y ÁLBUM MUNDIAL 2026. ELECTRODOMÉSTICOS Y ELECTRÓNICOS, RODADOS, INFORMÁTICA, CELULARES Y CLIMATIZACIÓN, LÍNEA BLANCA, MEDICAMENTOS DE FARMACIA, SERVICIOS DE AUTOCENTER, BATERÍAS Y NEUMÁTICOS. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES Y/O PRODUCTOS EN LIQUIDACIÓN. SOLO PARA CONSUMO FAMILIAR.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "8ccbdf0d-905d-11ee-8452-0eb8fa5466a5",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "f72bdebb-262f-11f0-b37f-a7f7ce43e163",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "SIN TOPE DE REINTEGRO",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Pagando con QR de todas las billeteras virtuales. No acumulable con otras promociones. Aplican exclusiones. (BV)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "15",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de descuento",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "04_BilleterasVirtuales_grande 8.webp",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "0",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2025-12-06T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Viernes, Sábados y Domingos",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PARA PAGOS REALIZADOS LOS DIAS\r\nVIERNES, SABADOS Y DOMINGOS DE OCTUBRE 2026 A TRAVÉS DEL SERVICIO DE\r\nPROCESAMIENTO DE PAGOS DE MERCADO PAGO OPERADO POR MERCADOLIBRE S.R.L.\r\n(“MERCADO PAGO.”) MEDIANTE EL ESCANEO DEL CÓDIGO QR CON LA APP DE MERCADO PAGO\r\n(LA “APP”) EL BENEFICIO CONSISTE EN UN 15% DE DESCUENTO SIN TOPE, COMPRANDO EN\r\nTODAS LAS SUCURSALES DE HIPERCHANGOMAS, CHANGOMAS Y MASGO, DE FORMA PRESENCIAL\r\nY A TRAVÉS DE MASONLINE ÚNICAMENTE ELIGIENDO LA OPCIÓN PAGO ONLINE, APLICA PARA\r\nTIENDAS. EL BENEFICIO ESTARÁ A CARGO DE DORINKA S.R.L. Y SE REALIZARÁ SOBRE EL\r\nPRECIO DE CONTADO. MERCADO PAGO NO ES UNA ENTIDAD FINANCIERA. LOS FONDOS EN\r\nCUENTAS DE PAGO NO SON DEPÓSITOS GARANTIZADOS. MERCADOLIBRE S.R.L. CUIT\r\n30-70308853-4, CASEROS 3039, PISO 2º, CABA”. EXCLUIDOS- CARNICERIA, GRANJA,\r\nELABORADOS, EMBUTIDOS, QUESOS: (QUESOS BLANDOS, QUESOS DUROS, QUESOS FETEADOS,\r\nQUESOS RALLADOS, QUESOS SEMIDUROS), FRUTAS Y VERDURAS, HUEVOS. ACEITES\r\nCOMESTIBLES, HARINAS, LECHES FLUIDAS, AZÚCARES. BEBIDAS BLANCAS, VINOS, FERNET,\r\nCERVEZAS Y GASEOSAS DE “CERVECERIA Y MALTERIA QUILMES” (STELLA ARTOIS,\r\nBUDWEISER, CORONA, QUILMES, BRAHMA, MICHELOB, PATAGONIA, EAZY, GOOSE ISLAND,\r\nANDES, TEMPLE, PEPSI, SEVEN UP, PASO DE LOS TOROS, GATORADE, GLACIAR, ECO DE\r\nLOS ANDES, H20, AGUAS NESTLÉ, AWAFRUT, MIRINDA, RED BULL, ROCKSTAR), LÍNEA COCA\r\nCOLA (ORIGINAL, LIGHT, ZERO SIN AZUCAR, SABOR LIVIANO), FANTA, SPRITE\r\n(ORIGINAL, SIN AZÚCAR), SCHWEPPES, POWERADE, CEPITA, ADES, AQUARIUS,\r\nBENEDICTINO, BONAQUA, SMART WATER, MONSTER, CRUSH, FIGURITAS Y ÁLBUM MUNDIAL",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "15ff1c4e-2630-11f0-b37f-93b1d8eaa315",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "73461e9f-0eb1-4ef1-a1f4-1a72f8f3dcb4",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con tarjeta de Crédito Cabal",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope: $13.500 semanal (C2)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "30",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de reintegro",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Banco Credicoop MODO_grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "1",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-04-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2027-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Sábado 24 de octubre",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "Promoción válida únicamente en QR de MODO a través de Credicoop Móvil o MODO seleccionando Tarjetas Cabal Credicoop (excepto Agrocabal, Cabal Mayorista y Cabal Empresa). Aplica a consumos de tipo familiar y efectuados en un pago. Vigente el dia sábado 24/10/26, 28/11/26 y 26/12/26 en consumos presenciales y online los días sábado de promoción. Ejemplo: en un consumo de $80.000 abonando con QR a través de Credicoop Móvil o MODO recibirá un reintegro de $13.500 (tope máximo por usuario/a por sábado). El reintegro se verá reflejado dentro de los 30 días posteriores al consumo en la cuenta del Banco, para lo cual será requisito que sea de título personal y se encuentre adherida a MODO. Será condición esencial para participar de la misma que al momento de efectuar el reintegro, la tarjeta se encuentre vigente y en estado de cumplimiento normal en el caso de crédito, y la cuenta abierta en el caso de débito. No participan los consumos realizados a través de los programas MasCuotasCabal-MiPyme y Cuotas MiPyme Payway, billeteras virtuales (excepto MODO), POS móviles, plataformas de pago y/o portales de pago online. Aplicable a la cartera de consumo. MODO es propiedad de Play Digital SA y se encuentra sujeto a los términos y condiciones de uso disponibles en www.modo.com.ar",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "0956bf6c-983a-11ee-8452-1298279711fd",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "30730e09-4eae-4d96-a0c4-2c77aea0109e",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Desde APP MODO o APP de bancos adheridos",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Pagando con tarjetas de crédito y/o débito. No aplica para pagos con transferencia (PCT)  Tope: $25.000 mensual por banco. Mínimo de compra: $75.000. (MD-29)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de reintegro",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "MODO.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "1",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-09-08T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los lunes",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PROMOCIÓN VÁLIDA EN LA REPÚBLICA ARGENTINA LOS DÍAS LUNES 5, 12, 19 Y 26 DE OCTUBRE DE 2026. EXCLUSIVO PARA COMPRAS REALIZADAS TANTO EN CANAL PRESENCIAL COMO ONLINE, ABONADAS A TRAVÉS DE MODO CON TARJETAS EMITIDAS POR BANCOS ADHERIDOS. BENEFICIO: 20% DE REINTEGRO PARA COMPRAS IGUALES O SUPERIORES A $75.000, CON UN TOPE DE REINTEGRO DE $25.000, POR BANCO, DURANTE TODA LA VIGENCIA DE LA PROMOCIÓN. EL BENEFICIO ES ACUMULABLE CON OTRAS PROMOCIONES VIGENTES APLICABLES A PAGOS REALIZADOS CON MODO. PARA ACCEDER AL BENEFICIO, EL USUARIO DEBERÁ SER TITULAR DE UNA CUENTA BANCARIA EN LA ENTIDAD EMISORA DE LA TARJETA UTILIZADA PARA EFECTUAR EL PAGO Y TENER DICHA TARJETA ASOCIADA A MODO. EL REINTEGRO SE ACREDITARÁ DENTRO DE LOS TREINTA (30) DÍAS CORRIDOS POSTERIORES A LA FECHA DE LA COMPRA EN LA CAJA DE AHORRO O CUENTA CORRIENTE QUE EL CLIENTE POSEA. PROMOCIÓN SUJETA A BANCOS Y COMERCIOS ADHERIDOS. PARA MÁS INFORMACIÓN O LIMITACIONES APLICABLES, CONSULTE EN WWW.MODO.COM.AR/PROMOS. PLAY DIGITAL S.A. (MODO), CUIT 30-71682943-6, AV. DEL LIBERTADOR 7208, 3°, CABA",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "6bbbedf1-ab40-11ee-8452-127334bd7427",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "01238eaf-80bb-400b-87a2-03061e10281a",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "SIN TOPE DE REINTEGRO",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Pagando con QR. No acumulable con otras promociones. Aplican exclusiones. (BV)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de descuento",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "04_BilleterasVirtuales_grande 8.avif",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "1",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-09-30T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-10-03T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Viernes 2 de octubre",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PARA PAGOS REALIZADOS EL VIERNES 02 DE OCTUBRE 2026 A TRAVÉS DEL SERVICIO DE PROCESAMIENTO DE PAGOS DE MERCADO PAGO OPERADO POR MERCADOLIBRE S.R.L. (“MERCADO PAGO.”) MEDIANTE EL ESCANEO DEL CÓDIGO QR CON LA APP DE MERCADO PAGO (LA “APP”) EL BENEFICIO CONSISTE EN UN 20% DE DESCUENTO SIN TOPE, COMPRANDO EN TODAS LAS SUCURSALES DE HIPERCHANGOMAS, CHANGOMAS Y MASGO, DE FORMA PRESENCIAL Y A TRAVÉS DE MASONLINE ÚNICAMENTE ELIGIENDO LA OPCIÓN PAGO ONLINE, APLICA PARA TIENDAS. EL BENEFICIO ESTARÁ A CARGO DE DORINKA S.R.L. Y SE REALIZARÁ SOBRE EL PRECIO DE CONTADO. MERCADO PAGO NO ES UNA ENTIDAD FINANCIERA. LOS FONDOS EN CUENTAS DE PAGO NO SON DEPÓSITOS GARANTIZADOS. MERCADOLIBRE S.R.L. CUIT 30-70308853-4, CASEROS 3039, PISO 2º, CABA”. EXCLUIDOS- CARNICERIA, GRANJA, ELABORADOS, EMBUTIDOS, QUESOS: (QUESOS BLANDOS, QUESOS DUROS, QUESOS FETEADOS, QUESOS RALLADOS, QUESOS SEMIDUROS), FRUTAS Y VERDURAS, HUEVOS. ACEITES COMESTIBLES, HARINAS, LECHES FLUIDAS, AZÚCARES. BEBIDAS BLANCAS, VINOS, FERNET, CERVEZAS Y GASEOSAS DE “CERVECERIA Y MALTERIA QUILMES” (STELLA ARTOIS, BUDWEISER, CORONA, QUILMES, BRAHMA, MICHELOB, PATAGONIA, EAZY, GOOSE ISLAND, ANDES, TEMPLE, PEPSI, SEVEN UP, PASO DE LOS TOROS, GATORADE, GLACIAR, ECO DE LOS ANDES, H20, AGUAS NESTLÉ, AWAFRUT, MIRINDA, RED BULL, ROCKSTAR), LÍNEA COCA COLA (ORIGINAL, LIGHT, ZERO SIN AZUCAR, SABOR LIVIANO), FANTA, SPRITE (ORIGINAL, SIN AZÚCAR), SCHWEPPES, POWERADE, CEPITA, ADES, AQUARIUS, BENEDICTINO, BONAQUA, SMART WATER, MONSTER, CRUSH, FIGURITAS Y ÁLBUM MUNDIAL 2026. ELECTRODOMÉSTICOS Y ELECTRÓNICOS, RODADOS, INFORMÁTICA, CELULARES Y CLIMATIZACIÓN, LÍNEA BLANCA, MEDICAMENTOS DE FARMACIA, SERVICIOS DE AUTOCENTER, BATERÍAS Y NEUMÁTICOS. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES Y/O PRODUCTOS EN LIQUIDACIÓN. SOLO PARA CONSUMO FAMILIAR.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "15ff1c4e-2630-11f0-b37f-93b1d8eaa315",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "f75d9bb7-25f8-11f0-b37f-f803d3fbf6af",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con tarjeta Visa débito",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope mensual: $10.000 para Cartera General y $30.000 para Búho One, Sueldo, Emprededor y Jubilado. (H)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "25",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de reintegro",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Logo Card - MODO_Hipotecario.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "2",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2025-04-30T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-12-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los martes",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "CARTERA CONSUMO. PROMOCIÓN VÁLIDA EN LA REPÚBLICA ARGENTINA COMPRANDO DE FORMA PRESENCIAL LOS MARTES EN CHANGOMÁS, HIPERCHANGOMÁS, MASGO Y EN WWW.MASONLINE.COM.AR CON PAGO ONLINE DESDE EL 01/09/2026 HASTA EL 30/11/2026. APLICA PARA CONSUMOS EFECTUADOS CON TARJETA DE DÉBITO VISA EMITIDA POR ESTE BANCO HIPOTECARIO SA QUE NO REGISTRE MORA MEDIANTE LA MODALIDAD DE PAGO CON “QR” A TRAVÉS DE “MODO” DESDE APP BH O APP MODO. SE OTORGARÁ UN DESCUENTO VÍA REINTEGRO DEL 25% CON TOPE MENSUAL Y POR CLIENTE (CONSIDERANDO LA SUMA DE LOS CONSUMOS REALIZADOS POR EL CLIENTE CON TARJETA DE DÉBITO Y CRÉDITO DURANTE EL MES). TOPES DE REINTEGRO: PARA TODOS LOS CLIENTES: $10.000. CLIENTES BÚHO ONE, BÚHO SUELDO, BÚHO EMPRENDEDOR Y BÚHO JUBILADO TOPE DE $30.000. NO ACUMULABLE CON OTRAS PROMOCIONES, NI CARTERA DE CLIENTES QUE ACREDITEN PLANES SOCIALES. NO APLICA A LAS OPERACIONES DE EXTRACCIÓN DE DINERO EN EFECTIVO REALIZADAS A TRAVÉS DE EXTRA, CASH. NO APLICA PARA LOS CONSUMOS EFECTUADOS A TRAVÉS DE LA PLATAFORMA MERCADO PAGO. NO APLICA A LOS PAGOS REALIZADOS POR LA PLATAFORMA DE PAGOS MÓVILES (POS MÓVIL, BOTÓN DE PAGO Y BILLETERA ELECTRÓNICA). NO APLICA PARA PAGOS CON TRANSFERENCIA. REINTEGRO: DENTRO DE LOS 30 DÍAS CORRIDOS DE REALIZADO EL PAGO SE ACREDITARÁ EN LA CAJA DE AHORRO DE BANCO HIPOTECARIO SA ASOCIADA A MODO. CONSULTE EL AHORRO APLICABLE Y VIGENTE EN CADA COMERCIO ANTES DE EFECTUAR LA COMPRA. BANCO HIPOTECARIO S.A. RECONQUISTA 151 (1003) CABA. CUIT 30-50001107-2.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "c40d38d3-1a7a-11ee-83ab-0263dabe290f",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "66dc6331-3d38-4a60-8d98-19cce4e385cf",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con tarjetas de Crédito Visa y MasterCard",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope: $15.000 semanal. (IC1)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de reintegro",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "ICBC MODO_grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "2",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-07-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Sábado 24 y Domingo 25 de octubre",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "CARTERA DE CONSUMO. PROMOCIÓN VÁLIDA EN LA REPÚBLICA ARGENTINA PARA EL CUARTO FIN DE SEMANA DE CADA MES DESDE EL 01/07/2026 HASTA EL 31/12/2026. 20% DE AHORRO CON TARJETAS DE CRÉDITO VISA Y MASTERCARD ICBC EN UN SOLO PAGO. PAGANDO A TRAVÉS MODO O SU INTEGRACIÓN EN ICBC MOBILE BANKING, CON PAGO ONLINE REALIZADO EL CUARTO FIN DE SEMANA DE CADA MES Y PROGRAMANDO EL RETIRO O ENVÍO PARA CUALQUIER DÍA. APLICA A COMPRAS PRESENCIALES REALIZADAS EL CUARTO FIN DE SEMANA DE CADA MES. TOPE DE REINTEGRO $15.000 POR CLIENTE POR FIN DE SEMANA. EJEMPLO: POR LA COMPRA DE $1.000 EN PRODUCTOS INCLUIDOS EN LA PROMOCIÓN SE LE REINTEGRAN $200. LOS REINTEGROS SE VERAN ACREDITADOS DENTRO DE LOS 30 DÍAS CORRIDOS POSTERIORES A LA FECHA DE REALIZADA LA COMPRA EN LA CAJA DE AHORRO O CUENTA CORRIENTE QUE EL CLIENTE POSEA EN ICBC. SOLO PODRÁN PARTICIPAR DE LA PROMOCIÓN AQUELLOS CLIENTES QUE SE ENCUENTREN AL DÍA EN SUS PRODUCTOS. NO VÁLIDO PARA COMPRAS EFECTUADAS POR MERCADO PAGO, PAGO INMEDIATO O PAGO ENTRE PERSONAS. NO VÁLIDO PARA COMPRAS MAYORISTAS NI PARA TARJETAS VISA BUSINESS, VISA DISTRIBUTION, VISA PURCHASING, VISA PURCHASING CAMPO, CORPORATE, CORPORATE SIGNATURE, RECARGABLE EMPRESA Y VISA CUENTA CENTRAL. VÁLIDO PARA CLIENTES CON PAQUETE DE PRODUCTOS EN ICBC. NO VALIDO PARA ADICIONALES DE CUENTA SIN CAJA DE AHORRO O CUENTA CORRIENTE EN ICBC. LOS BENEFICIOS NO SE SUPERPONEN NI SON ACUMULATIVOS ENTRE SÍ, NI CON OTROS BENEFICIOS, PROMOCIONES U OFERTAS QUE OFREZCA MASONLINE. QUEDAN EXCLUIDAS LAS SIGUIENTES CATEGORÍAS: ELECTRONICOS, ELECTRODOMESTICOS, CELULARES, TABLETS, CONSOLAS, Y TODOS LOS PRODUCTOS INCLUIDOS EN EL PROGRAMA PRECIOS CUIDADOS. INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ARGENTINA) S.A.U. ES UNA SOCIEDAD ANÓNIMA UNIPERSONAL BAJO LA LEY ARGENTINA. SU ACCIONISTA LIMITA SU RESPONSABILIDAD AL CAPITAL APORTADO. (LEY 25738). CUIT: 30-70944784-6. FLORIDA 99, CABA.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "06fc4208-78d8-11ee-83ab-0a1649dfa6b1",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "31c0965b-f123-4a5d-a5c5-a9d98fd696e7",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con Clásica y Plus Crédito Visa y MasterCard",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope: $10.000 mensual.  (P1)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "15",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de reintegro",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Banco Patagonia grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "3",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-12-31T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los sábados",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PROMOCIÓN VALIDA EN LA REPÚBLICA ARGENTINA LOS DÍAS SABADO DESDE EL 01/06/2026 AL 31/12/2026. APLICA A COMPRAS REALIZADAS EN 1 PAGO EN LOS SUPERMERCADOS CHANGOMAS LOS DÍAS JUEVES; O PAGANDO CON MODO EL DÍA DE LA PROMOCIÓN Y COORDINANDO EL RETIRO Y/O ENVÍO A DOMICILIO PARA CUALQUIER DÍA. (1) LOS CLIENTES ASOCIADOS A LOS PRODUCTOS CLÁSICA Y PLUS RECIBIRÁN UN 15% DE DESCUENTO POR COMPRAS EFECTUADAS CON LAS TARJETAS DE CRÉDITO VISA Y MASTERCARD DE BANCO PATAGONIA. TOPE POR CUENTA Y POR MES $10.000.LOS CLIENTES ASOCIADOS A LOS PRODUCTOS PLUS RECIBIRÁN UN 20% DE DESCUENTO POR COMPRAS EFECTUADAS CON LAS TARJETAS DE CRÉDITO VISA Y MASTERCARD DE BANCO PATAGONIA. TOPE POR CUENTA Y POR MES $10.000.LOS CLIENTES ASOCIADOS A LOS PRODUCTOS SINGULAR ABONADO CON TODAS LAS TARJETAS DE CRÉDITO VISA Y MASTERCARD DE BANCO PATAGONIA RECIBIRÁN UN 25% DE DESCUENTO CON TOPE POR CUENTA Y POR MES DE DE $15000. PARA ACCEDER Y OPERAR EN PATAGONIA MÓVIL, DEBERÁ ENCONTRARSE PREVIAMENTE ADHERIDO AL SERVICIO PATAGONIA EBANK PERSONAS. EL USO DE PATAGONIA MÓVIL REQUIERE UN TELÉFONO CELULAR CON SISTEMA OPERATIVO ANDROID O IOS (IPHONE) CON ACCESO A INTERNET Y SERVICIO DE DATOS. PARA UTILIZAR DICHO SERVICIO DEBERÁ ACEPTAR PREVIAMENTE SUS TÉRMINOS Y CONDICIONES, LOS CUALES PODRÁN SER CONSULTADOS EN WWW.BANCOPATAGONIA.COM.AR O EN CUALQUIERA DE NUESTRAS SUCURSALES. SIEMPRE DESCARGUE LA APLICACIÓN PATAGONIA MÓVIL DE TIENDAS OFICIALES, NO ACCEDA DESDE LINKS QUE PROVENGAN DE MAILS O SMS. LOS COSTOS DE LA DESCARGA, DE LA UTILIZACIÓN DE LA APLICACIÓN Y EL DE LA NAVEGACIÓN, SERÁN LOS QUE COBRE LA EMPRESA DE TELEFONÍA CELULAR UTILIZADA POR EL CLIENTE Y SERÁN A SU EXCLUSIVO CARGO. BANCO PATAGONIA S.A. NO SERÁ RESPONSABLE POR LOS ERRORES EN EL SOFTWARE DE LA APLICACIÓN, NI POR LA SUSPENSIÓN, INTERRUPCIÓN O FALLA DEL SERVICIO PROVENIENTE DE UNA MEDIDA UNILATERAL DE LA EMPRESA DE TELEFONÍA CELULAR. PARA MÁS INFORMACIÓN SOBRE EL SERVICIO DE MODO INGRESE A WWW.MODO.COM.AR. PARA TODAS LAS PROMOCIONES ABONADAS CON LAS TARJETAS DE CRÉDITO, EL PORCENTAJE DE BONIFICACIÓN SERÁ ACREDITADO EN EL MISMO RESUMEN EN QUE INGRESE EL CONSUMO, O EN EL INMEDIATO POSTERIOR. NO ACUMULABLES CON OTRAS PROMOCIONES Y NO VÁLIDAS PARA TARJETAS CORPORATIVAS. BANCO PATAGONIA NO SE RESPONSABILIZA POR LOS CUPONES PRESENTADOS FUERA DE LAS FECHAS DE VIGENCIA DE LAS PROMOCIONES. LAS CUENTAS NO DEBERÁN REGISTRAR MORA. LOS ACCIONISTAS DE BANCO PATAGONIA S.A. LIMITAN SU RESPONSABILIDAD A LA INTEGRACIÓN DE LAS ACCIONES SUSCRIPTAS. EN VIRTUD DE ELLO, NI LOS ACCIONISTAS MAYORITARIOS DE CAPITAL EXTRANJERO NI LOS ACCIONISTAS LOCALES O EXTRANJEROS, RESPONDEN EN EXCESO DE LA CITADA INTEGRACIÓN ACCIONARIA POR LAS OBLIGACIONES EMERGENTES DE LAS OPERACIONES CONCERTADAS POR LA ENTIDAD FINANCIERA. NO APLICA PARA AQUELLOS PAGOS Y/O CONSUMOS ABONADOS CON TARJETAS DE DÉBITO Y CRÉDITO EMITIDAS POR BANCO PATAGONIA S.A. A TRAVÉS DE BILLETERAS VIRTUALES A EXCEPCIÓN DE MODO.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "fdfcc594-907a-11ed-83ab-0ab135d7cee1",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "bb79238e-3556-11ef-8452-0e6280dc0bcd",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con tarjeta de Crédito Patagonia 365",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope: $10.000 mensual. (P365)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de descuento",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Banco Patagonia 365 grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "3",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2024-12-30T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los Miércoles",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PROMOCIÓN VIGENTE DESDE EL 01/8/2026 AL 31/10/2026. APLICABLE SOLO LOS DIAS MIERCOLES PARA CLIENTES QUE ABONEN CON TARJETA DE CREDITO PATAGONIA 365 EN UN (1) PAGO. EL CLIENTE OBTIENE UN 20% DE DESCUENTO CON UN TOPE DE $10.000 POR CUENTA, POR COMERCIO, POR PERIODO. EL REINTEGRO SE VERÁ REFLEJADO HASTA DENTRO DE LOS DOS (2) RESUMENES DE LA TARJETA MEDIANTE LA CUAL SE EFECTUÓ LA COMPRA. VALIDO SOLO EN SUPERMERCADOS CHANGOMAS Y MASGO. BANCO DEL CHUBUT S.A. CUIT 30-50001299-0. RIVADAVIA 615, RAWSON, PROVINCIA DE CHUBUT.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "c7025517-3067-11ee-83ab-125c839bfdf1",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "9b9876e3-0770-423d-bf5b-19a83a8f64eb",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con tarjeta de Crédito MasterCard",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope: $15.000 semanal. (Y2)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de reintegro",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Yoy-MODO_grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "3",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-04-27T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Sábado 24 y domingo 25 de octubre",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PROPUESTA PARA CARTERA DE CONSUMO VÁLIDA EN LA REPÚBLICA ARGENTINA PARA LOS DÍAS JUEVES DESDE EL 01/07/2026 HASTA EL 31/12/2026. 20% DE AHORRO CON TARJETAS DE CRÉDITO MASTERCARD YOY EN UN SOLO PAGO Y TARJETAS YOY VISA DÉBITO. PAGANDO POR MODO O SU INTEGRACIÓN EN APP YOY, CON PAGO ONLINE REALIZADO UN DÍA JUEVES Y PROGRAMANDO EL RETIRO O ENVÍO PARA CUALQUIER DÍA. APLICA A COMPRAS PRESENCIALES REALIZADAS LOS DÍAS JUEVES. TOPE DE REINTEGRO $10.000 POR CLIENTE POR SEMANA. EJEMPLO: POR LA COMPRA DE $1.000 EN PRODUCTOS INCLUIDOS EN LA PROMOCIÓN SE LE REINTEGRAN $200. LOS REINTEGROS SE VERAN ACREDITADOS DENTRO DE LOS 30 DÍAS CORRIDOS POSTERIORES A LA FECHA DE REALIZADA LA COMPRA EN LA CAJA DE AHORRO O CUENTA CORRIENTE QUE EL CLIENTE POSEA EN ICBC. SOLO PODRÁN PARTICIPAR DE LA PROMOCIÓN AQUELLOS CLIENTES QUE SE ENCUENTREN AL DÍA EN SUS PRODUCTOS. NO VÁLIDO PARA COMPRAS EFECTUADAS POR MERCADO PAGO, PAGO INMEDIATO O PAGO ENTRE PERSONAS. NO VALIDO PARA ADICIONALES DE CUENTA SIN CAJA DE AHORRO O CUENTA CORRIENTE EN ICBC. LOS BENEFICIOS NO SE SUPERPONEN NI SON ACUMULATIVOS ENTRE SÍ, NI CON OTROS BENEFICIOS, PROMOCIONES U OFERTAS QUE OFREZCA MASONLINE. QUEDAN EXCLUIDAS LAS SIGUIENTES CATEGORÍAS: ELECTRONICOS, ELECTRODOMESTICOS, CELULARES, TABLETS, CONSOLAS, Y TODOS LOS PRODUCTOS INCLUIDOS EN EL PROGRAMA PRECIOS CUIDADOS. INDUSTRIAL AND COMMERCIAL BANK OF CHINA (ARGENTINA) S.A.U. ES UNA SOCIEDAD ANÓNIMA UNIPERSONAL BAJO LA LEY ARGENTINA. SU ACCIONISTA LIMITA SU RESPONSABILIDAD AL CAPITAL APORTADO. (LEY 25738). CUIT: 30-70944784-6. FLORIDA 99, CABA.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "ab6abe23-54fd-11ef-8452-1211a9021aa7",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "da08f0a1-15bd-4a42-aad3-4de113832bf4",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Exclusivo Jubilados - Con Visa débito",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope: $25.000 mensual. (S2)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de descuento",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "banco supervielle normal.jpg",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "4",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-12-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los Martes",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "CARTERA CONSUMO. BANCO SUPERVIELLE S.A., RECONQUISTA 330, C.A.B.A., CUIT 33-50000517-9, INSCRIP. I.G.J. N° 23, F° 502, L. 45, T° A DE ESTATUTOS NAC. (“EL BANCO”). PROMOCIÓN VÁLIDA EN LA REPÚBLICA ARGENTINA LOS DÍAS MARTES DEL 01/08/2026 AL 30/11/2026 PARA CLIENTES QUE PERCIBAN SU JUBILACIÓN EN EL BANCO Y QUE REALICEN COMPRAS PRESENCIALES EN SUPERMERCADOS CHANGOMÁS, HIPER CHANGOMÁS,MASGO Y/O EN HTTPS://WWW.MASONLINE.COM.AR/CON LA TARJETA DE DÉBITO VISA (“LA TD”) QUE FORME PARTE DE UN PAQUETE DE PARTE DE UN PAQUETE DE PRODUCTOS ACTIVE PREVISIONAL, LIBERTÉ PREVISIONAL, LIBERTÉ GOLD PREVISIONAL E IDENTITÉ PREVISIONAL DEL BANCO. TOPE DE REINTEGRO MENSUAL POR CUENTA (CONSIDERANDO LA SUMA DE LOS CONSUMOS REALIZADOS POR EL CLIENTE, DURANTE EL MES, EN CUALQUIERA DE LOS SUPERMERCADOS ADHERIDOS): $25.000. EJ.: PARA UNA COMPRA DE $40.000, SE REINTEGRARÁ EL 20% DEL PRECIO, ES DECIR, $8.000. EL CONSUMO Y EL REINTEGRO SE VERÁN REFLEJADOS EN LA CUENTA ASOCIADA A LA TD EN LOS 30 DÍAS CORRIDOS POSTERIORES A LA COMPRA. NO APLICA A PAGOS REALIZADOS A TRAVÉS DE BILLETERAS VIRTUALES O 'PROVEEDORES DE SERVICIOS DE PAGO', EXCEPTO MODO. NO ACUMULABLE CON OTROS DESCUENTOS, EXCEPTO LOS PROMOVIDOS POR EL BANCO O MODO PARA PAGOS CON QR. LA MARCA “MODO” ES PROPIEDAD DE PLAY DIGITAL S.A., CUIT 30-71682943-6, DOMICILIO EN AV. DEL LIBERTADOR 7208, TORRE PRINCIPAL, PISO 3, C.A.B.A. EL BANCO NO ES RESPONSABLE POR LOS PRODUCTOS Y/O SERVICIOS COMERCIALIZADOS POR LAS MARCAS Y LOCALES PARTICIPANTES EN LAS PROMOCIONES.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "b7409f62-44f4-11ed-83ab-1600502170e1",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "d133f802-3604-4405-95fb-a80348ebef6a",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Plan Inicial - Con Crédito NaranjaX o débito Visa",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Tope: $3.000 semanal. (NX1)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de reintegro",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Banco Naranja grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "5",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-01-10T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los Martes",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "PROMOCIÓN VÁLIDA LOS DÍAS MARTES DE MES DE SEPTIEMBRE Y OCTUBRE 2026, O HASTA AGOTAR UN STOCK TOTAL DE 80.000 REINTEGROS, LO QUE OCURRA PRIMERO. EL BENEFICIO CONSISTE EN UN REINTEGRO (CASHBACK) PARA LAS COMPRAS REALIZADAS CON TARJETA DE CRÉDITO NARANJAX Y TARJETA DE DÉBITO VISA NARANJAX EN TODOS LOS COMERCIOS ADHERIDOS A LA PROMO SUPERMERCADO; APLICANDO EL SIGUIENTE DESCUENTO Y TOPE SEGÚN EL PLAN DEL USUARIO: (1) PLAN INICIAL: 20% DE DESCUENTO CON TOPE DE $3.000 POR SEMANA. (2) PLAN TURBO: 25% DE DESCUENTO CON TOPE DE $9.500 POR SEMANA. (3) PLAN ÉPICO: 30% DE DESCUENTO CON TOPE DE $12.000 POR SEMANA. EL MONTO REINTEGRADO SE ACREDITARÁ ÚNICAMENTE EN TU CUENTA NARANJA X DENTRO DE LOS 10 DÍAS POSTERIORES A LA FECHA DE LA COMPRA. ESTA PROMOCIÓN ES VÁLIDA SOLO EN LOS COMERCIOS ADHERIDOS Y NO APLICA PARA COMPRAS REALIZADAS CON NARANJA VISA, NARANJA MASTERCARD, NARANJA AMEX, NI PARA TRANSACCIONES EFECTUADAS EN AGRUPADORES Y BILLETERAS VIRTUALES QUE NO SEAN NARANJA X. NARANJA X SE RESERVA EL DERECHO DE SUSPENDER O MODIFICAR LA PROMOCIÓN POR CAUSAS DE FUERZA MAYOR, NOTIFICÁNDOLO A TRAVÉS DE LA APLICACIÓN NARANJA X. LA CUENTA NARANJA X ES ADMINISTRADA POR NARANJA DIGITAL COMPAÑÍA FINANCIERA S.A.U., CUIT 30-71663964-5, TTE. GRAL. JUAN D. PERÓN 430, PISO 19, CABA. LA TARJETA DE CRÉDITO NARANJA X ES EMITIDA POR TARJETA NARANJA S.A.U., CUIT 30-68537634-9, LA TABLADA 451, CIUDAD DE CÓRDOBA.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "9a9c3703-2fe8-11ee-83ab-0ecaeb3d03b5",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "62be34ea-262e-11f0-b37f-932bc4e434d0",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "SIN TOPE DE REINTEGRO",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Válido para Buenos Aires, CABA y Viedma. No acumulable con otras promociones bancarias. Aplican exclusiones. (CDNI)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de descuento",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Cuenta DNI_grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "6",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-03-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2026-11-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los jueves",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "BENEFICIO VÁLIDO EXCLUSIVAMENTE EN LA REPÚBLICA ARGENTINA PARA PAGOS REALIZADOS LOS JUEVES DE OCTUBRE 2026 A TRAVÉS DE CUENTA DNI. EL BENEFICIO CONSISTE EN UN 20% DE DESCUENTO SIN TOPE, COMPRANDO EN SUCURSALES DE HIPER CHANGOMAS, CHANGOMAS Y MASGO DE LAS SIGUIENTES LOCALIDADES: 3 DE FEBRERO, ALTE BROWN, AVELLANEDA, AVELLANEDA (SARANDI), BAHÍA BLANCA, CAMPANA, CASEROS, CLAYPOLE, GONZÁLEZ CATÁN, AV CONSTITUYENTES, HURLINGHAM (AV. VERGARA), HURLINGHAM (AV. VILLEGAS), JOSE C PAZ, JUNÍN, LA PLATA, LA TABLADA, LAFERRERE, LANÚS, LOMAS DE ZAMORA, LUJÁN, MALVINAS ARG, MATADEROS, MORENO, MORENO DERQUI, MORENO SHOPPING, MORÓN, OLAVARRÍA, PERGAMINO, PILAR, QUILMES, SAN FERNANDO, SAN JUSTO, SAN MARTIN, SAN VICENTE, TIGRE, VIEDMA.). INCLUYE TODAS LAS TIENDAS DE MASGO. INCLUYE TIENDA: QUILMES. APLICA UNICAMENTE PARA PAGO EN TIENDA. NO ACUMULABLE CON OTRAS PROMOCIONES. EL BENEFICIO ESTARÁ A CARGO DE CHANGOMAS Y SE REALIZARÁ SOBRE EL PRECIO DE CONTADO EN LÍNEA DE CAJA. BENEFICIO NO VÁLIDO PARA CAJAS DE AUTOCOBRO. EXCLUIDOS: CARNICERIA, GRANJA, ELABORADOS, EMBUTIDOS, QUESOS: (QUESOS BLANDOS, QUESOS DUROS, QUESOS FETEADOS, QUESOS RALLADOS, QUESOS SEMIDUROS), FRUTAS Y VERDURAS, HUEVOS. ACEITES COMESTIBLES, HARINAS, LECHES FLUIDAS, AZÚCARES. BEBIDAS BLANCAS, VINOS, FERNET, CERVEZAS Y GASEOSAS DE “CERVECERIA Y MALTERIA QUILMES” (STELLA ARTOIS, BUDWEISER, CORONA, QUILMES, BRAHMA, MICHELOB, PATAGONIA, EAZY, GOOSE ISLAND, ANDES, TEMPLE, PEPSI, SEVEN UP, PASO DE LOS TOROS, GATORADE, GLACIAR, ECO DE LOS ANDES, H20, AGUAS NESTLÉ, AWAFRUT, MIRINDA, RED BULL, ROCKSTAR), LÍNEA COCA COLA (ORIGINAL, LIGHT, ZERO SIN AZUCAR, SABOR LIVIANO), FANTA, SPRITE (ORIGINAL, SIN AZÚCAR), SCHWEPPES, POWERADE, CEPITA, ADES, AQUARIUS, BENEDICTINO, BONAQUA, SMART WATER, MONSTER, CRUSH, FIGURITAS Y ÁLBUM MUNDIAL 2026. ELECTRODOMÉSTICOS Y ELECTRÓNICOS, RODADOS, INFORMÁTICA, CELULARES Y CLIMATIZACIÓN, LÍNEA BLANCA, MEDICAMENTOS DE FARMACIA, SERVICIOS DE AUTOCENTER, BATERÍAS Y NEUMÁTICOS. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES Y/O PRODUCTOS EN LIQUIDACIÓN. SOLO PARA CONSUMO FAMILIAR. BANCO DE LA PROVINCIA DE BUENOS AIRES, CUIT N° 33-99924210-9, CON DOMICILIO EN AVENIDA ING. LUIS MONTEVERDE N° 726 DE LA CIUDAD DE LA PLATA, PROVINCIA DE BUENOS AIRES.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "f9315b48-4f81-11ef-8452-121b3ce95f81",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "d2e88505-e0f9-49e0-bd3f-de8628f06146",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "EN TODA LA COMPRA",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Exclusivo presencial. Pagando con Tarjetas de Crédito Visa, Mastercard y American Express. (G4)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "3",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "Sin Interés",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "banco galicia grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "8",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-02-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2027-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Jueves a Domingos",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "CARTERA DE CONSUMO. Promoción de hasta 3 cuotas sin interés, en compras realizadas en el País. Válida los días Jueves, Viernes, Sábado y Domingo comprendidos entre el 01/10/2026 y 31/12/2026, para compras realizadas con Tarjeta Visa, Tarjeta Mastercard y Tarjeta American Express. Promoción válida únicamente para compras presenciales. Dicha promoción no es acumulable con otras promociones vigentes. Ejemplo: En una compra de $1000 y se paga en 3 cuotas: el valor de las cuotas será de $333.33 No aplica para compras realizadas con tarjetas de Credito Visa Business, Visa Rural y Tarjetas de Débito emitidas a por Anses para Asignación Universal por hijo ni Progresar. La promoción no aplica a pagos a través de billeteras virtuales (excepto Modo, Google Pay y Apple Pay), mPos y/o plataformas de pago online. MODO es marca registrada por Play Digital S.A., CUIT 30-71682943-6, con domicilio en Av. del Libertador 7208, Torre I, Piso 3, CABA (“PDSA”) y es un Proveedor de Servicios Tecnológicos de Banco de Galicia y Buenos Aires S.A.U. Sólo podrán participar de la promoción aquellos clientes que al momento de comprar se encuentren al día con sus productos. Banco Galicia solo es el medio de pago para la adquisición del producto/servicio. Tasa Nominal Anual “TNA”: 0,00%, Tasa Efectiva Anual “TEA”: 0,00%, Costo Financiero Total Efectivo Anual “CFTEA”: 0,00%.“CFTEA”+IVA: 0,00%",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "6167861a-a593-11ee-8452-0af780f66fd5",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "d44efac1-f04a-4ef0-8353-b338e576e38f",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con QR con Tarjeta de Crédito de Mercado Pago",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Exclusivo en sucursales en compras a partir de $50.000 a $149.000. (MP2)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "2",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "Sin Interés",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Mercado Pago grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "11",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-06-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2027-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los días",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "CUOTAS SIN INTERÉS CON QR DE MERCADO PAGO: VÁLIDO DEL 1/10/2026 AL 31/12/2025 PARA COMPRAS DESDE $50.000 HASTA $149.000 EN 2 CUOTAS SIN INTERES REALIZADAS CON LA TARJETA DE CRÉDITO MERCADO PAGO EN UN QR DE MERCADO PAGO Y PARA COMPRAS MINIMAS DE$150.000 EN 3 CUOTAS SIN INTERES REALIZADAS CON LA TARJETA DE CRÉDITO MERCADO PAGO EN UN QR DE MERCADO PAGO . APLICA SOLO SI SE CUMPLEN TODAS LAS CONDICIONES: (I) PAGO CON QR CON LA TARJETA DE CRÉDITO DE MERCADO PAGO (II) EN QR DE MERCADO PAGO, (III) COMPRA MÍNIMA DE $50.000 EN 2 CUOTAS SIN INTERES Y COMPRA MINIMA DE $150.000 EN 3 CUOTAS SIN INTERES. MERCADOLIBRE S.R.L. CUIT 30-70308853-4. AVENIDA CASEROS 3039, PISO 2, CIUDAD AUTÓNOMA DE BUENOS AIRES",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "8ccbdf0d-905d-11ee-8452-0eb8fa5466a5",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "63800b70-3ecd-4866-a020-76119a1b44f8",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con Tarjeta de Crédito Visa y MasterCard",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "EN TODA TU COMPRA (4CB)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "4",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "Sin Interés",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Cordobesa BANCOR_grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "14",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-05-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2027-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los días",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "CARTERA DE CONSUMO. PROMOCIÓN VÁLIDA DESDE EL 01/10/2026 AL 31/12/2026 PARA PAGOS CON TARJETA DE CRÉDITO DEL BANCO DE CÓRDOBA (MASTERCARD Y/O VISA) PARA COMPRAS REALIZADAS EN COMERCIOS ADHERIDOS A LA PROMOCIÓN, PERTENECIENTES A LOS SIGUIENTES RUBROS: SUPERMERCADOS/FARMACIAS. FINANCIACIÓN EN CUATRO (4) CUOTAS SIN INTERÉS. TASA NOMINAL ANUAL (TNA): 0%. TASA EFECTIVA ANUAL (TEA) 0%.   COSTO FINANCIERO TOTAL (CFT): 0% EFECTIVO ANUAL. EJEMPLO: PARA UN PAGO DE PESOS CUARENTA MIL ($40.000), EL CLIENTE ABONARÁ CUATRO (4) CUOTAS SIN INTERÉS DE PESOS DIEZ MIL ($10.000). LOS BENEFICIOS SE APLICARÁN SIEMPRE QUE LA TARJETA SE ENCUENTRE HABILITADA Y QUE LA CUENTA NO SE ENCUENTRE EN MORA Y/O BLOQUEADA POR MOTIVOS ADMINISTRATIVOS.  BANCO PROVINCIA DE CÓRDOBA S.A. CUIT 30999228565. DOMICILIO: SAN JERÓNIMO 166, CÓRDOBA.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "ec7714dc-2866-405a-843a-8f8476c47b01",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "7ef0bdad-4543-4234-aab4-2eb0653a6d40",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "Con QR con Tarjeta de Crédito de Mercado Pago",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Exclusivo en sucursales en compras a partir de $150.000. (MP3)",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "3",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "Sin interés",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Mercado Pago grande.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-09-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2027-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los días",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "CUOTAS SIN INTERÉS CON QR DE MERCADO PAGO: VÁLIDO DEL 1/10/2026 AL 31/12/2025 PARA COMPRAS DESDE $50.000 HASTA $149.000 EN 2 CUOTAS SIN INTERES REALIZADAS CON LA TARJETA DE CRÉDITO MERCADO PAGO EN UN QR DE MERCADO PAGO Y PARA COMPRAS MINIMAS DE$150.000 EN 3 CUOTAS SIN INTERES REALIZADAS CON LA TARJETA DE CRÉDITO MERCADO PAGO EN UN QR DE MERCADO PAGO . APLICA SOLO SI SE CUMPLEN TODAS LAS CONDICIONES: (I) PAGO CON QR CON LA TARJETA DE CRÉDITO DE MERCADO PAGO (II) EN QR DE MERCADO PAGO, (III) COMPRA MÍNIMA DE $50.000 EN 2 CUOTAS SIN INTERES Y COMPRA MINIMA DE $150.000 EN 3 CUOTAS SIN INTERES. MERCADOLIBRE S.R.L. CUIT 30-70308853-4. AVENIDA CASEROS 3039, PISO 2, CIUDAD AUTÓNOMA DE BUENOS AIRES",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "8ccbdf0d-905d-11ee-8452-0eb8fa5466a5",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "express_ecommerce_all",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "id",
+"value": "0c45a40a-10dc-47bb-bd64-db8ae32b0c60",
+"__typename": "Field"
+},
+{
+"key": "title",
+"value": "En tu primera compra",
+"__typename": "Field"
+},
+{
+"key": "sub_title",
+"value": "Pagando con la linea de credito desde la app. Tope: $6.000 (CD)*",
+"__typename": "Field"
+},
+{
+"key": "discount_percentage",
+"value": "20",
+"__typename": "Field"
+},
+{
+"key": "discounts_amount_installments",
+"value": "6",
+"__typename": "Field"
+},
+{
+"key": "discounts_text_installments",
+"value": "Sin Interés",
+"__typename": "Field"
+},
+{
+"key": "discount_text_info",
+"value": "de descuento",
+"__typename": "Field"
+},
+{
+"key": "img",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "img_card",
+"value": "Logo_Credicuotas.png",
+"__typename": "Field"
+},
+{
+"key": "order",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "active_from",
+"value": "2026-06-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active_to",
+"value": "2027-01-01T00:00:00+00:00",
+"__typename": "Field"
+},
+{
+"key": "active",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "validText",
+"value": "Todos los días",
+"__typename": "Field"
+},
+{
+"key": "hyper",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "market",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "ecommerce",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "express",
+"value": "false",
+"__typename": "Field"
+},
+{
+"key": "maxi",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "legal",
+"value": "BENEFICIO VÁLIDO EN LA REPÚBLICA ARGENTINA PARA COMPRAS PRESENCIALES REALIZADAS EN LAS SUCURSALES  DE CHANGOMÁS, HIPERCHANGOMÁS Y MASGO. TODOS LOS DÍAS DEL 01/07/2026 AL 31/12/2026  AMBAS FECHAS INCLUSIVE, O HASTA ALCANZAR UN CUPO MÁXIMO DE 10.000 USUARIOS BENEFICIADOS, LO QUE OCURRA PRIMERO. EL BENEFICIO CONSISTE EN UN 20% DE DESCUENTO APLICADO EN EL MOMENTO DE LA PRIMERA COMPRA ABONADA MEDIANTE LECTURA DE CÓDIGO QR DESDE LA BILLETERA VIRTUAL DE CREDICUOTAS UTILIZANDO EL PRODUCTO LÍNEA DE CRÉDITO. EN CASO QUE EL CLIENTE YA HAYA UTILIZADO EL PRODUCTO LÍNEA DE CRÉDITO OFRECIDO POR CREDICUOTAS NO OBTENDRÁ EL BENEFICIO. TOPE DE DESCUENTO HASTA $8.000 POR USUARIO EN UNA ÚNICA TRANSACCIÓN.  EL BENEFICIO ES ACUMULABLE CON OTRAS PROMOCIONES Y/O DESCUENTOS.  CRÉDITO SUJETO A EVALUACIÓN CREDITICIA DE CREDICUOTAS CONSUMO S.A. SIN PARTICIPACIÓN DE DORINKA S.R.L. EN DICHA EVALUACIÓN NI SU OTORGAMIENTO.  PROMOCIÓN SUJETA A MODIFICACIÓN, SUSPENSIÓN O CANCELACIÓN.  CREDICUOTAS CONSUMO S.A. (Ex CREDISHOPP S.A) (C.U.I.T. 30-71091158-0) CON DOMICILIO EN ARENALES 707, PISO 7, CABA.",
+"__typename": "Field"
+},
+{
+"key": "valid",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "monday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "tuesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "wednesday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "thursday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "friday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "saturday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "sunday",
+"value": "true",
+"__typename": "Field"
+},
+{
+"key": "idBank",
+"value": "1ca7093d-5c03-45ef-8550-a8f06cd46921",
+"__typename": "Field"
+},
+{
+"key": "idCard",
+"value": "null",
+"__typename": "Field"
+},
+{
+"key": "isMasClub",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+}
+]
+}
+}

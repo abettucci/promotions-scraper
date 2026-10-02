@@ -1,0 +1,306 @@
+{
+ "9212": {
+  "item": {
+   "id": 9212,
+   "image": "https://beneficiosclub.personalpay.dev/partner/LaReina_image.png",
+   "discounts": "10%",
+   "benefitValue": "10% de reintegro",
+   "title": "Supermercado La Reina",
+   "name": "Supermercado La Reina",
+   "description": "Compra Online Exclusivo",
+   "days": [
+    "Sábado"
+   ],
+   "subtitle": "Sábado.",
+   "dueDate": "2026-10-31T00:00:00.000Z",
+   "legal": "",
+   "paymentMethods": [
+    {
+     "id": "3",
+     "name": "Cualquier QR escaneado desde Personal Pay"
+    },
+    {
+     "id": "6",
+     "name": "Tarjeta Visa Personal Pay"
+    },
+    {
+     "id": "8",
+     "name": "NFC desde Pagar sin contacto en la app (Android)"
+    }
+   ],
+   "liked": false,
+   "channelName": "Exclusivo",
+   "typeCode": "Cashback",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/LaReina_image.png",
+   "documentTyc": "",
+   "heading": "Supermercado",
+   "levels": [
+    {
+     "code": "LVL00",
+     "name": "Todos los usuarios",
+     "discountValue": "10%",
+     "limitAmount": "$7000",
+     "renewal": "Se renueva los Lunes",
+     "usageLimit": "1 vez por semana",
+     "paymentMin": 30000,
+     "value": "10%",
+     "typeLimit": "1 vez por semana"
+    }
+   ],
+   "limitAmount": "$7.000",
+   "limitAmountSubtitle": "Tope $7.000"
+  },
+  "detail": {
+   "id": 9212,
+   "image": "https://beneficiosclub.personalpay.dev/reward/la reina imagen.jpg",
+   "discounts": "10% reintegro",
+   "title": "Supermercado La Reina",
+   "name": "Supermercado La Reina",
+   "description": "Pagando con tu tarjeta Visa Personal Pay disfrutá de un 10% de reintegro en el total de la compra en sucursales físicas. El tope se aplica solo en la primer compra que realices en la semana.\nMínima de compra $30.000.",
+   "startDate": "2025-11-07T00:00:00.000Z",
+   "dueDate": "2026-10-31T00:00:00.000Z",
+   "days": [
+    "Sábado"
+   ],
+   "legal": "Beneficio de alcance nacional, válido del 01/04/2026 hasta el 31/10/2026 ambas fechas inclusive. La promoción consiste en un 10% (diez por ciento) de reintegro los días Sábado pagando con tarjeta prepaga Visa Personal Pay física o NFC, o QR desde la app de Personal Pay, con un tope de reintegro por persona titular de cuenta de pago Personal Pay hasta $7.000.- (pesos siete mil) por transacción por usuario y por semana en compras mayores a $30.000 (pesos treinta mil). Los reintegros se verán reflejados en la cuenta de pago Personal Pay en hasta 72 horas hábiles de autorizado el pago. Exclusivo en todas las sucursales del Supermercado La Reina. Para mayor información sobre el programa de Niveles, consultar en https://www.personalpay.com.ar/terminos-y-condiciones/promociones. Para más información y condiciones o limitaciones aplicables, consulte en https://www.personal.com.ar/pay. Micro Sistemas se limita a ofrecer servicios de pago y no se encuentra autorizada a operar como entidad financiera por el banco central de la República Argentina. Los fondos depositados en cuentas de pago no constituyen depósitos en una entidad financiera, ni cuentan con ninguna de las garantías que tales depósitos pueden gozar de acuerdo con la legislación y reglamentación aplicables en materia de depósitos en entidades financieras. \n\nMICRO SISTEMAS S.A. GENERAL HORNOS 690 CABA, CUIT: 30-57297583-1. LA REINA S A, CUIT: 30-54161823-2, San Martin 3419 Rosario.",
+   "paymentMethods": [
+    {
+     "id": 3,
+     "name": "Cualquier QR escaneado desde Personal Pay"
+    },
+    {
+     "id": 6,
+     "name": "Tarjeta Visa Personal Pay"
+    },
+    {
+     "id": 8,
+     "name": "NFC desde Pagar sin contacto en la app (Android)"
+    }
+   ],
+   "liked": false,
+   "channelName": "Sucursal",
+   "typeCode": "Cashback",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/LaReina_image.png",
+   "documentTyc": "Beneficio de alcance nacional, válido del 01/04/2026 hasta el 31/10/2026 ambas fechas inclusive. La promoción consiste en un 10% (diez por ciento) de reintegro los días Sábado pagando con tarjeta prepaga Visa Personal Pay física o NFC, o QR desde la app de Personal Pay, con un tope de reintegro por persona titular de cuenta de pago Personal Pay hasta $7.000.- (pesos siete mil) por transacción por usuario y por semana en compras mayores a $30.000 (pesos treinta mil). Los reintegros se verán reflejados en la cuenta de pago Personal Pay en hasta 72 horas hábiles de autorizado el pago. Exclusivo en todas las sucursales del Supermercado La Reina. Para mayor información sobre el programa de Niveles, consultar en https://www.personalpay.com.ar/terminos-y-condiciones/promociones. Para más información y condiciones o limitaciones aplicables, consulte en https://www.personal.com.ar/pay. Micro Sistemas se limita a ofrecer servicios de pago y no se encuentra autorizada a operar como entidad financiera por el banco central de la República Argentina. Los fondos depositados en cuentas de pago no constituyen depósitos en una entidad financiera, ni cuentan con ninguna de las garantías que tales depósitos pueden gozar de acuerdo con la legislación y reglamentación aplicables en materia de depósitos en entidades financieras. \n\nMICRO SISTEMAS S.A. GENERAL HORNOS 690 CABA, CUIT: 30-57297583-1. LA REINA S A, CUIT: 30-54161823-2, San Martin 3419 Rosario.",
+   "heading": "Supermercado",
+   "generic": false,
+   "idCashback": "5086",
+   "limitAmount": "$7000",
+   "limitAmountSubtitle": "Tope $7000",
+   "ecommerce": null,
+   "levels": [
+    {
+     "code": "LVL00",
+     "name": "Todos los usuarios",
+     "discountValue": "10%",
+     "limitAmount": "$7000",
+     "renewal": "Se renueva los Lunes",
+     "usageLimit": "1 vez por semana",
+     "paymentMin": 30000,
+     "value": "10%",
+     "typeLimit": "1 vez por semana"
+    }
+   ],
+   "rewardsLinked": []
+  }
+ },
+ "9403": {
+  "item": {
+   "id": 9403,
+   "image": "https://beneficiosclub.personalpay.dev/reward/Logo_Supermercado_Coto.jpg",
+   "discounts": "30%",
+   "benefitValue": "30% de descuento",
+   "title": "Supermercado COTO",
+   "name": "total de la compra",
+   "description": "Compra Online Exclusivo",
+   "days": [
+    "Jueves"
+   ],
+   "subtitle": "Jueves.",
+   "dueDate": "2026-10-02T00:00:00.000Z",
+   "legal": "",
+   "paymentMethods": [
+    {
+     "id": "8",
+     "name": "NFC desde Pagar sin contacto en la app (Android)"
+    }
+   ],
+   "liked": false,
+   "channelName": "Exclusivo",
+   "typeCode": "Discount",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/Coto_image.png",
+   "documentTyc": "",
+   "heading": "Supermercado",
+   "levels": [],
+   "limitAmount": null,
+   "limitAmountSubtitle": null
+  },
+  "detail": {
+   "id": 9403,
+   "image": "https://beneficiosclub.personalpay.dev/reward/Logo_Supermercado_Coto.jpg",
+   "discounts": "30% descuento",
+   "title": "Supermercado COTO",
+   "name": "total de la compra",
+   "description": "Promoción exclusiva de Visa. Pagando con Visa desde el celu sin contacto (NFC) obtené un 30% de descuento todos los jueves, sin tope.\nAplican exclusiones.\nBeneficio aplicable exclusivamente en sucursales físicas de COTO.",
+   "startDate": "2026-02-25T00:00:00.000Z",
+   "dueDate": "2026-10-02T00:00:00.000Z",
+   "days": [
+    "Jueves"
+   ],
+   "legal": "Promoción “30 OFF Visa Débito NFC”\nDescuento en Pagos Con NFC en Coto C.I.C.S.A\nBeneficio aplicable exclusivamente en sucursales físicas de COTO.\n1. Promoción:\nLa promoción denominada “30 OFF Visa Débito NFC” Descuento En Pagos Con NFC en COTO, es una promoción (la “Promoción”) organizada por MOH S.R.L., CUIT N° 30-71840267-7 con domicilio Juana Azurduy 2440 PB, Ciudad Autónoma de Buenos Aires (el\n“Organizador”), para Visa International Service Association, con domicilio en Metro 1, 900, Metro Center Boulevard, Foster City, USA, (el “Auspiciante”) y se regirá por los siguientes Términos y Condiciones (los “Términos”).\n2. Vigencia:\nLa Promoción estará vigente en la Ciudad Autónoma de Buenos Aires, Gran Buenos Aires, Neuquén, Mendoza, Entre Rios y Santa Fe, exclusivamente en todas las Sucursales Físicas de Coto (el “Territorio”) todos los días jueves, desde el 26 de Febrero de 2026 hasta el 01 de Octubre de 2026.\n3. Los Participantes:\nPodrán participar en esta Promoción las personas humanas que cumplan con los siguientes requisitos:\n(i) tengan capacidad legal para contratar en el Territorio,\n(ii) sean titulares y/o adicionales de una Tarjeta Visa (emitida en Argentina), débito o prepaga, habilitada para pagos con “Comunicación de Campo Cercano” o “Near Field Communication” (“NFC”, por sus siglas en inglés) (la “Tarjeta Visa”); (iii) utilicen la Tarjeta Visa a través de alguna de las siguientes billeteras digitales (las “Billeteras NFC”):\n• Apple Pay (en caso de tener un dispositivo iOS)\n•  Google Pay, MODO Contactless, la aplicación de billetera Galicia, la aplicación, la aplicación de billetera BUEPP, la aplicación de Personal Pay (en caso de tener un dispositivo Android).\nLA PROMOCIÓN NO APLICA PARA PAGOS REALIZADOS MEDIANTE CÓDIGOS DE RESPUESTA RÁPIDA (“QR”).\nNo podrán participar de la Promoción: (a) personas jurídicas; (b) quienes que no cumplan con estos Términos.\n4. Entidades emisoras habilitadas para esta Promoción:\nPara participar en la Promoción, los Participantes deberán realizar los pagos exclusivamente con Tarjetas Visa de Debito y/o Prepaga emitidas por alguna de las siguientes entidades, según la plataforma utilizada:\n• PARA APPLE PAY: BANCO GALICIA, BANCO MACRO, BANCO BBVA, BRUBANK, BANCO ICBC, BANCO SANTANDER, BANCO PATAGONIA, BANCO HIPOTECARIO, BANCO SUPERVIELLE, BANCO SANTA FE, BANCO SAN JUAN, BANCO SANTA CRUZ, NARANJA X, BANCO ENTRE RIOS, RIPIO.\n• PARA GOOGLE PAY: BANCO GALICIA, BANCO MACRO, BANCO BBVA, BRUBANK, BANCO ICBC, BANCO SANTANDER, BANCO PATAGONIA, BANCO SUPERVIELLE, BANCO SANTA FE, BANCO SAN JUAN, BANCO DE ENTRE RÍOS, BANCO SANTA CRUZ, BANCO\nHIPOTECARIO, BANCO CIUDAD, BANCO CORRIENTES, POMELO, BANCO COMAFI, NARANJA X, RIPIO.\nPARA MODO CONTACTLESS: BANCO GALICIA, BANCO MACRO, BANCO BBVA, BRUBANK, BANCO ICBC, BANCO SANTANDER, BANCO PATAGONIA, BANCO SUPERVIELLE, BANCO SANTA FE, BANCO SAN JUAN, BANCO DE ENTRE RÍOS, BANCO SANTA CRUZ, BANCO HIPOTECARIO, BANCO CIUDAD, BANCO COMAFI.\nBILLETERAS DE ENTIDADES EMISORAS: APLICACIÓN BANCO GALICIA, APLICACIÓN BUEPP, APLICACIÓN PERSONAL PAY.\n5. Mecánica:\nDurante la Vigencia de la Promoción, el Participante que realice exitosamente un pago sin contacto con una Tarjeta Visa a través de las Billeteras NFC en Coto, recibirá un descuento del 30%. El descuento se aplicará en línea de caja, al momento de realizar el pago.\n6. Comercios Adheridos a la Promoción:\nParticipan de la Promoción únicamente las tiendas presenciales de Coto.\n7. Exclusiones:\nNo válido para venta online y/o Coto Digital (WWW.COTODIGITAL.COM.AR).\nNo acumulable con otras promociones vigentes.\nDESCUENTOS NO APLICABLES SOBRE PRODUCTOS INCLUIDOS EN PROGRAMAS DE PRECIOS DEL GOBIERNO Y/O APLICABLES POR NORMATIVA VIGENTE. DESCUENTOS NO VÁLIDOS PARA COMPRAS EN LOS PATIOS DE COMIDAS, COTO EXPRESSO, COTO BAR, ZONA JUEGOS Y ESTACIONAMIENTO PROPIO. NO INCLUYE ELECTRODOMÉSTICOS, NEUMÁTICOS NI RODADOS. NO INCLUYE PRODUCTOS DE BODEGAS CATENA ZAPATA, NICOLA CATENA, BODEGA ERNESTO CATENA (ALMA NEGRA, PADRILLOS, ANIMAL, ENEMIGO Y GRAN ENEMIGO), MALBEC DV CATENA BOT X 1,5LT, MALBEC LA RIOJA DV CATENA, MALBEC SALTA DV CATENA, SAINT FELICIEN, NICASIA, TILIA, BODEGA LA RURAL (RUTINI, TRUMPETER, SAN FELIPE Y CEPA TRADICIONAL SEMILLON/MALBEC- MALBEC/TINTO BLEND), CHANDON Y TERRAZAS DE LOS ANDES (LATITUD 33°, CASTEL, ALTOS DEL PLATA, VALMONT, BELTOUR, CHEVAL Y CLOS DU MOULIN), BODEGA NORTON (LOTE NEGRO, QUORUM VI, PRIVADA FAMILY BLEND), BODEGA CADUS WINES (CADUS), CASA PIRQUE (ALTALAND, LA POSTA, LUCA, ARUMA, PETIT CARO, MALBEC/CABERNET FRANC CASA DE HERRERO, MALBEC OJO DE BUEN CUBERO, MALBEC/CABERNET FRANC/PINOT NOIR CUCHILLO DE PALO, MALBEC RÍO DE LOS CIERVOS ARAUCANA, MALBEC NICO Y BLEND BESO DE DANTE LUCA), BODEGA BIANCHI\n(VINO CHARDONNAY RESERVADO MARÍA CARMEN, VINO GRAN CORTE ENZO BIANCHI, VINOS MALBEC Y CABERNET SAUVIGNON PARTICULAR BIANCHI), BODEGA VALENTÍN BIANCHI (VINO TINTO CORTE Y MALBEC IV GENERACIÓN) BODEGA MONTEVIEJO (FESTIVO Y PETITE FLEUR) NI VINOS EN TETRABRIK NI GENEROSOS. EL DESCUENTO EN CHAMPAÑAS Y ESPUMANTES NO INCLUYE PRODUCTOS DE BODEGAS CHANDON, MERCIER, CATENA ZAPATA, BARÓN B, DOM PERIGNON, POMMERY, MÖET CHANDON, LA GRANDE DAME NI KRUG. NO INCLUYE CORTES DE CARNES DE NOVILLO, NOVILLITO, TERNERA, MENUDENCIAS NI CARNES ELABORADAS. NO INCLUYE POLLO ENTERO NI\nTROZADO, FRESCO NI CONGELADO. NO INCLUYE LECHES INFANTILES ETAPAS 1 Y 2 (FLUÍDAS NI EN POLVO), NI HARINAS EN TODAS SUS PRESENTACIONES, NI AZÚCAR EN TODAS SUS PRESENTACIONES, NI ACEITE DE GIRASOL Y MEZCLA GIRASOL-SOJA EN TODAS SUS PRESENTACIONES. NO INCLUYE TODAS LAS PRESENTACIONES DE LAS SIGUIENTES MARCAS: COCA COLA, COCA COLA LIGHT, COCA COLA SIN AZÚCAR, CRUSH, FANTA, FANTA SIN AZÚCAR, SCHWEPPES, SPRITE, SPRITE SIN AZÚCAR,\nAQUARIUS, SMARTWATER, CEPITA, BENEDICTINO, POWERADE, ADES, HI-C NI MONSTER.\n7. Suspensión, Modificación y Cancelación:\nEl Organizador y el Auspiciante podrán ampliar el tope de la bonificación o el plazo de vigencia de la Promoción. A su vez, cuando circunstancias no imputables al Organizador o\nno previstas en estos Términos que constituyan caso fortuito o fuerza mayor lo justifiquen, el Organizador podrá suspender, cancelar o modificar la Promoción.\n8. Contacto:\nEn caso de dudas respecto de la Promoción, los Participantes podrán comunicarse con las entidades emisoras participantes, con el Auspiciante a través de los canales de atención informados en VISA.COM.AR/PROMOCIONES/ o con el Organizador a través de la siguiente casilla promociones@weldonagency.com.\nOferta sujeta a cambio y basada en términos y condiciones individuales del comercio. Nula donde esté prohibida o restringida por la ley. Oferta válida solamente cuando usted paga con una tarjeta Visa válida. Cualquier impuesto es responsabilidad exclusiva del comprador.",
+   "paymentMethods": [
+    {
+     "id": 8,
+     "name": "NFC desde Pagar sin contacto en la app (Android)"
+    }
+   ],
+   "liked": false,
+   "channelName": "Sucursal",
+   "typeCode": "Discount",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/Coto_image.png",
+   "documentTyc": "Promoción “30 OFF Visa Débito NFC”\nDescuento en Pagos Con NFC en Coto C.I.C.S.A\nBeneficio aplicable exclusivamente en sucursales físicas de COTO.\n1. Promoción:\nLa promoción denominada “30 OFF Visa Débito NFC” Descuento En Pagos Con NFC en COTO, es una promoción (la “Promoción”) organizada por MOH S.R.L., CUIT N° 30-71840267-7 con domicilio Juana Azurduy 2440 PB, Ciudad Autónoma de Buenos Aires (el\n“Organizador”), para Visa International Service Association, con domicilio en Metro 1, 900, Metro Center Boulevard, Foster City, USA, (el “Auspiciante”) y se regirá por los siguientes Términos y Condiciones (los “Términos”).\n2. Vigencia:\nLa Promoción estará vigente en la Ciudad Autónoma de Buenos Aires, Gran Buenos Aires, Neuquén, Mendoza, Entre Rios y Santa Fe, exclusivamente en todas las Sucursales Físicas de Coto (el “Territorio”) todos los días jueves, desde el 26 de Febrero de 2026 hasta el 01 de Octubre de 2026.\n3. Los Participantes:\nPodrán participar en esta Promoción las personas humanas que cumplan con los siguientes requisitos:\n(i) tengan capacidad legal para contratar en el Territorio,\n(ii) sean titulares y/o adicionales de una Tarjeta Visa (emitida en Argentina), débito o prepaga, habilitada para pagos con “Comunicación de Campo Cercano” o “Near Field Communication” (“NFC”, por sus siglas en inglés) (la “Tarjeta Visa”); (iii) utilicen la Tarjeta Visa a través de alguna de las siguientes billeteras digitales (las “Billeteras NFC”):\n• Apple Pay (en caso de tener un dispositivo iOS)\n•  Google Pay, MODO Contactless, la aplicación de billetera Galicia, la aplicación, la aplicación de billetera BUEPP, la aplicación de Personal Pay (en caso de tener un dispositivo Android).\nLA PROMOCIÓN NO APLICA PARA PAGOS REALIZADOS MEDIANTE CÓDIGOS DE RESPUESTA RÁPIDA (“QR”).\nNo podrán participar de la Promoción: (a) personas jurídicas; (b) quienes que no cumplan con estos Términos.\n4. Entidades emisoras habilitadas para esta Promoción:\nPara participar en la Promoción, los Participantes deberán realizar los pagos exclusivamente con Tarjetas Visa de Debito y/o Prepaga emitidas por alguna de las siguientes entidades, según la plataforma utilizada:\n• PARA APPLE PAY: BANCO GALICIA, BANCO MACRO, BANCO BBVA, BRUBANK, BANCO ICBC, BANCO SANTANDER, BANCO PATAGONIA, BANCO HIPOTECARIO, BANCO SUPERVIELLE, BANCO SANTA FE, BANCO SAN JUAN, BANCO SANTA CRUZ, NARANJA X, BANCO ENTRE RIOS, RIPIO.\n• PARA GOOGLE PAY: BANCO GALICIA, BANCO MACRO, BANCO BBVA, BRUBANK, BANCO ICBC, BANCO SANTANDER, BANCO PATAGONIA, BANCO SUPERVIELLE, BANCO SANTA FE, BANCO SAN JUAN, BANCO DE ENTRE RÍOS, BANCO SANTA CRUZ, BANCO\nHIPOTECARIO, BANCO CIUDAD, BANCO CORRIENTES, POMELO, BANCO COMAFI, NARANJA X, RIPIO.\nPARA MODO CONTACTLESS: BANCO GALICIA, BANCO MACRO, BANCO BBVA, BRUBANK, BANCO ICBC, BANCO SANTANDER, BANCO PATAGONIA, BANCO SUPERVIELLE, BANCO SANTA FE, BANCO SAN JUAN, BANCO DE ENTRE RÍOS, BANCO SANTA CRUZ, BANCO HIPOTECARIO, BANCO CIUDAD, BANCO COMAFI.\nBILLETERAS DE ENTIDADES EMISORAS: APLICACIÓN BANCO GALICIA, APLICACIÓN BUEPP, APLICACIÓN PERSONAL PAY.\n5. Mecánica:\nDurante la Vigencia de la Promoción, el Participante que realice exitosamente un pago sin contacto con una Tarjeta Visa a través de las Billeteras NFC en Coto, recibirá un descuento del 30%. El descuento se aplicará en línea de caja, al momento de realizar el pago.\n6. Comercios Adheridos a la Promoción:\nParticipan de la Promoción únicamente las tiendas presenciales de Coto.\n7. Exclusiones:\nNo válido para venta online y/o Coto Digital (WWW.COTODIGITAL.COM.AR).\nNo acumulable con otras promociones vigentes.\nDESCUENTOS NO APLICABLES SOBRE PRODUCTOS INCLUIDOS EN PROGRAMAS DE PRECIOS DEL GOBIERNO Y/O APLICABLES POR NORMATIVA VIGENTE. DESCUENTOS NO VÁLIDOS PARA COMPRAS EN LOS PATIOS DE COMIDAS, COTO EXPRESSO, COTO BAR, ZONA JUEGOS Y ESTACIONAMIENTO PROPIO. NO INCLUYE ELECTRODOMÉSTICOS, NEUMÁTICOS NI RODADOS. NO INCLUYE PRODUCTOS DE BODEGAS CATENA ZAPATA, NICOLA CATENA, BODEGA ERNESTO CATENA (ALMA NEGRA, PADRILLOS, ANIMAL, ENEMIGO Y GRAN ENEMIGO), MALBEC DV CATENA BOT X 1,5LT, MALBEC LA RIOJA DV CATENA, MALBEC SALTA DV CATENA, SAINT FELICIEN, NICASIA, TILIA, BODEGA LA RURAL (RUTINI, TRUMPETER, SAN FELIPE Y CEPA TRADICIONAL SEMILLON/MALBEC- MALBEC/TINTO BLEND), CHANDON Y TERRAZAS DE LOS ANDES (LATITUD 33°, CASTEL, ALTOS DEL PLATA, VALMONT, BELTOUR, CHEVAL Y CLOS DU MOULIN), BODEGA NORTON (LOTE NEGRO, QUORUM VI, PRIVADA FAMILY BLEND), BODEGA CADUS WINES (CADUS), CASA PIRQUE (ALTALAND, LA POSTA, LUCA, ARUMA, PETIT CARO, MALBEC/CABERNET FRANC CASA DE HERRERO, MALBEC OJO DE BUEN CUBERO, MALBEC/CABERNET FRANC/PINOT NOIR CUCHILLO DE PALO, MALBEC RÍO DE LOS CIERVOS ARAUCANA, MALBEC NICO Y BLEND BESO DE DANTE LUCA), BODEGA BIANCHI\n(VINO CHARDONNAY RESERVADO MARÍA CARMEN, VINO GRAN CORTE ENZO BIANCHI, VINOS MALBEC Y CABERNET SAUVIGNON PARTICULAR BIANCHI), BODEGA VALENTÍN BIANCHI (VINO TINTO CORTE Y MALBEC IV GENERACIÓN) BODEGA MONTEVIEJO (FESTIVO Y PETITE FLEUR) NI VINOS EN TETRABRIK NI GENEROSOS. EL DESCUENTO EN CHAMPAÑAS Y ESPUMANTES NO INCLUYE PRODUCTOS DE BODEGAS CHANDON, MERCIER, CATENA ZAPATA, BARÓN B, DOM PERIGNON, POMMERY, MÖET CHANDON, LA GRANDE DAME NI KRUG. NO INCLUYE CORTES DE CARNES DE NOVILLO, NOVILLITO, TERNERA, MENUDENCIAS NI CARNES ELABORADAS. NO INCLUYE POLLO ENTERO NI\nTROZADO, FRESCO NI CONGELADO. NO INCLUYE LECHES INFANTILES ETAPAS 1 Y 2 (FLUÍDAS NI EN POLVO), NI HARINAS EN TODAS SUS PRESENTACIONES, NI AZÚCAR EN TODAS SUS PRESENTACIONES, NI ACEITE DE GIRASOL Y MEZCLA GIRASOL-SOJA EN TODAS SUS PRESENTACIONES. NO INCLUYE TODAS LAS PRESENTACIONES DE LAS SIGUIENTES MARCAS: COCA COLA, COCA COLA LIGHT, COCA COLA SIN AZÚCAR, CRUSH, FANTA, FANTA SIN AZÚCAR, SCHWEPPES, SPRITE, SPRITE SIN AZÚCAR,\nAQUARIUS, SMARTWATER, CEPITA, BENEDICTINO, POWERADE, ADES, HI-C NI MONSTER.\n7. Suspensión, Modificación y Cancelación:\nEl Organizador y el Auspiciante podrán ampliar el tope de la bonificación o el plazo de vigencia de la Promoción. A su vez, cuando circunstancias no imputables al Organizador o\nno previstas en estos Términos que constituyan caso fortuito o fuerza mayor lo justifiquen, el Organizador podrá suspender, cancelar o modificar la Promoción.\n8. Contacto:\nEn caso de dudas respecto de la Promoción, los Participantes podrán comunicarse con las entidades emisoras participantes, con el Auspiciante a través de los canales de atención informados en VISA.COM.AR/PROMOCIONES/ o con el Organizador a través de la siguiente casilla promociones@weldonagency.com.\nOferta sujeta a cambio y basada en términos y condiciones individuales del comercio. Nula donde esté prohibida o restringida por la ley. Oferta válida solamente cuando usted paga con una tarjeta Visa válida. Cualquier impuesto es responsabilidad exclusiva del comprador.",
+   "heading": "Supermercado",
+   "generic": false,
+   "idCashback": null,
+   "limitAmount": null,
+   "limitAmountSubtitle": null,
+   "ecommerce": null,
+   "levels": [],
+   "rewardsLinked": []
+  }
+ },
+ "9416": {
+  "item": {
+   "id": 9416,
+   "image": "https://beneficiosclub.personalpay.dev/reward/cine atlas.jpg",
+   "discounts": "15%",
+   "benefitValue": "15% de descuento",
+   "title": "ChangoMás",
+   "name": "total de la compra",
+   "description": "Compra Online Exclusivo",
+   "days": [
+    "Do",
+    "Vi",
+    "Sá"
+   ],
+   "subtitle": "Domingo, viernes y sábado.",
+   "dueDate": "2026-10-31T00:00:00.000Z",
+   "legal": "",
+   "paymentMethods": [
+    {
+     "id": "3",
+     "name": "Cualquier QR escaneado desde Personal Pay"
+    }
+   ],
+   "liked": false,
+   "channelName": "Exclusivo",
+   "typeCode": "Discount",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/ChangoMas_image.png",
+   "documentTyc": "",
+   "heading": "Supermercado",
+   "levels": [],
+   "limitAmount": 0,
+   "limitAmountSubtitle": "Sin tope"
+  },
+  "detail": {
+   "id": 9416,
+   "image": "https://beneficiosclub.personalpay.dev/reward/cine atlas.jpg",
+   "discounts": "15% descuento",
+   "title": "ChangoMás",
+   "name": "total de la compra",
+   "description": "Promoción exclusiva de ChangoMás para billeteras virtuales. Pagando con QR escaneado desde Personal Pay obtené un 15% de descuento todos los Viernes, Sábados y Domingos de Octubre, sin tope.",
+   "startDate": "2026-03-03T00:00:00.000Z",
+   "dueDate": "2026-10-31T00:00:00.000Z",
+   "days": [
+    "Do",
+    "Vi",
+    "Sá"
+   ],
+   "legal": "PARA PAGOS REALIZADOS LOS DIAS VIERNES , SABADOS Y DOMINGOS DE OCTUBRE 2026 A TRAVÉS DE MEDIANTE EL ESCANEO DEL CÓDIGO QR CON LA APP DE PERSONAL PAY. EL BENEFICIO CONSISTE EN UN 15% DE DESCUENTO SIN TOPE, COMPRANDO EN TODAS LAS SUCURSALES DE HIPERCHANGOMAS Y CHANGOMAS DE FORMA PRESENCIAL Y A TRAVÉS DE MÁS ONLINE ÚNICAMENTE ELIGIENDO LA OPCIÓN PAGO ONLINE, APLICA PARA TIENDAS PUNTO MAYORISTA. EL BENEFICIO ESTARÁ A CARGO DE DORINKA S.R.L. Y SE REALIZARÁ SOBRE EL PRECIO DE CONTADO. PERSONAL PAY NO ES UNA ENTIDAD FINANCIERA. LOS FONDOS EN CUENTAS DE PAGO NO SON DEPÓSITOS GARANTIZADOS. APLICAN EXCLUSIONES: : No incluye CARNICERIA, YERBA, PASTAS SECAS, LACTEOS, ESPUMANTES, FERNET, PESCADERIA, GRANJA, elaborados, embutidos, frutas y verduras, huevos. Leches fluidas y en polvo, quesos, cremas, dulce de leche y mantecas de las marcas: Armonía, Casanto, Garcia, Finlandia y La Serenísima. Yogures, Yogurisimo, Actimel, Danonino, Gran Compra, Activia, Cindor, Silk, Ser, Danette y Serenito. Aceites comestibles, yerbas, harinas, pastas secas, azúcares. Bebidas blancas, vinos, espumantes, cervezas y gaseosas de “Cerveceria y Malteria Quilmes” (Stella Artois, Budweiser, Corona, Quilmes, Brahma, Michelob, Patagonia, Eazy, Goose Island, Andes, Temple, Fernet Branca, Pepsi, Seven Up, Paso de los Toros, Gatorade, Glaciar, Eco de los Andes, H20, aguas Nestlé, Awafrut, Mirinda, Red Bull, Rockstar), línea Coca Cola (original, light, zero sin azucar, sabor liviano), Fanta, Sprite (original, sin azúcar), Schweppes, Powerade, Cepita, Ades, Aquarius, Benedictino, Bonaqua, Smart Water, Monster, Crush. Electrodomésticos y electrónicos, informática, celulares y climatización, línea blanca, baterías y neumáticos. Cajas Navideñas. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES Y/O PRODUCTOS EN LIQUIDACIÓN. SOLO PARA CONSUMO FAMILIAR.",
+   "paymentMethods": [
+    {
+     "id": 3,
+     "name": "Cualquier QR escaneado desde Personal Pay"
+    }
+   ],
+   "liked": false,
+   "channelName": "Sucursal",
+   "typeCode": "Discount",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/ChangoMas_image.png",
+   "documentTyc": "PARA PAGOS REALIZADOS LOS DIAS VIERNES , SABADOS Y DOMINGOS DE OCTUBRE 2026 A TRAVÉS DE MEDIANTE EL ESCANEO DEL CÓDIGO QR CON LA APP DE PERSONAL PAY. EL BENEFICIO CONSISTE EN UN 15% DE DESCUENTO SIN TOPE, COMPRANDO EN TODAS LAS SUCURSALES DE HIPERCHANGOMAS Y CHANGOMAS DE FORMA PRESENCIAL Y A TRAVÉS DE MÁS ONLINE ÚNICAMENTE ELIGIENDO LA OPCIÓN PAGO ONLINE, APLICA PARA TIENDAS PUNTO MAYORISTA. EL BENEFICIO ESTARÁ A CARGO DE DORINKA S.R.L. Y SE REALIZARÁ SOBRE EL PRECIO DE CONTADO. PERSONAL PAY NO ES UNA ENTIDAD FINANCIERA. LOS FONDOS EN CUENTAS DE PAGO NO SON DEPÓSITOS GARANTIZADOS. APLICAN EXCLUSIONES: : No incluye CARNICERIA, YERBA, PASTAS SECAS, LACTEOS, ESPUMANTES, FERNET, PESCADERIA, GRANJA, elaborados, embutidos, frutas y verduras, huevos. Leches fluidas y en polvo, quesos, cremas, dulce de leche y mantecas de las marcas: Armonía, Casanto, Garcia, Finlandia y La Serenísima. Yogures, Yogurisimo, Actimel, Danonino, Gran Compra, Activia, Cindor, Silk, Ser, Danette y Serenito. Aceites comestibles, yerbas, harinas, pastas secas, azúcares. Bebidas blancas, vinos, espumantes, cervezas y gaseosas de “Cerveceria y Malteria Quilmes” (Stella Artois, Budweiser, Corona, Quilmes, Brahma, Michelob, Patagonia, Eazy, Goose Island, Andes, Temple, Fernet Branca, Pepsi, Seven Up, Paso de los Toros, Gatorade, Glaciar, Eco de los Andes, H20, aguas Nestlé, Awafrut, Mirinda, Red Bull, Rockstar), línea Coca Cola (original, light, zero sin azucar, sabor liviano), Fanta, Sprite (original, sin azúcar), Schweppes, Powerade, Cepita, Ades, Aquarius, Benedictino, Bonaqua, Smart Water, Monster, Crush. Electrodomésticos y electrónicos, informática, celulares y climatización, línea blanca, baterías y neumáticos. Cajas Navideñas. NO ACUMULABLE CON OTRAS PROMOCIONES VIGENTES Y/O PRODUCTOS EN LIQUIDACIÓN. SOLO PARA CONSUMO FAMILIAR.",
+   "heading": "Supermercado",
+   "generic": false,
+   "idCashback": null,
+   "limitAmount": null,
+   "limitAmountSubtitle": "Sin tope",
+   "ecommerce": null,
+   "levels": [],
+   "rewardsLinked": []
+  }
+ },
+ "9121": {
+  "item": {
+   "id": 9121,
+   "image": "https://beneficiosclub.personalpay.dev/reward/wico fondo.jpg",
+   "discounts": "5%",
+   "benefitValue": "5% de descuento",
+   "title": "Wico Combustibles",
+   "name": "Combustible",
+   "description": "Compra Online Exclusivo",
+   "days": [
+    "Todos los días"
+   ],
+   "subtitle": "Todos los días.",
+   "dueDate": "2026-10-31T00:00:00.000Z",
+   "legal": "",
+   "paymentMethods": [
+    {
+     "id": "6",
+     "name": "Tarjeta Visa Personal Pay"
+    }
+   ],
+   "liked": false,
+   "channelName": "Exclusivo",
+   "typeCode": "Discount",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/WicoCombustibles_image.png",
+   "documentTyc": "",
+   "heading": "Combustible",
+   "levels": [],
+   "limitAmount": 0,
+   "limitAmountSubtitle": "Sin tope"
+  },
+  "detail": {
+   "id": 9121,
+   "image": "https://beneficiosclub.personalpay.dev/reward/wico fondo.jpg",
+   "discounts": "5% descuento",
+   "title": "Wico Combustibles",
+   "name": "Combustible",
+   "description": "Pagando con tu tarjeta Visa Personal Pay disfrutá de un 5% de descuento en el total de la carga.",
+   "startDate": "2024-11-12T00:00:00.000Z",
+   "dueDate": "2026-10-31T00:00:00.000Z",
+   "days": [
+    "Todos los días"
+   ],
+   "legal": "Beneficio de alcance nacional. Vigencia desde 15/11/2024 hasta 31/10/2026. Sujeto a disponibilidad. Exclusivo para clientes. No acumulable con otras promociones. Aplica para todo tipo de nafta. Medios de pago exclusivo con tarjeta Visa Personal Pay. Válido para modalidad presencial. Micro Sistemas se limita a ofrecer servicios de pago y no se encuentra autorizada a operar como entidad financiera por el banco central de la República Argentina. Los fondos depositados en cuentas de pago no constituyen depósitos en una entidad financiera, ni cuentan con ninguna de las garantías que tales depósitos pueden gozar de acuerdo con la legislación y reglamentación aplicables en materia de depósitos en entidades financieras. Para más información y condiciones o limitaciones aplicables, consulte en https://www.personal.com.ar/pay.\n\nCOMBUSTIBLE ITALO ARGENTINA S.A , CUIT: 30-71611995-1.\nMICRO SISTEMAS S.A.U. , GENERAL HORNOS 690 CABA, CUIT: 30-57297583-1.",
+   "paymentMethods": [
+    {
+     "id": 6,
+     "name": "Tarjeta Visa Personal Pay"
+    }
+   ],
+   "liked": false,
+   "channelName": "Sucursal",
+   "typeCode": "Discount",
+   "partnerImage": "https://beneficiosclub.personalpay.dev/partner/WicoCombustibles_image.png",
+   "documentTyc": "Beneficio de alcance nacional. Vigencia desde 15/11/2024 hasta 31/10/2026. Sujeto a disponibilidad. Exclusivo para clientes. No acumulable con otras promociones. Aplica para todo tipo de nafta. Medios de pago exclusivo con tarjeta Visa Personal Pay. Válido para modalidad presencial. Micro Sistemas se limita a ofrecer servicios de pago y no se encuentra autorizada a operar como entidad financiera por el banco central de la República Argentina. Los fondos depositados en cuentas de pago no constituyen depósitos en una entidad financiera, ni cuentan con ninguna de las garantías que tales depósitos pueden gozar de acuerdo con la legislación y reglamentación aplicables en materia de depósitos en entidades financieras. Para más información y condiciones o limitaciones aplicables, consulte en https://www.personal.com.ar/pay.\n\nCOMBUSTIBLE ITALO ARGENTINA S.A , CUIT: 30-71611995-1.\nMICRO SISTEMAS S.A.U. , GENERAL HORNOS 690 CABA, CUIT: 30-57297583-1.",
+   "heading": "Combustible",
+   "generic": false,
+   "idCashback": null,
+   "limitAmount": null,
+   "limitAmountSubtitle": "Sin tope",
+   "ecommerce": null,
+   "levels": [],
+   "rewardsLinked": []
+  }
+ }
+}

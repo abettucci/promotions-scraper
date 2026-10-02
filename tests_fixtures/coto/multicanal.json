@@ -1,0 +1,466 @@
+{
+ "result": {
+  "promocionesDigitales": [
+   {
+    "aplicaCompra": "S",
+    "banco": 0,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "En un pago si sos miembro DE NUESTRA COMUNIDAD. Con todos los medios de pago",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Miercoles",
+      "id": 4,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Miercoles",
+    "formaPago": 5,
+    "icono": "logo_comunidad.png",
+    "id": "370",
+    "isDigital": true,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Siendo miembro de Comunidad Coto - Aplican exclusiones. Ver legales - Sin límite de reintegro.",
+    "textoDescuento": "15% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 76,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "En un pago con tarjeta de crédito Naranja X o tarjeta Débito Naranja X VISA.",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Martes",
+      "id": 3,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Martes",
+    "formaPago": 75,
+    "icono": "logo_naranjax2.png",
+    "id": "382",
+    "isDigital": true,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Tope de reintegro $12.000 por semana para clientes adheridos a Plan Épico de NaranjaX",
+    "textoDescuento": "30% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 5,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "PLAN SUELDO En un pago con tarjetas de crédito Visa, Mastercard y Visa débito.",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Lunes",
+      "id": 2,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Lunes",
+    "formaPago": 7,
+    "icono": "logo_icbc_1.png",
+    "id": "356",
+    "isDigital": true,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Aplican exclusiones. Ver legales - Tope de Reintegro de $20.000",
+    "textoDescuento": "30% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 16,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "En un pago con tarjetas de crédito Visa, Mastercard y Cabal",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Lunes",
+      "id": 2,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Lunes",
+    "formaPago": 7,
+    "icono": "logo_ciudad1.png",
+    "id": "344",
+    "isDigital": true,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Tope $30.000. En compras en un pago. Aplica en los productos sin oferta, aplican excluidos, ver legales.",
+    "textoDescuento": "25% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 17,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "En un pago con tarjetas crédito y débito Visa",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Martes",
+      "id": 3,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Martes",
+    "formaPago": 7,
+    "icono": "logo_comafi2.png",
+    "id": "368",
+    "isDigital": true,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Cartera general con tope de reintegro $ 15.000 por transacción, para Segmento Unico tope de reintegro $ 25.000 por transacción. Aplican exclusiones. Ver legales.",
+    "textoDescuento": "35% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 58,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "12-18 cuotas sin interés con tarjetas de crédito American Express de American express.",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Domingo",
+      "id": 1,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Viernes",
+      "id": 6,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Sabado",
+      "id": 7,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "De Viernes a Domingo",
+    "formaPago": 7,
+    "icono": "logo_amex1.png",
+    "id": "425",
+    "isDigital": true,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Prod. Seleccionados Electro, Ferreteria, Automotor, Bazar, deportes, Muebles, camping, Jardineria, Rodados, decoracion. Del 01/10 al 31/10/2026 Aplican exclusiones. Ver legales",
+    "textoDescuento": "18 CUOTAS SIN INTERÉS",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   }
+  ],
+  "promocionesSucursalesFisicas": [
+   {
+    "aplicaCompra": "S",
+    "banco": 0,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "Exclusivo en sucursales. Utilizando todos los medios de pago dentro de la app",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Viernes",
+      "id": 6,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Viernes",
+    "formaPago": 1,
+    "icono": "logo_mercadopago.png",
+    "id": "385",
+    "isDigital": false,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "No válido para venta online (Coto Digital). Aplican exclusiones. Ver legal.",
+    "textoDescuento": "25% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 0,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "Exclusivo en sucursales. En un pago con Tarjetas de débito.",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Viernes",
+      "id": 6,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Viernes",
+    "formaPago": 6,
+    "icono": "logo_debito2.png",
+    "id": "390",
+    "isDigital": false,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Sin tope de reintegro. Aplican exclusiones. Ver legal.",
+    "textoDescuento": "15% TARJETAS DE DÉBITO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 0,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "Exclusivo en sucursales. Programa ciudadanía porteña",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Martes",
+      "id": 3,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Jueves",
+      "id": 5,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Martes y Jueves",
+    "formaPago": 1,
+    "icono": "logo_ciudadania_portena.png",
+    "id": "394",
+    "isDigital": false,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Sin tope de reintegro. Aplican exclusiones. Ver legal.",
+    "textoDescuento": "15% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 16,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "Exclusivo en sucursales. Pagando con MODO desde la app de Ciudad con tarjetas de crédito del banco",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Lunes",
+      "id": 2,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Lunes",
+    "formaPago": 7,
+    "icono": "logo_ciudad1.png",
+    "id": "343",
+    "isDigital": false,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Aplica exclusiones. Ver legales. Tope de Reintegro $30.000 por transacción.",
+    "textoDescuento": "25% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 49,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "Exclusivo en sucursales. Pagando con MODO desde la app de Comafi con tarjetas de débito y crédito del banco",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Martes",
+      "id": 3,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "Martes",
+    "formaPago": 7,
+    "icono": "logo_columbia_1.png",
+    "id": "363",
+    "isDigital": false,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "No acumula con promo Modo martes. Sin tope. En compras presenciales en un pago. Aplica en los productos sin oferta, aplican excluidos, ver legales.",
+    "textoDescuento": "30% DE DESCUENTO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 0,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "Exclusivo en sucursales. 2 cuotas sin interés con tarjeta de crédito Mercado Pago. Pagando con QR.",
+    "dias": [
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Domingo",
+      "id": 1,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Lunes",
+      "id": 2,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Martes",
+      "id": 3,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Miercoles",
+      "id": 4,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Jueves",
+      "id": 5,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Viernes",
+      "id": 6,
+      "mensajeError": null
+     },
+     {
+      "@class": "atg.dto.backOffice.DtoDia",
+      "codigoError": null,
+      "descripcion": "Sabado",
+      "id": 7,
+      "mensajeError": null
+     }
+    ],
+    "diasVigencia": "De Lunes a Domingo",
+    "formaPago": 1,
+    "icono": "logo_mercadopago.png",
+    "id": "386",
+    "isDigital": false,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Pagando con QR tarjeta de crédito mercado pago en compras a partir de $50.000 a $149.000. No válido para venta online (Coto Digital). Aplican exclusiones. Ver legal.",
+    "textoDescuento": "2 CUOTAS SIN INTERÉS",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   },
+   {
+    "aplicaCompra": "S",
+    "banco": 0,
+    "@class": "atg.dto.backOffice.DtoPromocion",
+    "classes": null,
+    "codigoError": null,
+    "descripcion": "Exclusivo en sucursales. En un pago con Tarjetas de débito.",
+    "dias": [],
+    "diasVigencia": "",
+    "formaPago": 6,
+    "icono": "logo_debito2.png",
+    "id": "293",
+    "isDigital": false,
+    "labelTerminos": null,
+    "mensajeError": null,
+    "observacion": "Sin tope de reintegro. Aplican exclusiones. Ver legal.",
+    "textoDescuento": "15% TARJETAS DE DÉBITO",
+    "tipoTarjetaFidelizada": null,
+    "urlTerminos": null,
+    "vigenciaDesde": null,
+    "vigenciaHasta": null,
+    "wildcard": "N"
+   }
+  ]
+ }
+}

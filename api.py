@@ -1057,7 +1057,12 @@ def get_stats():
         "AND bank != ''",
         active_params,
     ).fetchone()[0]
-    total_supermarkets = conn.execute("SELECT COUNT(*) FROM supermarkets WHERE enabled = 1").fetchone()[0]
+    # Sólo comercios con promos visibles: los aggregators (MODO, Cuenta DNI...)
+    # y fuentes caídas también son filas de supermarkets pero no comercios.
+    total_supermarkets = conn.execute(
+        f"SELECT COUNT(DISTINCT p.supermarket_id) FROM promotions p WHERE {active_clause}",
+        active_params,
+    ).fetchone()[0]
     last_updated = conn.execute(
         f"SELECT MAX(scraped_at) FROM promotions p WHERE {active_clause}",
         active_params,
@@ -1073,7 +1078,14 @@ def get_stats():
             AND p.is_active = 1
             AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
             AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
-        GROUP BY s.id ORDER BY count DESC
+        GROUP BY s.id HAVING count > 0 ORDER BY count DESC
+    """, active_params).fetchall()
+    category_expr = "COALESCE(s.category, 'supermarket')" if _HAS_SUPERMARKET_CATEGORY else "'supermarket'"
+    by_category = conn.execute(f"""
+        SELECT {category_expr} AS category, COUNT(*) AS count
+        FROM promotions p JOIN supermarkets s ON s.id = p.supermarket_id
+        WHERE {active_clause}
+        GROUP BY category
     """, active_params).fetchall()
     conn.close()
 
@@ -1084,6 +1096,7 @@ def get_stats():
         "last_updated": last_updated,
         "top_banks": [dict(r) for r in top_banks],
         "by_supermarket": [dict(r) for r in by_supermarket],
+        "by_category": {r["category"]: r["count"] for r in by_category},
     }
 
 

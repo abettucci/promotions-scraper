@@ -2,382 +2,439 @@
 """
 Scraper de Cencosud (Jumbo) - Promociones Bancarias
 
-Usa Crawl4AI con session_id para reutilizar el browser entre días:
-  - Cada día tiene su propia URL (?type=por-dia&day=N), se navega normalmente
-  - wait_for JS espera hasta que haya contenido con % o cuotas
-  - js_code hace scroll + expande "Ver más" antes de capturar el HTML
-  - Métodos de parsing sin cambios respecto a versión anterior
+La página https://www.jumbo.com.ar/descuentos-del-dia se arma desde un único
+documento de VTEX Master Data (entidad JN, id "bankDiscount"). Su campo `value`
+es un JSON string con ~200 promos compartidas entre Jumbo, Disco y Vea.
+
+Flujo:
+  1. GET /api/dataentities/JN/documents/bankDiscount (requests, sin navegador).
+  2. Filtrar las promos del sitio Jumbo ('jumboargentinaio' en websites) vigentes
+     hoy (dateStart <= ahora <= dateEnd, epoch).
+  3. Una promo por item: el item ya trae todos sus días (antes se scrapeaba el
+     DOM día por día y el dedup cruzado dejaba un solo día por promo).
+
+Campos útiles del item: banks[].name, discount ("24.99", "11.99" → se redondea),
+discountText ("cuotas sin interés", "%", ", 6 y 12 Cuotas..."), installmentsText
+(subtítulo de la card), info (legal corto), legals (legal completo), isExclusive
+("Exclusivo Online"), paymentMethod (Crédito/Débito/Billetera Virtual).
+days: "1".."6" = Lunes..Sábado (el sitio no tiene pestaña Domingo).
 """
+import asyncio
+import hashlib
+import json
 import re
-import os
-from typing import List, Dict, Set
+import time
+from datetime import datetime, timedelta, timezone
+from typing import Any, Dict, List, Optional, Tuple
+
+
+_API_URL = 'https://www.jumbo.com.ar/api/dataentities/JN/documents/bankDiscount'
+_WEBSITE = 'jumboargentinaio'
+_HTTP_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/129.0.0.0 Safari/537.36'
+    ),
+    'Accept': 'application/json',
+}
+_AR_TZ = timezone(timedelta(hours=-3))
+_DAY_NAMES = {
+    '0': 'Domingo', '1': 'Lunes', '2': 'Martes', '3': 'Miércoles',
+    '4': 'Jueves', '5': 'Viernes', '6': 'Sábado', '7': 'Domingo',
+}
+_DAY_ORDER = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
+
+# nombre en la API (normalizado) → (entidad para el título, bank, wallet, payment_method)
+_ENTITIES = {
+    'visa y master': ('Visa y Mastercard', None, None, 'Tarjetas de crédito Visa y Mastercard bancarias'),
+    'cencopay': ('CencoPay', 'CencoPay', None, 'Tarjeta de crédito CencoPay'),
+    'cencopay cuenta': ('CencoPay Cuenta', 'CencoPay', None, 'CencoPay Cuenta (QR / cuenta digital)'),
+    'tarjeta naranja x': ('Naranja X', 'Naranja X', None, None),
+    'naranja x': ('Naranja X', 'Naranja X', None, None),
+    'nacion': ('Banco Nación', 'Banco Nación', None, None),
+    'banco nacion': ('Banco Nación', 'Banco Nación', None, None),
+    'banco hipotecario': ('Banco Hipotecario', 'Banco Hipotecario', 'MODO', 'QR MODO / App BH'),
+    'supervielle': ('Banco Supervielle', 'Banco Supervielle', None, None),
+    'banco comafi': ('Banco Comafi', 'Banco Comafi', None, None),
+    'banco patagonia': ('Banco Patagonia', 'Banco Patagonia', None, None),
+    'banco cordoba': ('Bancor', 'Bancor', None, 'Tarjeta Cordobesa'),
+    'banco macro': ('Banco Macro', 'Banco Macro', None, None),
+    'banco galicia': ('Banco Galicia', 'Banco Galicia', None, None),
+    'banco ciudad': ('Banco Ciudad', 'Banco Ciudad', None, None),
+    'banco provincia': ('Banco Provincia', 'Banco Provincia', None, None),
+    'tarjeta sol': ('Tarjeta Sol', 'Tarjeta Sol', None, None),
+    'modo': ('MODO', None, 'MODO', 'MODO'),
+    'mercado pago': ('Mercado Pago', None, 'Mercado Pago', None),
+    'cuenta dni': ('Cuenta DNI', 'Banco Provincia', 'Cuenta DNI', 'Cuenta DNI'),
+    'amex': ('American Express', 'American Express', None, 'American Express'),
+    'american express': ('American Express', 'American Express', None, 'American Express'),
+    'medios de pago': ('Jubilados', None, None, 'Todos los medios de pago'),
+    'club rio negro': ('Club Río Negro', 'Club Río Negro', None, 'Credencial Club Río Negro'),
+    'club la voz': ('Club La Voz', 'Club La Voz', None, 'Credencial Club La Voz'),
+    'club la gaceta': ('Club La Gaceta', 'Club La Gaceta', None, 'Credencial Club La Gaceta'),
+    'club la capital': ('Club La Capital', 'Club La Capital', None, 'Credencial Club La Capital'),
+    'club la nacion': ('Club La Nación', 'Club La Nación', None, 'Credencial Club La Nación'),
+    'andes pass': ('Andes Pass', 'Andes Pass', None, 'Credencial Andes Pass'),
+}
+
+
+def _norm(text: str) -> str:
+    text = (text or '').strip().lower()
+    for a, b in (('á', 'a'), ('é', 'e'), ('í', 'i'), ('ó', 'o'), ('ú', 'u'), ('ñ', 'n')):
+        text = text.replace(a, b)
+    return re.sub(r'\s+', ' ', text)
+
+
+def _clean(text: Any) -> str:
+    return re.sub(r'\s+', ' ', str(text or '')).strip()
+
+
+def _fmt_amount(raw: str) -> Optional[str]:
+    digits = re.sub(r'[^\d]', '', raw.split(',')[0])
+    if not digits or int(digits) <= 0:
+        return None
+    return f"${int(digits):,}".replace(',', '.')
 
 
 class CencosudScraper:
     def __init__(self):
         self.name = 'Jumbo (Cencosud)'
         self.base_url = 'https://www.jumbo.com.ar/descuentos-del-dia'
-        self.dias = {
-            'Lunes': '1', 'Martes': '2', 'Miercoles': '3',
-            'Jueves': '4', 'Viernes': '5', 'Sabado': '6', 'Domingo': '0',
-        }
 
     async def scrape(self) -> List[Dict]:
+        print(f"\n🔍 Scraping {self.name}...")
+        print(f"   🌐 API: {_API_URL}")
         try:
-            from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
-        except ImportError:
-            print("   ⚠️ crawl4ai no instalado — instalá con: pip install crawl4ai && crawl4ai-setup")
+            items = await asyncio.to_thread(self._fetch_items)
+        except Exception as e:
+            print(f"   ⚠️ No se pudo consultar bankDiscount: {type(e).__name__}")
             return []
 
-        print(f"\n🔍 Scraping {self.name}...")
-        print(f"   🌐 URL Base: {self.base_url}")
-
-        all_promotions: List[Dict] = []
-        seen_promos: Set[str] = set()
-        SESSION = 'jumbo_session'
-
-        browser_cfg = BrowserConfig(headless=True, verbose=False)
-
-        # Scroll hasta el fondo + expandir "Ver más" antes de capturar
-        _JS_SCROLL_EXPAND = """
-            (async () => {
-                let prev = 0;
-                for (let i = 0; i < 12; i++) {
-                    window.scrollTo(0, document.body.scrollHeight);
-                    await new Promise(r => setTimeout(r, 350));
-                    if (document.body.scrollHeight === prev) break;
-                    prev = document.body.scrollHeight;
-                }
-                window.scrollTo(0, 0);
-                document.querySelectorAll('button,span,a').forEach(el => {
-                    if (/ver\\s*m[aá]s/i.test(el.textContent) && el.offsetParent !== null) {
-                        try { el.click(); } catch(e) {}
-                    }
-                });
-            })();
-        """
-
-        try:
-            async with AsyncWebCrawler(config=browser_cfg) as crawler:
-                first_day = True
-                for dia_nombre, dia_valor in self.dias.items():
-                    url = f"{self.base_url}?type=por-dia&day={dia_valor}"
-                    print(f"\n      📆 {dia_nombre}  →  {url}")
-
-                    run_cfg = CrawlerRunConfig(
-                        session_id=SESSION,
-                        wait_for="js:() => /\\d+\\s*%|cuotas?\\s+sin\\s+inter/i.test(document.body.innerText)",
-                        js_code=_JS_SCROLL_EXPAND,
-                        delay_before_return_html=1.5,
-                        page_timeout=60000,
-                        cache_mode=CacheMode.BYPASS,
-                    )
-                    result = await crawler.arun(url, config=run_cfg)
-
-                    if not result.success:
-                        print(f"         ⚠️ Error: {result.error_message}")
-                        continue
-
-                    if first_day and os.environ.get('DEBUG_SCRAPER'):
-                        with open('debug_jumbo.html', 'w', encoding='utf-8') as f:
-                            f.write(result.html)
-                        print(f"         📄 HTML guardado: debug_jumbo.html")
-                        first_day = False
-
-                    promos = self._extract_promotions(result.html, dia_nombre, url)
-                    new_count = 0
-                    for promo in promos:
-                        key = f"{promo.get('bank','')}-{promo.get('discount','')}-{promo.get('categories','')}"
-                        if key not in seen_promos:
-                            seen_promos.add(key)
-                            all_promotions.append(promo)
-                            new_count += 1
-                    print(f"         ✅ {new_count} nuevas")
-
-        except Exception as e:
-            print(f"\n   ❌ Error: {e}")
-            import traceback
-            traceback.print_exc()
-
-        print(f"\n✅ {self.name}: {len(all_promotions)} promociones únicas")
-        return all_promotions
-
-    # ──────────────────────────────────────────────────────────────────────────
-    # Métodos de extracción/parsing — sin cambios respecto a versión anterior
-    # ──────────────────────────────────────────────────────────────────────────
-
-    def _extract_promotions(self, html: str, dia_nombre: str, url: str) -> List[Dict]:
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(html, 'html.parser')
-        all_cards = []
-
-        for div in soup.find_all('div'):
-            imgs = div.find_all('img')
-            if not imgs:
-                continue
-            # Si tiene 3+ imágenes en su subárbol, es un contenedor de múltiples tarjetas
-            if len(imgs) > 2:
-                continue
-            text = div.get_text(' ', strip=True)
-            has_discount = bool(re.search(
-                r'\d+\s*%|\d+\s*cuotas?\s*sin\s*inter[eé]s|\d+\s*y\s*\d+\s*cuotas?|\d+\s*CSI',
-                text, re.I))
-            if not has_discount or not (30 < len(text) < 3500):
-                continue
-            child_cards = sum(
-                1 for c in div.find_all('div', recursive=False)
-                if c.find('img') and re.search(r'\d+\s*%|\d+\s*cuotas', c.get_text(' ', strip=True), re.I)
-            )
-            if child_cards > 1:
-                continue
-            all_cards.append(div)
-
-        for selector in ['[class*="promo"]','[class*="card"]','[class*="oferta"]',
-                          '[class*="descuento"]','[class*="bank"]','[class*="promotion"]']:
-            for element in soup.select(selector):
-                if not element.find('img'):
-                    continue
-                text = element.get_text(' ', strip=True)
-                if re.search(r'\d+\s*%|\d+\s*cuotas', text, re.I) and 30 < len(text) < 8000:
-                    if element not in all_cards:
-                        all_cards.append(element)
-
-        print(f"         🔍 Cards candidatas: {len(all_cards)}")
-
-        seen_keys: Set[str] = set()
-        unique: List = []
-        for card in all_cards:
-            text = card.get_text(' ', strip=True)
-            dm = re.search(r'(\d+\s*%\s*(?:Dto\.?)?|\d+\s*(?:y\s*\d+\s*)?[Cc]uotas?\s*[Ss]in\s*[Ii]nter[eé]s)', text)
-            if dm:
-                pos = dm.end()
-                key = f"{dm.group(1)}_{text[pos:pos+80]}"
-            else:
-                key = text[:120]
-            key = re.sub(r'\s+', ' ', key).strip().lower()
-            if key not in seen_keys:
-                seen_keys.add(key)
-                unique.append(card)
-
-        print(f"         🔍 Cards únicas: {len(unique)}")
-
-        promotions = []
-        for card in unique:
-            try:
-                promo = self._parse_promo(card, dia_nombre, url)
-                if promo and promo.get('discount'):
-                    promotions.append(promo)
-            except Exception as e:
-                print(f"         ⚠️ Error parseando card: {e}")
-        print(f"         🔍 Promociones extraídas: {len(promotions)}")
+        promotions = self.parse_items(items)
+        print(f"✅ {self.name}: {len(promotions)} promociones encontradas")
         return promotions
 
-    def _parse_promo(self, card, dia_nombre: str, url: str) -> Dict:
-        text = card.get_text(' ', strip=True)
-        promo = {'url': url, 'supermarket': 'Jumbo', 'valid_days': dia_nombre, 'raw_text': text[:3000]}
+    @staticmethod
+    def _fetch_items() -> List[Dict]:
+        import requests
+        response = requests.get(
+            _API_URL,
+            params={'_fields': 'value,id', 'an': 'jumboargentina'},
+            headers=_HTTP_HEADERS,
+            timeout=(8, 30),
+            allow_redirects=False,
+        )
+        response.raise_for_status()
+        payload = response.json()
+        value = payload.get('value') if isinstance(payload, dict) else None
+        items = json.loads(value) if isinstance(value, str) else value
+        if not isinstance(items, list):
+            raise ValueError('formato inesperado')
+        return items
 
-        img = card.find('img')
-        img_src = img_alt = ''
-        if img:
-            img_src = img.get('src', '') or img.get('data-src', '') or ''
-            img_alt = img.get('alt', '') or ''
-            promo['image_url'] = img_src
+    # ──────────────────────────────────────────────────────────
+    # Parsing
+    # ──────────────────────────────────────────────────────────
 
-        promo['bank'] = self._identify_bank_from_image(img_src, img_alt) or self._identify_bank_from_text(text)
+    def parse_items(self, items: List[Dict], now: Optional[float] = None,
+                    website: str = _WEBSITE) -> List[Dict]:
+        now = time.time() if now is None else now
+        promotions: List[Dict] = []
+        for item in items:
+            if not isinstance(item, dict) or website not in (item.get('websites') or []):
+                continue
+            try:
+                start, end = int(item.get('dateStart') or 0), int(item.get('dateEnd') or 0)
+            except (TypeError, ValueError):
+                continue
+            if not (start <= now <= end):
+                continue
+            try:
+                promo = self._parse_item(item, start, end)
+            except Exception as e:  # un item raro no tira abajo la corrida
+                print(f"   ⚠️ Item ignorado: {e}")
+                continue
+            if promo:
+                promotions.append(promo)
+        return self._ensure_unique_titles(promotions)
 
-        dm = re.search(r'(\d+)\s*%\s*(?:Dto\.?|[Dd]escuento)?', text)
-        if dm:
-            promo['discount'] = f"{dm.group(1)}%"
+    def _parse_item(self, item: Dict, start: int, end: int) -> Optional[Dict]:
+        banks = [b for b in (item.get('banks') or []) if isinstance(b, dict) and _clean(b.get('name'))]
+        raw_entity = _clean(banks[0]['name']) if banks else ''
+        subtitle = _clean(item.get('installmentsText'))
+        info = _clean(item.get('info'))
+        legals = _clean(item.get('legals'))
+        full_text = f"{subtitle}. {info}. {legals}"
 
-        for pattern in [
-            r'(\d+)\s*,?\s*(\d+)?\s*y?\s*(\d+)?\s*[Cc]uotas?\s*[Ss]in\s*[Ii]nter[eé]s',
-            r'(\d+)\s*[Cc]uotas?\s*[Ss]in\s*[Ii]nter[eé]s',
-            r'(\d+)\s*[Cc]SI',
-        ]:
-            m = re.search(pattern, text, re.I)
+        discount = self._format_discount(item.get('discount'), item.get('discountText'), full_text)
+        if not discount:
+            return None
+
+        entity, bank, wallet, payment_method = self._entity(raw_entity)
+        card_type = self._card_type(item.get('paymentMethod'), f"{subtitle} {info}", subtitle)
+        if not payment_method and entity == 'Naranja X':
+            payment_method = 'Tarjeta de crédito Naranja X' if card_type == 'Crédito' else 'Tarjetas Naranja X'
+
+        valid_days = self._valid_days(item.get('days') or [], full_text)
+        store_types = self._store_types(item, f"{subtitle}. {info}" if info else legals, legals)
+
+        requirements: List[str] = []
+        qualifier = self._qualifier(subtitle, discount)
+        if entity == 'Jubilados':
+            requirements.append('Jubilados, pensionados y mayores de 60 años (presentar documentación / Jumbo+)')
+            m = re.search(r'(\d+)\s*%\s*con\s+cencopay', subtitle, re.I)
             if m:
-                groups = [g for g in m.groups() if g]
-                promo['cuotas'] = (
-                    f"{', '.join(groups[:-1])} y {groups[-1]} cuotas sin interés"
-                    if len(groups) > 1 else f"{groups[0]} cuotas sin interés"
-                )
-                if not promo.get('discount'):
-                    promo['discount'] = promo['cuotas']
-                break
+                qualifier = f"({m.group(1)}% con CencoPay)"
+        if re.search(r'jubilad', subtitle + info, re.I) and entity != 'Jubilados':
+            requirements.append('Exclusivo jubilados')
+            qualifier = qualifier or 'Jubilados'
+        branches = re.search(r'en las sucursales de ([^.]+?)\.', info, re.I)
+        if branches:
+            requirements.append(f"Sucursales de {branches.group(1).strip()}")
+        local = re.search(r'EN (?:EL|LOS) LOCAL(?:ES)? (JUMBO [^,.]+?)(?:,| Y EN| EN EL SITIO)', info, re.I)
+        if local:
+            requirements.append(f"Válido en {local.group(1).title()} y jumbo.com.ar")
+        if entity == 'Banco Patagonia':
+            brand = self._card_brand(subtitle)
+            qualifier = brand or qualifier
 
-        for pattern in [
-            r'(?:entre\s+(?:el\s+)?|del\s+|desde\s+(?:el\s+)?)(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})\s*(?:y\s+(?:el\s+)?|al\s+|hasta\s+(?:el\s+)?)(\d{1,2})[/\-](\d{1,2})[/\-](\d{2,4})',
-            r'(?:del|desde)\s+(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})\s+(?:al|hasta)\s+(\d{1,2})\s+de\s+(\w+)\s+de\s+(\d{4})',
-        ]:
-            m = re.search(pattern, text, re.I)
-            if m:
-                g = m.groups()
-                if len(g) == 6:
-                    if g[1].isdigit():
-                        promo['valid_from'] = f"{g[0]}/{g[1]}/{g[2]}"
-                        promo['valid_until'] = f"{g[3]}/{g[4]}/{g[5]}"
-                    else:
-                        promo['valid_from'] = f"{g[0]} de {g[1]} de {g[2]}"
-                        promo['valid_until'] = f"{g[3]} de {g[4]} de {g[5]}"
-                break
+        title = entity + f" {discount}"
+        if qualifier:
+            title += f" {qualifier}"
+        if store_types == 'Online':
+            title += ' (Online)'
+        title += f" - {valid_days}"
 
-        for pattern in [
-            r'(?:TOPE|REEMBOLSO\s+M[AÁ]XIMO|M[AÁ]XIMO|Tope\s+(?:m[aá]ximo\s+)?(?:de\s+)?(?:reintegro)?)[:\s]*\$?\s*([\d.,]+)',
-            r'\$\s*([\d.,]+)\s*(?:de\s+)?(?:tope|m[aá]ximo)',
-        ]:
-            m = re.search(pattern, text, re.I)
-            if m:
-                amt = m.group(1).replace('.', '').replace(',', '.')
-                try:
-                    promo['tope'] = f"${float(amt):,.0f}".replace(',', '.')
-                except Exception:
-                    promo['tope'] = f"${m.group(1)}"
-                break
+        exclusions = []
+        m = re.search(r'(?:NO INCLUYE|SE EXCLUYE[N]?|EXCLUYE)\s*:?\s*([^.]{5,600})', f"{info}. {legals}", re.I)
+        if m:
+            exclusions.append(m.group(1).strip())
 
-        tarjetas = []
-        for kw, name in [('VISA','Visa'),('MASTERCARD','Mastercard'),('CABAL','Cabal'),
-                          ('AMERICAN EXPRESS|AMEX','American Express'),('NARANJA','Naranja')]:
-            if re.search(kw, text, re.I): tarjetas.append(name)
-        if tarjetas: promo['card_types'] = ', '.join(tarjetas)
+        valid_from = datetime.fromtimestamp(start, _AR_TZ).date().isoformat()
+        # dateEnd suele ser 23:59 (inclusive) o 00:00 del día siguiente (exclusivo).
+        valid_until = (datetime.fromtimestamp(end, _AR_TZ) - timedelta(seconds=1)).date().isoformat()
 
-        pt = []
-        if re.search(r'TARJETAS?\s+DE\s+CR[EÉ]DITO|CR[EÉ]DITO', text, re.I): pt.append('Crédito')
-        if re.search(r'TARJETAS?\s+DE\s+D[EÉ]BITO|D[EÉ]BITO', text, re.I):  pt.append('Débito')
-        if pt: promo['payment_type'] = ', '.join(pt)
-
-        for pattern in [
-            r'(?:cuotas?\s+sin\s+inter[eé]s\s+)?en\s+([A-Za-záéíóúñÁÉÍÓÚÑ\s,]+?)(?:\s+Para\s+compras|\s+Promoci[oó]n|\s+V[aá]lida|\s+Abonando|\s+PROMOCIONES|\.|$)',
-            r'Dto\.?\s+(?:en\s+)?([A-Za-záéíóúñÁÉÍÓÚÑ\s,]+?)(?:\s+Para|\s+Promoci[oó]n|\.|$)',
-        ]:
-            m = re.search(pattern, text, re.I)
-            if m:
-                cat = re.sub(r'\s+', ' ', m.group(1).strip())
-                invalid = ['Para','Con','El','La','Los','Las','Desde','Del','Válido','Exclusivo']
-                if 2 < len(cat) < 100 and not any(cat.startswith(w) for w in invalid):
-                    promo['categories'] = cat
-                    break
-
-        excl = []
-        nv = re.search(r'NO\s+V[AÁ]LIDO\s+(?:EL\s+)?(\d{1,2}\s+DE\s+\w+\s+DE\s+\d{4}|\d{1,2}[/\-]\d{1,2}[/\-]\d{2,4})', text, re.I)
-        if nv: excl.append(f"No válido el {nv.group(1)}")
-        for m in re.findall(r'[Nn]o\s+aplica\s+(?:para\s+)?([^.]+?)(?:\.|V[aá]lido|$)', text):
-            if len(m.strip()) > 5: excl.append(f"No aplica {m.strip()[:200]}")
-        if excl: promo['exclusions'] = ' | '.join(excl)[:500]
-
-        if re.search(r'no\s+(?:es\s+)?acumulable|no\s+acumula', text, re.I): promo['acumulable'] = 'No'
-        elif re.search(r'\bacumulable\b', text, re.I): promo['acumulable'] = 'Sí'
-
-        if re.search(r'EXCLUSIVO\s+ONLINE|COMPRAS?\s+ONLINE|JUMBO\.COM', text, re.I): promo['validez'] = 'Online'
-        elif re.search(r'V[AÁ]LIDO\s+PRESENCIAL|EN\s+(?:LOS\s+)?(?:LOCALES|COMERCIOS)', text, re.I): promo['validez'] = 'Presencial'
-
-        for attr, pat in [('tna', r'(?:TNA|TASA\s+NOMINAL\s+ANUAL)[:\s]*(\d+[,.]?\d*)\s*%'),
-                           ('tea', r'(?:TEA|TASA\s+EFECTIVA\s+ANUAL)[:\s]*(\d+[,.]?\d*)\s*%'),
-                           ('cft', r'(?:CFTEA?|COSTO\s+FINANCIERO\s+TOTAL)[^:]*[:\s]*(\d+[,.]?\d*)\s*%')]:
-            m = re.search(pat, text, re.I)
-            if m: promo[attr] = f"{m.group(1)}%"
-
-        if promo.get('bank') == 'MODO':
-            pm = re.search(r'[Pp]articipan\s+(.+?)(?:\.\s*[A-Z]|$)', text)
-            if pm:
-                bl = re.findall(r'Banco\s+[\w\s]+|Billetera\s+\w+|\bICBC\b|\bBBVA\b|\bHSBC\b', pm.group(1), re.I)
-                if bl:
-                    promo['bancos_participantes'] = ', '.join(
-                        b.strip().rstrip(',y').strip() for b in bl if len(b.strip()) > 3
-                    )[:15 * 20]
-
-        title_parts = []
-        if promo.get('bank'):       title_parts.append(promo['bank'])
-        if promo.get('discount'):   title_parts.append(promo['discount'])
-        if promo.get('categories'): title_parts.append(f"en {promo['categories']}")
-        if promo.get('validez') == 'Online': title_parts.append('(Online)')
-        title_parts.append(f"- {dia_nombre}")
-        promo['title'] = ' '.join(title_parts) if title_parts else text[:80]
-
-        return promo
-
-    def _identify_bank_from_image(self, img_src: str, img_alt: str) -> str:
-        if not img_src and not img_alt:
-            return ''
-        combined = f"{img_src} {img_alt}".lower()
-        for pattern, name in [
-            (r'hipotecario', 'Banco Hipotecario'), (r'supervielle', 'Supervielle'),
-            (r'galicia', 'Banco Galicia'),          (r'macro', 'Banco Macro'),
-            (r'nacion|bna[^c]|banco.?nacion', 'Banco Nación'), (r'ciudad', 'Banco Ciudad'),
-            (r'provincia|bapro', 'Banco Provincia'),(r'santander', 'Banco Santander'),
-            (r'patagonia', 'Banco Patagonia'),      (r'comafi', 'Banco Comafi'),
-            (r'c[oó]rdoba|bancor', 'Bancor'),       (r'columbia', 'Banco Columbia'),
-            (r'hsbc', 'HSBC'),                      (r'bbva|franc[eé]s', 'BBVA'),
-            (r'icbc', 'ICBC'),                      (r'credicoop', 'Banco Credicoop'),
-            (r'modo', 'MODO'),                      (r'mercado[-_]?pago|mp[-_]logo', 'Mercado Pago'),
-            (r'prex', 'Prex'),                      (r'personal[-_]?pay', 'Personal Pay'),
-            (r'cuenta[-_]?dni', 'Cuenta DNI'),      (r'ual[aá]', 'Ualá'),
-            (r'cencopay|cencosud|cencop', 'CencoPay'),
-            (r'naranja', 'Naranja X'),              (r'clarin|365', 'Clarín 365'),
-            (r'tarjeta.?sol|sol.?tarjeta', 'Tarjeta Sol'), (r'amex|american', 'American Express'),
-            (r'visa[-_]?master|master[-_]?visa', 'Visa/Mastercard'),
-            (r'visa', 'Visa'),                      (r'mastercard|master', 'Mastercard'),
-        ]:
-            if re.search(pattern, combined):
-                return name
-        return ''
-
-    def _identify_bank_from_text(self, text: str) -> str:
-        text_upper = text.upper()
-
-        if 'TRAVÉS DE MODO' in text_upper or 'CON MODO' in text_upper:
-            m = re.search(
-                r'(?:CLIENTES?\s+(?:DE\s+)?|TARJETAS?\s+(?:DE\s+)?|EMITIDAS?\s+POR\s+)'
-                r'(BANCO\s+\w+|SUPERVIELLE|HIPOTECARIO|GALICIA|MACRO|SANTANDER)', text_upper)
-            if m:
-                return self._normalize_bank_name(m.group(1))
-            if re.search(r'PAGANDO\s+CON\s+MODO', text_upper) and re.search(r'PARTICIPAN\s+BANCO', text_upper):
-                return 'MODO'
-
-        banco_patterns = [
-            (r'BANCO\s+HIPOTECARIO', 'Banco Hipotecario'), (r'SUPERVIELLE', 'Supervielle'),
-            (r'BANCO\s+(?:DE\s+)?GALICIA', 'Banco Galicia'), (r'BANCO\s+MACRO', 'Banco Macro'),
-            (r'BANCO\s+(?:DE\s+LA\s+)?NACI[OÓ]N', 'Banco Nación'), (r'BANCO\s+CIUDAD', 'Banco Ciudad'),
-            (r'BANCO\s+(?:DE\s+LA\s+)?PROVINCIA', 'Banco Provincia'), (r'BANCO\s+SANTANDER', 'Banco Santander'),
-            (r'BANCO\s+PATAGONIA', 'Banco Patagonia'), (r'BANCO\s+COMAFI', 'Banco Comafi'),
-            (r'BANCOR|BANCO\s+(?:DE\s+)?C[OÓ]RDOBA', 'Banco Córdoba'),
-            (r'\bHSBC\b', 'HSBC'), (r'\bBBVA\b', 'BBVA'), (r'\bICBC\b', 'ICBC'),
-        ]
-
-        mentions = {name: len(re.findall(p, text_upper)) for p, name in banco_patterns
-                    if re.search(p, text_upper)}
-        if len(mentions) == 1:
-            return list(mentions.keys())[0]
-        if len(mentions) > 1:
-            for p, name in banco_patterns:
-                if re.search(rf'(?:CLIENTES?\s+(?:DE\s+)?|TARJETAS?\s+(?:DE\s+)?){p}', text_upper):
-                    return name
-
-        for pattern, name in [
-            (r'\bMODO\b', 'MODO'),             (r'MERCADO\s*PAGO', 'Mercado Pago'),
-            (r'\bPREX\b', 'Prex'),             (r'PERSONAL\s+PAY', 'Personal Pay'),
-            (r'CUENTA\s+DNI', 'Cuenta DNI'),   (r'\bUAL[AÁ]\b', 'Ualá'),
-            (r'\bCENCOPAY\b', 'CencoPay'),     (r'NARANJA\s*X?|TARJETA\s+NARANJA', 'Naranja X'),
-            (r'CLAR[IÍ]N\s*365', 'Clarín 365'),(r'TARJETA\s+SOL', 'Tarjeta Sol'),
-        ]:
-            if re.search(pattern, text_upper):
-                return name
-        return ''
-
-    def _normalize_bank_name(self, banco_text: str) -> str:
-        banco_upper = banco_text.upper().strip()
+        key = '|'.join([raw_entity, str(item.get('discount')), _clean(item.get('discountText')),
+                        subtitle, str(item.get('dateStart')), ','.join(item.get('days') or [])])
         return {
-            'GALICIA': 'Banco Galicia',          'BANCO GALICIA': 'Banco Galicia',
-            'BANCO DE GALICIA': 'Banco Galicia', 'MACRO': 'Banco Macro',
-            'BANCO MACRO': 'Banco Macro',        'NACION': 'Banco Nación',
-            'BANCO NACION': 'Banco Nación',      'BANCO DE LA NACION': 'Banco Nación',
-            'CIUDAD': 'Banco Ciudad',            'BANCO CIUDAD': 'Banco Ciudad',
-            'PROVINCIA': 'Banco Provincia',      'BANCO PROVINCIA': 'Banco Provincia',
-            'BANCO DE LA PROVINCIA': 'Banco Provincia', 'SANTANDER': 'Banco Santander',
-            'BANCO SANTANDER': 'Banco Santander','PATAGONIA': 'Banco Patagonia',
-            'BANCO PATAGONIA': 'Banco Patagonia','SUPERVIELLE': 'Supervielle',
-            'BANCO SUPERVIELLE': 'Supervielle',  'COMAFI': 'Banco Comafi',
-            'BANCO COMAFI': 'Banco Comafi',      'HIPOTECARIO': 'Banco Hipotecario',
-            'BANCO HIPOTECARIO': 'Banco Hipotecario', 'HSBC': 'HSBC',
-            'BBVA': 'BBVA',                      'ICBC': 'ICBC',
-            'BANCOR': 'Banco Córdoba',           'BANCO CORDOBA': 'Banco Córdoba',
-        }.get(banco_upper, banco_text.title())
+            'title': title[:200],
+            'discount': discount,
+            'bank': bank,
+            'wallet': wallet,
+            'card_type': card_type,
+            'payment_method': payment_method,
+            'store_types': store_types,
+            'valid_days': valid_days,
+            'valid_from': valid_from,
+            'valid_until': valid_until,
+            'url': self.base_url,
+            'image_url': (banks[0].get('image') or None) if banks else None,
+            'terms_raw': legals or info,
+            'tope': self._extract_tope(subtitle, info, '' if entity == 'Jubilados' else legals),
+            'min_purchase': self._extract_min_purchase(f"{subtitle}. {info}. {legals}"),
+            'acumulable': self._acumulable(f"{info}. {legals}"),
+            'exclusions': exclusions,
+            'requirements': requirements,
+            'source_id': 'jumbo-' + hashlib.sha1(key.encode('utf-8')).hexdigest()[:12],
+        }
+
+    @staticmethod
+    def _entity(raw: str) -> Tuple[str, Optional[str], Optional[str], Optional[str]]:
+        key = _norm(raw)
+        if key in _ENTITIES:
+            return _ENTITIES[key]
+        # Nombre nuevo: se usa tal cual (con mayúscula inicial) como banco.
+        name = raw.strip()
+        name = name[0].upper() + name[1:] if name else 'Medios de pago'
+        return name, name, None, None
+
+    @staticmethod
+    def _card_type(payment_methods: Any, text: str, subtitle: str = '') -> Optional[str]:
+        sub = subtitle.lower()
+        has_credit, has_debit = bool(re.search(r'cr[ée]dito', sub)), bool(re.search(r'd[ée]bito', sub))
+        if has_credit != has_debit:
+            return 'Crédito' if has_credit else 'Débito'
+        keys = list(payment_methods.keys()) if isinstance(payment_methods, dict) else []
+        types = [t for t in ('Crédito', 'Débito') if t in keys]
+        if not types:
+            low = text.lower()
+            if re.search(r'd[ée]bito', low):
+                types.append('Débito')
+            if re.search(r'cr[ée]dito', low):
+                types.insert(0, 'Crédito')
+        return ', '.join(types) or None
+
+    @staticmethod
+    def _format_discount(raw_value: Any, raw_text: Any, full_text: str) -> str:
+        """'24.99' → 25 (el sitio carga 24.99 para mostrar 25), '11.99' cuotas → 12."""
+        try:
+            value = float(str(raw_value).replace(',', '.'))
+        except (TypeError, ValueError):
+            return ''
+        if value <= 0:
+            return ''
+        number = int(round(value))
+        text = _clean(raw_text)
+        low = _norm(text)
+
+        if 'cuota' in low:
+            # "3" + ", 6 y 12 Cuotas sin Interés" / "y 4 cuotas" / "6 y 12 Cuotas"
+            pre = re.split(r'cuotas?', text, flags=re.I)[0]
+            extra = re.findall(r'\d+', pre)
+            if '%' in pre:
+                return f"{number}% y {' y '.join(extra)} cuotas sin interés" if extra else f"{number}%"
+            nums = [str(number)] + extra
+            if len(nums) == 1:
+                joined = nums[0]
+            else:
+                joined = ', '.join(nums[:-1]) + ' y ' + nums[-1]
+            return f"{joined} cuotas sin interés"
+        if 'mil' in low and '$' in text:
+            return f"${number * 1000:,}".replace(',', '.') + ' reintegro'
+        if low in ('', '%') or low.startswith('%'):
+            # Sólo "reintegro" si el texto lo dice para ESTE porcentaje (los legales de
+            # Jumbo agrupan varias promos y mencionan reintegros de otras).
+            explicit = (
+                rf'\b{number}\s*%\s*(?:de\s+)?reintegro|reintegro\s*(?:\(cashback\)\s*)?del\s*{number}\s*%|'
+                r'^\W*de\s+reintegro|se\s+otorgar[áa]\s+un\s+reintegro'
+            )
+            if re.search(explicit, full_text, re.I):
+                return f"{number}% reintegro"
+            return f"{number}%"
+        return f"{number}%"
+
+    @staticmethod
+    def _qualifier(subtitle: str, discount: str) -> Optional[str]:
+        """Subtítulo de la card cuando describe el alcance ('en Electro', 'en Tv y más')."""
+        sub = subtitle.strip(' .')
+        if not sub:
+            return None
+        if '$' in sub:
+            return None  # ya queda en tope / min_purchase
+        if re.match(r'en\s', sub, re.I) and len(sub) <= 60:
+            rest = sub[3:].strip()
+            if rest.isupper():
+                rest = rest.capitalize()
+            return f"en {rest}"
+        if '%' in discount and re.match(r'\d+\s+cuotas\s+sin\s+inter', sub, re.I):
+            return '+ ' + sub.lower()
+        return None
+
+    @staticmethod
+    def _card_brand(subtitle: str) -> Optional[str]:
+        low = subtitle.lower()
+        if 'american express' in low or 'amex' in low:
+            return 'American Express'
+        if 'visa' in low:
+            return 'Visa'
+        if 'mastercard' in low:
+            return 'Mastercard'
+        return None
+
+    @staticmethod
+    def _valid_days(days: List[Any], text: str) -> str:
+        names = {_DAY_NAMES[str(d).strip()] for d in days if str(d).strip() in _DAY_NAMES}
+        if not names:
+            return 'Todos los días'
+        # El sitio sólo tiene pestañas Lunes..Sábado: los "todos los días" vienen como 1..6
+        # y las promos de fin de semana suelen marcar sólo el sábado.
+        if 'Sábado' in names and re.search(r'domingos?\b', text, re.I) and not re.search(
+                r'(?:no|excepto|salvo)\s+(?:v[aá]lid[oa]\s+)?(?:los\s+)?domingos?', text, re.I):
+            names.add('Domingo')
+        if {'Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado'} <= names:
+            return 'Todos los días'
+        return ', '.join(d for d in _DAY_ORDER if d in names)
+
+    @staticmethod
+    def _store_types(item: Dict, text: str, legals: str = '') -> str:
+        """Canal según la card (subtítulo + legal corto); el legal completo agrupa varias promos."""
+        upper = text.upper()
+        presencial_re = r'EXCLUSIVO\s+(?:PARA\s+)?(?:VENTAS?\s+|COMPRAS?\s+)?PRESENCIAL(?!\s+Y)'
+        presencial_only = re.search(
+            presencial_re + r'|SOLO\s+(?:PARA\s+)?VENTA\s+PRESENCIAL|'
+            r'V[AÁ]LIDO\s+PRESENCIAL|EXCLUSIVO\s+COMPRAS\s+PRESENCIALES', upper)
+        online_only = re.search(r'EXCLUSIVO\s+(?:PARA\s+)?(?:VENTA\s+|COMPRAS?\s+)?ONLINE|SOLO\s+VENTA\s+NO\s+PRESENCIAL|'
+                                r'EN\s+LOS\s+SITIOS\s+WEB\s+OBTENIENDO', upper)
+        mentions_web = re.search(r'ONLINE|SITIO|WEB|JUMBO\.COM\.AR', upper)
+        if presencial_only and not online_only:
+            return 'Tiendas'
+        if item.get('isExclusive') or online_only:
+            # El sello "Exclusivo Online" a veces contradice el legal ("EXCLUSIVO VENTA
+            # PRESENCIAL", p. ej. 30% CencoPay Cuenta con QR): manda el legal.
+            if not online_only and re.search(presencial_re, legals.upper()):
+                return 'Tiendas'
+            return 'Online'
+        if re.search(r'COMPRAS?\s+PRESENCIAL', upper) and not mentions_web:
+            return 'Tiendas'
+        return 'Online, Tiendas'
+
+    # ──────────────────────────────────────────────────────────
+    # Tope / compra mínima / acumulable
+    # ──────────────────────────────────────────────────────────
+
+    @staticmethod
+    def _tope_in(text: str) -> Tuple[Optional[str], Optional[str]]:
+        for m in re.finditer(r'\btopes?\b', text, re.I):
+            window = text[m.start():m.start() + 160]
+            amount = re.search(r'\$\s*(\d{1,3}(?:[.,]\d{3})+|\d{3,})|\b(\d{1,3}(?:\.\d{3})+)\b', window)
+            if not amount:
+                continue
+            raw = amount.group(1) or amount.group(2)
+            context = window[:amount.end() + 70].lower()
+            if re.search(r'diari|por d[ií]a\b', context):
+                period = 'diario'
+            elif re.search(r'semana|semanal', context):
+                period = 'semanal'
+            elif re.search(r'\bmes\b|mensual', context):
+                period = 'mensual'
+            elif 'vigencia' in context:
+                period = 'por vigencia'
+            else:
+                period = None
+            return _fmt_amount(raw), period
+        return None, None
+
+    def _extract_tope(self, subtitle: str, info: str, legals: str) -> Optional[str]:
+        for text in (subtitle, info, legals):
+            if re.search(r'sin\s+tope', text, re.I):
+                return 'Sin tope'
+            amount, period = self._tope_in(text)
+            if amount:
+                if not period:
+                    # el período suele estar en el legal ("$15.000 POR MES")
+                    for other in (info, legals):
+                        other_amount, other_period = self._tope_in(other)
+                        if other_amount == amount and other_period:
+                            period = other_period
+                            break
+                    if not period and re.search(r'tope\s+mensual', f"{info} {legals}", re.I):
+                        period = 'mensual'
+                return f"{amount} {period}" if period else amount
+        return None
+
+    @staticmethod
+    def _extract_min_purchase(text: str) -> Optional[str]:
+        m = re.search(
+            r'(?:m[ií]nimo\s+de\s+compra(?:\s+de)?|a\s+partir\s+de|superiores?\s+a(?:\s+total\s+de)?|'
+            r'mayores?\s+a)\s*\$\s*(\d[\d.,]*)', text, re.I)
+        return _fmt_amount(m.group(1)) if m else None
+
+    @staticmethod
+    def _acumulable(text: str) -> Optional[bool]:
+        if re.search(r'no\s+(?:es\s+)?acumulable', text, re.I):
+            return False
+        if re.search(r'acumulable', text, re.I):
+            return True
+        return None
+
+    @staticmethod
+    def _ensure_unique_titles(promotions: List[Dict]) -> List[Dict]:
+        seen: Dict[str, int] = {}
+        for promo in promotions:
+            title = promo['title']
+            if title in seen:
+                seen[title] += 1
+                promo['title'] = f"{title} ({seen[title]})"
+            else:
+                seen[title] = 1
+        return promotions

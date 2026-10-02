@@ -1,0 +1,381 @@
+{
+"data": {
+"documents": [
+{
+"fields": [
+{
+"key": "id",
+"value": "0956bf6c-983a-11ee-8452-1298279711fd",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Logo Id - MODO3_Credicoop.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Banco Credicoop MODO",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "6167861a-a593-11ee-8452-0af780f66fd5",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "GaliciaMini.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Banco Galicia",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "fdfcc594-907a-11ed-83ab-0ab135d7cee1",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "1BancoPatagonia.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Banco Patagonia",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "f9315b48-4f81-11ef-8452-121b3ce95f81",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "CuentaDNI_chico.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Banco Provincia - Cuenta DNI",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "b7409f62-44f4-11ed-83ab-1600502170e1",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "1Supervielle.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Banco Supervielle",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "ec7714dc-2866-405a-843a-8f8476c47b01",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "BANCOR_chico.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "BANCOR",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "15ff1c4e-2630-11f0-b37f-93b1d8eaa315",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "04_BilleterasVirtuales_chico 7.webp",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Billeteras Virtuales",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "1ca7093d-5c03-45ef-8550-a8f06cd46921",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Logo_Credicuotas.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Credicuotas",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "false",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "c40d38d3-1a7a-11ee-83ab-0263dabe290f",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Copia de Logo Id - MODO2_Hipotecario.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Hipotecario_Modo",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "06fc4208-78d8-11ee-83ab-0a1649dfa6b1",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Logo Id - MODO3_ICBC.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "ICBC Modo",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "8ccbdf0d-905d-11ee-8452-0eb8fa5466a5",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Mercado-Pago-Logo 2.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Mercado Pago",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "6bbbedf1-ab40-11ee-8452-127334bd7427",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "modo.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Modo",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "9a9c3703-2fe8-11ee-83ab-0ecaeb3d03b5",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Logo_Naranjax_final.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "NaranjaX",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "true",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "c7025517-3067-11ee-83ab-125c839bfdf1",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Patagonia365.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Patagonia 365",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+},
+{
+"fields": [
+{
+"key": "id",
+"value": "ab6abe23-54fd-11ef-8452-1211a9021aa7",
+"__typename": "Field"
+},
+{
+"key": "image",
+"value": "Logo Id - MODO3_YOY.png",
+"__typename": "Field"
+},
+{
+"key": "name",
+"value": "Yoy_MODO",
+"__typename": "Field"
+},
+{
+"key": "showInPdp",
+"value": "null",
+"__typename": "Field"
+}
+],
+"__typename": "Document"
+}
+]
+}
+}

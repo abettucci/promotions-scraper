@@ -69,6 +69,7 @@ export interface Stats {
   last_updated: string | null
   top_banks: { name: string; count: number }[]
   by_supermarket: { name: string; count: number }[]
+  by_category?: Record<string, number>
 }
 
 export type PromotionState = "activa" | "proxima" | "finalizada"

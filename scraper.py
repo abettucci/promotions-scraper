@@ -213,6 +213,14 @@ class PromoScraper:
                 return
             
             raw_count = len(promotions)
+            promotions, expired = self._drop_expired_promotions(promotions)
+            if expired:
+                self.log(f"   ⌛ {expired} promociones vencidas descartadas")
+            if not promotions:
+                self.log(f"⚠️  {supermarket_data['name']}: todas las promociones están vencidas", 'WARNING')
+                self.db.deactivate_for_source(supermarket_id, supermarket_key, include_legacy=not is_aggregator)
+                self.db.insert_scrape_history(supermarket_id, 'success', 0, 'All promotions expired')
+                return
             promotions = self._deduplicate_promotions(promotions)
             if raw_count != len(promotions):
                 self.log(f"   🧹 Dedup: {raw_count} → {len(promotions)} promociones únicas")
@@ -228,8 +236,10 @@ class PromoScraper:
                 )
                 return
 
-            # Deactivate all existing promos before re-inserting so old duplicates are cleared
-            self.db.deactivate_all_for_supermarket(supermarket_id)
+            # Desactivar sólo lo que publicó esta fuente antes de re-insertar:
+            # las promos que otros aggregators rutearon a este comercio
+            # (p. ej. MODO → Shell) no se tocan.
+            self.db.deactivate_for_source(supermarket_id, supermarket_key, include_legacy=not is_aggregator)
 
             inserted = 0
             extraction_method = 'ai_vision' if self.use_ai else 'traditional'
@@ -245,22 +255,32 @@ class PromoScraper:
                     if not brands and default_brand:
                         brands = [default_brand]
                     if not brands:
-                        # Sin marca identificable → entrada genérica
-                        brands = ['Combustible (genérico)']
+                        # Sin marca identificable no sabemos dónde aplica: antes
+                        # se creaba "Combustible (genérico)" con datos basura.
+                        self.log(f"   ⏭️ Sin marca identificable, se omite: {promo.get('title')}", 'WARNING')
+                        continue
 
+                    # Los aggregators de combustible rutean a estaciones; los de
+                    # beneficios (Cuenta DNI, Buepp...) indican el rubro por promo.
+                    category = promo.get('merchant_category') or supermarket_data.get('category', 'fuel')
+                    if category not in ('supermarket', 'fuel'):
+                        continue
                     for brand in brands:
                         brand_id = self.db.insert_supermarket(
                             brand,
-                            supermarket_data['url'],  # url de origen (la del banco)
-                            'fuel',
+                            promo.get('merchant_url') or supermarket_data['url'],
+                            category,
+                            update_existing=False,
                         )
-                        # Limpiar promos viejas de esta marca solo la primera vez que la tocamos
+                        # Limpiar lo que esta fuente publicó antes en la marca
+                        # (sólo la primera vez que la tocamos en la corrida).
                         if brand_id not in touched:
-                            self.db.deactivate_all_for_supermarket(brand_id)
+                            self.db.deactivate_for_source(brand_id, supermarket_key)
                             touched[brand_id] = []
 
                         promo_for_brand = dict(promo)
                         promo_for_brand['merchant_brand'] = brand
+                        promo_for_brand['source'] = supermarket_key
                         promotion_id = self.db.insert_promotion(brand_id, promo_for_brand)
                         if promotion_id:
                             touched[brand_id].append(promo.get('title', ''))
@@ -284,7 +304,7 @@ class PromoScraper:
                 # Flujo standard: todas las promos van bajo este supermarket
                 current_titles = []
                 for promo in promotions:
-                    promotion_id = self.db.insert_promotion(supermarket_id, promo)
+                    promotion_id = self.db.insert_promotion(supermarket_id, {**promo, 'source': supermarket_key})
                     if promotion_id:
                         current_titles.append(promo.get('title', ''))
                         inserted += 1
@@ -292,15 +312,32 @@ class PromoScraper:
                             terms_data = self._terms_for_promo(promo)
                             self.db.insert_terms(promotion_id, terms_data)
 
-                deactivated = self.db.deactivate_old_promotions(supermarket_id, current_titles)
+                # Las que no volvieron a aparecer ya quedaron desactivadas por
+                # deactivate_for_source; el upsert reactiva las vigentes.
+                deactivated = 0
                 self.db.update_supermarket_scraped(supermarket_id)
                 self.db.insert_scrape_history(supermarket_id, 'success', inserted,
                                                f'Method: {extraction_method}')
                 self.log(f"✅ {supermarket_data['name']}: {inserted} promociones guardadas" +
                          (f", {deactivated} desactivadas" if deactivated > 0 else ""))
 
-            # Solo se actualiza después de haber persistido la extracción.
-            # Si el proceso falla, el cache no puede ocultar un reintento.
+            # Solo se actualiza si se persistió todo lo extraído. Si algún
+            # INSERT falló, el cache ocultaría el reintento en la próxima
+            # corrida (así quedaron fuentes con 0 promos durante semanas).
+            # (Los aggregators abren cada promo en N marcas y omiten las que no
+            # tienen marca, así que el conteo no es comparable.)
+            if not is_aggregator and inserted < len(promotions):
+                self.log(
+                    f"⚠️ {supermarket_data['name']}: solo {inserted}/{len(promotions)} promociones "
+                    "se guardaron; no se actualiza el cache", 'WARNING',
+                )
+                self.db.insert_scrape_history(
+                    supermarket_id, 'error', inserted,
+                    f'Partial insert: {inserted}/{len(promotions)}',
+                )
+                self.stats['total_promotions'] += inserted
+                self.stats['failed_scrapes'] += 1
+                return
             try:
                 self.result_cache.remember(supermarket_key, promotions)
             except Exception as cache_error:
@@ -387,16 +424,47 @@ class PromoScraper:
             payment_method = (promo.get('payment_method') or '').strip().lower()
             entity = bank or wallet or card_type or payment_method
             if not entity:
-                continue
+                # Promos de "todos los medios de pago" o programas propios
+                # (p. ej. Puma Pris) no tienen entidad; se distinguen por título.
+                entity = 'title:' + (promo.get('title') or '').strip().lower()
+                if entity == 'title:':
+                    continue
             discount = (promo.get('discount') or '').strip().lower()
             days = (promo.get('valid_days') or '').strip().lower()[:40]
-            stores = (promo.get('store_types') or '').lower()
-            has_online = 'carrefour.com' in stores or '.com' in stores or 'online' in stores
-            key = (entity, discount, days, has_online)
+            stores = (promo.get('store_types') or promo.get('aplica_en') or '').strip().lower()
+            # El tope distingue tramos de la misma promo (Plan Sueldo vs Singular,
+            # tarjeta clásica vs Visa) que antes se pisaban entre sí.
+            tope = (promo.get('tope') or '').strip().lower()
+            key = (entity, discount, days, stores, tope)
             existing = seen.get(key)
             if existing is None or len(promo.get('terms_raw') or '') > len(existing.get('terms_raw') or ''):
                 seen[key] = promo
         return list(seen.values())
+
+    @staticmethod
+    def _drop_expired_promotions(promotions: list) -> tuple[list, int]:
+        """Descarta promos con valid_until pasado antes de tocar la DB.
+
+        Si valid_until < valid_from (typo frecuente en legales, p. ej. "DEL
+        1/10/2026 AL 31/12/2025") se descarta sólo la fecha de fin para no
+        ocultar una promo que sigue publicada.
+        """
+        from database import normalize_date_iso
+
+        today = datetime.now().date().isoformat()
+        kept = []
+        expired = 0
+        for promo in promotions:
+            valid_from = normalize_date_iso(promo.get('valid_from'))
+            valid_until = normalize_date_iso(promo.get('valid_until'))
+            if valid_from and valid_until and valid_until < valid_from:
+                promo = {**promo, 'valid_until': None}
+                valid_until = None
+            if valid_until and valid_until < today:
+                expired += 1
+                continue
+            kept.append(promo)
+        return kept, expired
 
     def _terms_for_promo(self, promo: dict) -> dict:
         """Preserva condiciones explícitas del scraper si el parser no las detecta."""

@@ -2,94 +2,101 @@
 """
 Scraper de Supermercados Día - Promociones Bancarias
 
-Estructura VTEX de DIA:
-  - Cards: div.diaio-custom-bank-promotions-0-x-card_detail + banco como clase CSS extra
-  - Descuento: solo visible en imagen Y en el modal que abre "Ver Legales"
-  - Días: los días válidos están en el texto legal del modal
+La landing VTEX ``/medios-de-pago-y-promociones`` se renderiza del lado del
+servidor y trae embebido (en un ``<script>`` JSON) el contenido del bloque
+``...landing-medios-pago#props``. De ahí se usa ``content.cards`` (las tarjetas
+que se ven en la página; ``props.cards`` es una copia vieja y NO se usa):
 
-Approach Crawl4AI (sin async IIFE → no timeout de Playwright):
-  1. Carga inicial → esperar cards → JS síncrono inyecta metadata de cards visibles
-  2. Por cada card: js_only click "Ver Legales" (index puntual) → delay 2s → parsear modal
-  3. js_only ESC/close → siguiente card
-  4. Extraer discount + días desde el texto del modal
+  - ``__editorItemTitle``: rótulo interno ("Naranja 25%", "5% BNA MODO").
+  - ``active``: sólo las activas se muestran.
+  - ``daysToShow``: días de la tarjeta (se ignora ``all``).
+  - ``availableOn``: online / store.
+  - ``associatedBanks``: entidad (puede venir vacía, p. ej. Credicoop).
+  - ``terms``: legal completo (vigencia, tope, mínimo, tipo de tarjeta).
+
+No necesita navegador: alcanza con un GET plano.
 """
-import re
-import os
+import asyncio
 import json
-from typing import List, Dict, Set
+import os
+import re
+import tempfile
+from datetime import date, datetime
+from typing import Any, Dict, List, Optional, Tuple
 
 
-_CSS_CARD = 'diaio-custom-bank-promotions-0-x-card_detail'
+_PROPS_SUFFIX = 'landing-medios-pago#props'
+_HEADERS = {
+    'User-Agent': (
+        'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
+        '(KHTML, like Gecko) Chrome/124.0.0.0 Safari/537.36'
+    ),
+    'Accept-Language': 'es-AR,es;q=0.9',
+}
 
-# JS síncrono que inyecta metadata de cards visibles en el DOM
-# Sin async/await → nunca hace timeout en page.evaluate()
-_JS_INJECT_METADATA = f"""
-(() => {{
-    const CSS_CARD = '{_CSS_CARD}';
-    const cards = Array.from(document.querySelectorAll('.' + CSS_CARD))
-        .filter(d => !Array.from(d.classList).some(c => c.includes('__')))
-        .filter(d => getComputedStyle(d).display !== 'none'
-                  && getComputedStyle(d).visibility !== 'hidden'
-                  && d.getBoundingClientRect().width > 0);
+_DAY_KEYS = (
+    ('monday', 'Lunes'), ('tuesday', 'Martes'), ('wednesday', 'Miércoles'),
+    ('thursday', 'Jueves'), ('friday', 'Viernes'), ('saturday', 'Sábado'),
+    ('sunday', 'Domingo'),
+)
+_MONTHS = {
+    'enero': 1, 'febrero': 2, 'marzo': 3, 'abril': 4, 'mayo': 5, 'junio': 6,
+    'julio': 7, 'agosto': 8, 'septiembre': 9, 'setiembre': 9, 'octubre': 10,
+    'noviembre': 11, 'diciembre': 12,
+}
+_MONTH_RE = '|'.join(_MONTHS)
 
-    const meta = cards.map((d, i) => {{
-        const cls = Array.from(d.classList).filter(c => c !== CSS_CARD);
-        const img = d.querySelector('img');
-        const channels = Array.from(d.querySelectorAll('span'))
-            .map(s => s.textContent.trim())
-            .filter(t => t === 'ONLINE' || t === 'TIENDAS');
-        return {{
-            dom_idx: Array.from(document.querySelectorAll('.' + CSS_CARD))
-                .filter(x => !Array.from(x.classList).some(c => c.includes('__')))
-                .indexOf(d),
-            bank_cls: cls.join(' '),
-            channels: [...new Set(channels)],
-            img_src: img ? (img.src || img.dataset.src || '') : ''
-        }};
-    }});
+# Nombre de entidad (associatedBanks o rótulo) → (bank, wallet, etiqueta).
+_ENTITIES = (
+    (r'^modo$', (None, 'MODO', 'MODO')),
+    (r'prex', (None, 'Prex', 'Prex')),
+    (r'personal\s*pay', (None, 'Personal Pay', 'Personal Pay')),
+    (r'mercado\s*pago', (None, 'Mercado Pago', 'Mercado Pago')),
+    (r'cuenta\s*dni', ('Banco Provincia', 'Cuenta DNI', 'Cuenta DNI')),
+    (r'columbia', ('Banco Columbia', None, 'Banco Columbia')),
+    (r'banco\s*del\s*sol', ('Banco del Sol', None, 'Banco del Sol')),
+    (r'credicoop', ('Banco Credicoop', None, 'Banco Credicoop')),
+    (r'corrientes', ('Banco de Corrientes', None, 'Banco de Corrientes')),
+    (r'naranja', ('Naranja X', None, 'Naranja X')),
+    (r'^bna$|banco\s*naci[oó]n', ('Banco Nación', None, 'Banco Nación')),
+    (r'anses', ('ANSES', None, 'ANSES')),
+    (r'sidecreer', ('Sidecreer', None, 'Sidecreer')),
+    (r'tarjeta\s*ba|ciudadan[ií]a', (None, None, 'Ciudadanía Porteña')),
+    (r'galicia', ('Banco Galicia', None, 'Banco Galicia')),
+    (r'macro', ('Banco Macro', None, 'Banco Macro')),
+    (r'ciudad', ('Banco Ciudad', None, 'Banco Ciudad')),
+)
+_CARD_BRANDS = (
+    (r'\bvisa\b', 'Visa'), (r'master\s*card', 'Mastercard'),
+    (r'american\s+express|\bamex\b', 'American Express'), (r'\bcabal\b', 'Cabal'),
+)
+# Tiendas regionales: el legal o la entidad restringe a una provincia.
+_REGIONAL_ENTITIES = {'Banco de Corrientes': 'Corrientes'}
 
-    let el = document.getElementById('__dia_meta');
-    if (!el) {{
-        el = document.createElement('div');
-        el.id = '__dia_meta';
-        el.style.display = 'none';
-        document.body.appendChild(el);
-    }}
-    el.textContent = JSON.stringify(meta);
-    return meta.length;
-}})()
-"""
+# Datos que Día publica SÓLO en la imagen de la tarjeta (el legal no los
+# dice). Se indexan por el id del asset: si Día cambia la imagen, el dato deja
+# de aplicarse y la tarjeta vuelve a parsearse sólo desde el legal.
+_IMAGE_FACTS = {
+    # ANSES: "10% de reintegro - Tope $2.000 por transacción - Del 1 de enero
+    # al 31 de octubre - Tarjeta de débito (solo beneficiarios)".
+    '5781d88c-21c3-4ce0-b76e-18a573e3d3ab': {
+        'percent': 10, 'tope': '$2.000 por transacción', 'card_type': 'Débito',
+        'valid_from': '2026-01-01', 'valid_until': '2026-10-31',
+    },
+    # Credicoop: el legal sólo da el ejemplo ($60.000 → $15.000); la imagen
+    # confirma "25% de reintegro - Tope de $15.000 semanal".
+    '7f92d03b-ce19-4469-a08c-8ea2283bde5d': {'percent': 25, 'tope': '$15.000 semanal'},
+}
 
-def _js_click_ver_legales(dom_idx: int) -> str:
-    """Clickea 'Ver Legales' de la card con posición dom_idx (entre todas las cards top-level)."""
-    return f"""
-        (() => {{
-            const cards = Array.from(document.querySelectorAll('.{_CSS_CARD}'))
-                .filter(d => !Array.from(d.classList).some(c => c.includes('__')));
-            const btn = cards[{dom_idx}]?.querySelector('[class*="card_detail__terms"]');
-            if (btn) {{ btn.click(); return true; }}
-            return false;
-        }})()
-    """
 
-_JS_CLOSE_MODAL = """
-    (() => {
-        const sels = [
-            '[class*="closeButton"]',
-            '[aria-label="Close"]',
-            '[aria-label="Cerrar"]',
-            '[data-testid="modal-close"]',
-            '[class*="modal__close"]',
-            '[class*="overlayClose"]'
-        ];
-        for (const sel of sels) {
-            const el = document.querySelector(sel);
-            if (el) { el.click(); return 'clicked'; }
-        }
-        document.dispatchEvent(new KeyboardEvent('keydown', { key: 'Escape', bubbles: true }));
-        return 'esc';
-    })()
-"""
+def _debug_dump(name: str, content: str) -> None:
+    """Guarda artefactos de debug fuera del repo, sólo con DEBUG_SCRAPER."""
+    if os.environ.get('DEBUG_SCRAPER', '').lower() not in ('1', 'true', 'yes'):
+        return
+    path = os.path.join(tempfile.gettempdir(), name)
+    with open(path, 'w', encoding='utf-8') as fh:
+        fh.write(content)
+    print(f"   💾 Debug: {path}")
 
 
 class DiaScraper:
@@ -98,295 +105,428 @@ class DiaScraper:
         self.base_url = 'https://diaonline.supermercadosdia.com.ar/medios-de-pago-y-promociones'
 
     async def scrape(self) -> List[Dict]:
-        try:
-            from crawl4ai import AsyncWebCrawler, CrawlerRunConfig, BrowserConfig, CacheMode
-        except ImportError:
-            print("   ⚠️ crawl4ai no instalado — instalá con: pip install crawl4ai && crawl4ai-setup")
-            return []
-
-        from bs4 import BeautifulSoup
-
         print(f"\n🔍 Scraping {self.name}...")
         print(f"   🌐 URL: {self.base_url}")
-
-        SESSION = 'dia_session'
-        browser_cfg = BrowserConfig(headless=True, verbose=False)
-        all_promotions: List[Dict] = []
-
         try:
-            async with AsyncWebCrawler(config=browser_cfg) as crawler:
+            html = await asyncio.to_thread(self._fetch_html)
+        except Exception as error:
+            print(f"   ❌ No se pudo descargar la landing de Día ({type(error).__name__}: {error})")
+            return []
+        _debug_dump('debug_dia_landing.html', html)
 
-                # ── 1. Carga inicial ──────────────────────────────────────────────
-                print(f"\n   📡 Carga inicial...")
-                init_cfg = CrawlerRunConfig(
-                    session_id=SESSION,
-                    wait_for=(
-                        "js:() => document.querySelectorAll("
-                        "'[class*=\"card_detail__terms\"]').length >= 3"
-                    ),
-                    delay_before_return_html=1.5,
-                    page_timeout=60000,
-                    cache_mode=CacheMode.BYPASS,
-                )
-                init_result = await crawler.arun(self.base_url, config=init_cfg)
-                if not init_result.success:
-                    print(f"   ❌ Error: {init_result.error_message}")
-                    return []
+        cards = self._extract_cards(html)
+        if not cards:
+            print("   ⚠️ No se encontró el bloque landing-medios-pago en el HTML; no se devuelven promos")
+            return []
 
-                # ── 2. Click "Todos" + inyectar metadata (vista completa) ─────────
-                # La página puede defaultear al día de hoy — "Todos" muestra las 23 cards
-                print(f"   📋 Seleccionando vista 'Todos' e inyectando metadata...")
-                todos_cfg = CrawlerRunConfig(
-                    session_id=SESSION,
-                    js_only=True,
-                    js_code="""
-                        (() => {
-                            const btns = Array.from(
-                                document.querySelectorAll('button[class*="days_fi"]')
-                            );
-                            const btn = btns.find(b => b.textContent.trim() === 'Todos');
-                            if (btn) btn.click();
-                        })();
-                    """,
-                    delay_before_return_html=1.8,
-                    cache_mode=CacheMode.BYPASS,
-                )
-                await crawler.arun(self.base_url, config=todos_cfg)
+        promotions = self._parse_cards(cards)
+        print(f"\n✅ {self.name}: {len(promotions)} promociones")
+        return promotions
 
-                # Ahora inyectar metadata de cards visibles
-                meta_cfg = CrawlerRunConfig(
-                    session_id=SESSION,
-                    js_only=True,
-                    js_code=_JS_INJECT_METADATA,
-                    delay_before_return_html=0.8,
-                    cache_mode=CacheMode.BYPASS,
-                )
-                meta_result = await crawler.arun(self.base_url, config=meta_cfg)
-                if not meta_result.success:
-                    print(f"   ❌ Error inyectando metadata: {meta_result.error_message}")
-                    return []
+    # ──────────────────────────────────────────────────────────────────────
+    # Descarga / extracción del JSON embebido
+    # ──────────────────────────────────────────────────────────────────────
 
-                # Leer metadata inyectada por JS
-                meta_soup = BeautifulSoup(meta_result.html, 'html.parser')
-                meta_el = meta_soup.find(id='__dia_meta')
-                if not meta_el:
-                    print("   ⚠️ Metadata JS no inyectada — usando fallback HTML")
-                    cards_meta = self._fallback_cards_meta(meta_soup)
-                else:
-                    try:
-                        cards_meta = json.loads(meta_el.get_text())
-                    except json.JSONDecodeError:
-                        print("   ⚠️ JSON malformado — usando fallback HTML")
-                        cards_meta = self._fallback_cards_meta(meta_soup)
+    def _fetch_html(self) -> str:
+        import requests
+        response = requests.get(self.base_url, headers=_HEADERS, timeout=(8, 40))
+        response.raise_for_status()
+        return response.text
 
-                print(f"   ✅ {len(cards_meta)} cards visibles")
+    @staticmethod
+    def _extract_cards(html: str) -> List[Dict]:
+        for match in re.finditer(r'<script[^>]*>(.*?)</script>', html, re.S):
+            body = match.group(1)
+            if _PROPS_SUFFIX not in body:
+                continue
+            try:
+                data = json.loads(body)
+            except (json.JSONDecodeError, ValueError):
+                continue
+            if not isinstance(data, dict):
+                continue
+            for key, block in data.items():
+                if key.endswith(_PROPS_SUFFIX) and isinstance(block, dict):
+                    cards = (block.get('content') or {}).get('cards')
+                    if isinstance(cards, list):
+                        return cards
+        return []
 
-                if os.environ.get('DEBUG_SCRAPER'):
-                    with open('debug_dia_meta.html', 'w', encoding='utf-8') as f:
-                        f.write(meta_result.html)
-                    print(f"   💾 HTML guardado en debug_dia_meta.html")
+    # ──────────────────────────────────────────────────────────────────────
+    # Parseo de tarjetas
+    # ──────────────────────────────────────────────────────────────────────
 
-                # ── 2. Por cada card: abrir modal → extraer → cerrar ─────────────
-                print(f"\n   🔎 Extrayendo legales...")
-                for card in cards_meta:
-                    dom_idx  = card.get('dom_idx', 0)
-                    bank_cls = card.get('bank_cls', '')
-                    channels = ', '.join(card.get('channels', []))
-                    img_url  = card.get('img_src', '')
+    def _parse_cards(self, cards: List[Dict], today: Optional[date] = None) -> List[Dict]:
+        today = today or datetime.now().date()
+        promotions: List[Dict] = []
+        for index, card in enumerate(cards):
+            if not isinstance(card, dict) or not card.get('active'):
+                continue
+            promo = self._parse_card(card, index)
+            label = self._clean(card.get('__editorItemTitle')) or f'card {index}'
+            if not promo:
+                print(f"   ⏭️ {label}: sin beneficio identificable, se omite")
+                continue
+            if promo.get('valid_until') and promo['valid_until'] < today.isoformat():
+                # Día a veces deja publicada la tarjeta con el legal vencido.
+                print(f"   ⌛ {label}: vencida el {promo['valid_until']}, se omite")
+                continue
+            print(f"      {promo['title']}")
+            promotions.append(promo)
 
-                    bank = self._normalize_bank(bank_cls)
-                    if not bank:
-                        bank = self._identify_bank_from_image(img_url, '')
-                    if not bank:
-                        continue
+        seen: Dict[str, int] = {}
+        for promo in promotions:
+            seen[promo['title']] = seen.get(promo['title'], 0) + 1
+        for promo in promotions:
+            if seen[promo['title']] > 1:
+                promo['title'] += f" #{promo['source_id'].rsplit('-', 1)[-1]}"
+        return promotions
 
-                    # Abrir modal
-                    modal_cfg = CrawlerRunConfig(
-                        session_id=SESSION,
-                        js_only=True,
-                        js_code=_js_click_ver_legales(dom_idx),
-                        delay_before_return_html=2.2,
-                        cache_mode=CacheMode.BYPASS,
-                    )
-                    modal_result = await crawler.arun(self.base_url, config=modal_cfg)
+    def _parse_card(self, card: Dict, index: int) -> Optional[Dict]:
+        editor_title = self._clean(card.get('__editorItemTitle'))
+        terms = self._clean(card.get('terms'))
+        image = ((card.get('displayData') or {}).get('cardImage') or '')
+        facts = next((f for asset, f in _IMAGE_FACTS.items() if asset in image), {})
+        text = terms.upper()
 
-                    legal_text = ''
-                    if modal_result.success:
-                        legal_text = self._extract_modal_text(modal_result.html)
+        banks = [self._clean(b.get('__editorItemTitle')) for b in card.get('associatedBanks') or []
+                 if isinstance(b, dict)]
+        bank, wallet, entity_label, brands = self._resolve_entity(banks, editor_title, text)
 
-                    discount  = self._extract_discount(legal_text)
-                    tope      = self._extract_tope(legal_text)
-                    valid_days = self._extract_days(legal_text)
+        discount, plan = self._discount(editor_title, text, facts)
+        if not discount:
+            return None
 
-                    print(f"      {bank:25s} | {discount or '—':8s} | {valid_days or 'Todos los días'}")
+        # Naranja X publica una tarjeta por plan con el mismo legal: el tope
+        # sale del tramo cuyo porcentaje coincide con el de la tarjeta.
+        tope = facts.get('tope') or self._plan_tope(text, discount) or self._extract_tope(text)
 
-                    # Cerrar modal
-                    close_cfg = CrawlerRunConfig(
-                        session_id=SESSION,
-                        js_only=True,
-                        js_code=_JS_CLOSE_MODAL,
-                        delay_before_return_html=0.5,
-                        cache_mode=CacheMode.BYPASS,
-                    )
-                    await crawler.arun(self.base_url, config=close_cfg)
+        if bank and not wallet and re.search(r'\bMODO\b', f"{text} {editor_title.upper()}"):
+            wallet = 'MODO'
 
-                    title_parts = [p for p in [
-                        bank, discount,
-                        f"({channels})" if channels else '',
-                        f"- {valid_days}" if valid_days else '',
-                    ] if p]
+        valid_days = self._valid_days(card.get('daysToShow') or {})
+        valid_from, valid_until = self._validity(text)
+        valid_from = facts.get('valid_from') or valid_from
+        valid_until = facts.get('valid_until') or valid_until
 
-                    all_promotions.append({
-                        'supermarket': 'Día',
-                        'url': self.base_url,
-                        'bank': bank,
-                        'discount': discount,
-                        'valid_days': valid_days,
-                        'aplica_en': channels,
-                        'tope': tope,
-                        'image_url': img_url,
-                        'legal_text': legal_text[:2000],
-                        'title': ' '.join(title_parts) or bank,
-                    })
+        store_types = self._store_types(card.get('availableOn') or {}, text, bank)
+        card_type = facts.get('card_type') or self._card_type(text, discount)
+        payment_method = self._payment_method(text, wallet, brands, card_type, bank)
+        min_purchase = self._min_purchase(text)
 
-        except Exception as e:
-            print(f"\n   ❌ Error: {e}")
-            import traceback
-            traceback.print_exc()
+        requirements: List[str] = []
+        tiers = re.findall(r'\$\s?([\d.]+)\s+HASTA\s+(\d{1,2})\s+CUOTAS', text)
+        if tiers:
+            requirements.append('; '.join(
+                f"{n} cuotas sin interés desde {self._format_amount(a)}" for a, n in tiers))
+        if re.search(r'JUBILAD', text):
+            requirements.append('Exclusivo jubilados (según legal)')
+        if plan == 'Plan Z':
+            requirements.append('Comprando en Plan Z')
+        elif plan:
+            requirements.append(f'Para clientes {plan}')
+        extra = re.search(r'ADICIONALMENTE.*?\.(?=\s|$)', text)
+        if extra:
+            requirements.append(extra.group(0).capitalize())
+        if 'PRIMERA TRANSACCI' in text:
+            requirements.append('Aplica sólo a la primera transacción del día')
+        if re.search(r'NFC|SIN CONTACTO', text) and wallet == 'Cuenta DNI':
+            requirements.append('Pago sin contacto (NFC) con Cuenta DNI')
+        if re.search(r'PAGO CLAVE DNI', text):
+            requirements.append('Pago con Clave DNI desde la app Cuenta DNI')
 
-        print(f"\n✅ {self.name}: {len(all_promotions)} promociones")
-        return all_promotions
+        exclusions = ''
+        excl = re.search(r'(?:NO APLICA|EXCLUYE|NO PARTICIPAN).*?\.(?=\s|$)', text)
+        if excl:
+            exclusions = excl.group(0).capitalize()
 
-    # ──────────────────────────────────────────────────────────────────────────
-    # Helpers
-    # ──────────────────────────────────────────────────────────────────────────
+        title_entity = entity_label if not (bank and wallet and wallet != 'Cuenta DNI') else f"{entity_label} + {wallet}"
+        title = f"{title_entity} {discount}"
+        qualifier = plan or self._card_qualifier(editor_title, entity_label)
+        if qualifier:
+            title += f" ({qualifier})"
+        title += f" - {valid_days or 'Todos los días'}"
+        if store_types == 'Online':
+            title += ' - Online'
+        elif store_types.startswith('Tiendas') and store_types != 'Online, Tiendas':
+            title += f" - {store_types}"
 
-    def _fallback_cards_meta(self, soup) -> List[Dict]:
-        """Extrae metadata de cards desde HTML puro cuando el JS no inyectó."""
-        meta = []
-        all_top = [d for d in soup.find_all('div')
-                   if d.get('class') and d.get('class')[0] == _CSS_CARD
-                   and not any('__' in c for c in d.get('class', [])[1:])]
-        for dom_idx, div in enumerate(all_top):
-            cls = div.get('class', [])
-            bank_cls = ' '.join(c for c in cls if c != _CSS_CARD)
-            channels = [s.get_text(strip=True)
-                        for s in div.find_all('span')
-                        if s.get_text(strip=True) in ('ONLINE', 'TIENDAS')]
-            img = div.find('img')
-            meta.append({
-                'dom_idx': dom_idx,
-                'bank_cls': bank_cls,
-                'channels': list(dict.fromkeys(channels)),
-                'img_src': img.get('src', '') if img else '',
-            })
-        return meta
-
-    def _extract_modal_text(self, html: str) -> str:
-        """Extrae el texto del modal desde el HTML capturado."""
-        from bs4 import BeautifulSoup
-        soup = BeautifulSoup(html, 'html.parser')
-        for sel in [
-            '[class*="vtex__modal"]',
-            '[role="dialog"]',
-            '[class*="Modal__"]',
-            '[class*="modal--"]',
-            '[class*="overlay--"]',
-            '[class*="overlayMask"]',
-            '[class*="modalLayout"]',
-        ]:
-            for el in soup.select(sel):
-                text = el.get_text(' ', strip=True)
-                if len(text) > 80 and re.search(
-                    r'descuento|promo|beneficio|tope|cuota|%|v[aá]lido', text, re.I
-                ):
-                    return re.sub(r'\s+', ' ', text).strip()
-        return ''
-
-    def _extract_discount(self, text: str) -> str:
-        if not text:
-            return ''
-        m = re.search(
-            r'(\d{1,3})\s*%\s*(?:de\s+)?(?:descuento|dto\.?|reintegro|bonificaci[oó]n)?',
-            text, re.I
-        )
-        if m:
-            return f"{m.group(1)}%"
-        m = re.search(r'(\d+)\s*cuotas?\s*sin\s*inter[eé]s', text, re.I)
-        if m:
-            return f"{m.group(1)} CSI"
-        return ''
-
-    def _extract_tope(self, text: str) -> str:
-        if not text:
-            return ''
-        if re.search(r'[Ss]in\s+[Tt]ope', text):
-            return 'Sin tope'
-        m = re.search(
-            r'[Tt]ope\s*(?:m[aá]ximo\s*)?(?:de\s+)?(?:reintegro\s*)?:?\s*\$?\s*([\d.,]+)',
-            text, re.I
-        )
-        if m:
-            return f"${m.group(1)}"
-        return ''
-
-    def _extract_days(self, text: str) -> str:
-        if not text:
-            return ''
-        day_names = {
-            'lunes': 'Lunes', 'martes': 'Martes', 'mi[eé]rcoles': 'Miércoles',
-            'jueves': 'Jueves', 'viernes': 'Viernes',
-            's[aá]bado': 'Sábado', 'domingo': 'Domingo',
+        source_key = re.search(r'images/([0-9a-f-]{36})', image)
+        return {
+            'title': title,
+            'discount': discount,
+            'bank': bank,
+            'wallet': wallet,
+            'card_type': card_type,
+            'payment_method': payment_method,
+            'store_types': store_types,
+            'valid_days': valid_days or 'Todos los días',
+            'valid_from': valid_from,
+            'valid_until': valid_until,
+            'tope': tope,
+            'min_purchase': min_purchase,
+            'url': self.base_url,
+            'image_url': image,
+            'terms_raw': terms,
+            'exclusions': exclusions,
+            'requirements': ' | '.join(requirements),
+            'source_id': f"dia-{source_key.group(1) if source_key else index}",
         }
-        found = []
-        for pattern, name in day_names.items():
-            if re.search(pattern, text, re.I):
-                found.append(name)
-        if not found or len(found) >= 6:
-            return ''  # Vacío = todos los días
-        return ', '.join(found)
 
-    def _normalize_bank(self, raw: str) -> str:
-        if not raw or raw.strip() in (',', ''):
-            return ''
-        raw = raw.strip()
-        for pattern, name in [
-            (r'^Modo$', 'MODO'),
-            (r'^Prex$', 'Prex'),
-            (r'^Personal\s*Pay', 'Personal Pay'),
-            (r'^Mercado\s*Pago', 'Mercado Pago'),
-            (r'^Banco\s*Columbia', 'Banco Columbia'),
-            (r'^Banco\s*del\s*Sol', 'Banco del Sol'),
-            (r'Visa.*Master|Master.*Visa', 'Visa/Mastercard'),
-            (r'^Naranja', 'Naranja X'),
-            (r'^Cuenta\s*DNI', 'Cuenta DNI'),
-            (r'^Anses', 'Beneficios ANSES'),
-            (r'^Sidecreer', 'Sidecreer'),
-            (r'^Tarjeta\s*BA', 'Tarjeta BA'),
-            (r'^BNA$|^Banco\s*Naci', 'Banco Nación'),
-            (r'^Modo.*BNA|^BNA.*Modo', 'MODO + BNA'),
-            (r'^Galicia', 'Banco Galicia'),
-        ]:
-            if re.search(pattern, raw, re.I):
-                return name
-        if len(raw) > 1 and raw not in (',', '.'):
-            return ' '.join(w.capitalize() for w in raw.split())
-        return ''
+    @staticmethod
+    def _clean(value: Any) -> str:
+        return re.sub(r'\s+', ' ', str(value or '')).strip()
 
-    def _identify_bank_from_image(self, img_src: str, img_alt: str) -> str:
-        combined = f"{img_src} {img_alt}".lower()
-        for pattern, name in [
-            (r'modo', 'MODO'), (r'prex', 'Prex'),
-            (r'personal.?pay', 'Personal Pay'), (r'mercado.?pago', 'Mercado Pago'),
-            (r'naranja', 'Naranja X'), (r'cuenta.?dni', 'Cuenta DNI'),
-            (r'anses', 'Beneficios ANSES'), (r'galicia', 'Banco Galicia'),
-            (r'macro', 'Banco Macro'), (r'nacion|bna', 'Banco Nación'),
-            (r'ciudad', 'Banco Ciudad'), (r'santander', 'Banco Santander'),
-            (r'patagonia', 'Banco Patagonia'), (r'comafi', 'Banco Comafi'),
-            (r'hsbc', 'HSBC'), (r'bbva|franc[eé]s', 'BBVA'),
-            (r'icbc', 'ICBC'), (r'credicoop', 'Banco Credicoop'),
-            (r'supervielle', 'Supervielle'), (r'columbia', 'Banco Columbia'),
-        ]:
-            if re.search(pattern, combined):
-                return name
-        return ''
+    @staticmethod
+    def _resolve_entity(banks: List[str], editor_title: str, text: str) -> Tuple:
+        brands = [name for pattern, name in _CARD_BRANDS
+                  if any(re.search(pattern, b, re.I) for b in banks)]
+        candidates = [b for b in banks if b] + [editor_title]
+        # "5% BNA MODO" asocia [Modo, BNA]: el banco manda y MODO es billetera.
+        for candidate in sorted(candidates, key=lambda c: bool(re.match(r'^modo$', c, re.I))):
+            for pattern, entity in _ENTITIES:
+                if re.search(pattern, candidate, re.I):
+                    return entity + (brands,)
+        if brands:
+            # "3CSI TC": tarjetas de crédito de todas las marcas, sin banco.
+            return (None, None, 'Tarjetas de crédito', brands)
+        return (None, None, editor_title, brands)
+
+    @staticmethod
+    def _card_qualifier(editor_title: str, entity_label: str) -> str:
+        # "Sidecreer BLACK", "Cuenta Dni Visa": la variante va en el título.
+        extra = re.sub(r'\b\d{2}-\d{2}\b', ' ', editor_title)  # "Prex 05-10" (fecha)
+        extra = re.sub(r'\d{1,3}\s*%|\b\d*\s*C?SI\b|\bCI\b|de reintegro|-', ' ', extra, flags=re.I)
+        for word in re.split(r'\s+', entity_label):
+            extra = re.sub(rf'\b{re.escape(word)}\b', ' ', extra, flags=re.I)
+        extra = re.sub(r'\b(dni|cuenta|banco|naranja|tc|modo|bna)\b', ' ', extra, flags=re.I)
+        extra = re.sub(r'\s+', ' ', extra).strip()
+        return extra.title() if extra else ''
+
+    def _discount(self, editor_title: str, text: str, facts: Dict) -> Tuple[str, str]:
+        """Devuelve (beneficio, plan). El rótulo de la tarjeta manda sobre el legal."""
+        plan = ''
+        percent = facts.get('percent')
+        title_pct = re.search(r'(\d{1,3})\s*%', editor_title)
+        if not percent and title_pct:
+            percent = int(title_pct.group(1))
+        if not percent:
+            # Porcentajes del legal ignorando tasas (TNA/TEA/CFT 0,00%).
+            values = [int(v) for v in re.findall(r'(?<![\d,])(\d{1,2})\s?%', text) if int(v) > 0]
+            percent = max(values) if values else None
+        if not percent:
+            percent = self._percent_from_example(text)
+
+        cuotas = [int(n) for n in re.findall(r'(\d{1,2})\s+CUOTAS\s+SIN\s+INTER', text)]
+        title_cuotas = re.search(r'\b(\d{1,2})\s*C(?:S)?I\b', editor_title, re.I)
+        if title_cuotas:
+            cuotas.append(int(title_cuotas.group(1)))
+        cuotas_label = ''
+        if cuotas:
+            top = max(cuotas)
+            tiered = len(set(cuotas)) > 1 or re.search(rf'HASTA\s+{top}\s+CUOTAS', text)
+            cuotas_label = f"{'Hasta ' if tiered else ''}{top} cuotas sin interés"
+            if re.search(r'PLAN Z', text):
+                plan = 'Plan Z'
+        if re.search(r'PLAN\s+(INICIAL|TURBO|[ÉE]PICO)', text) and percent:
+            tier = re.search(rf'PLAN\s+(INICIAL|TURBO|[ÉE]PICO):\s*{percent}%', text)
+            if tier:
+                plan = 'Plan ' + tier.group(1).capitalize().replace('Epico', 'Épico')
+
+        if percent:
+            kind = 'reintegro' if re.search(r'REINTEGRO|CASHBACK|BONIFICACI', text) or facts else 'descuento'
+            label = f"{percent}% {kind}"
+            if cuotas_label and cuotas_label.endswith('sin interés'):
+                label += f" + {cuotas_label.replace('Hasta ', 'hasta ')}"
+            return label, plan
+        return cuotas_label, plan
+
+    @staticmethod
+    def _percent_from_example(text: str) -> Optional[int]:
+        """'En un consumo de $60.000 recibirá un reintegro de $15.000' → 25."""
+        match = re.search(
+            r'(?:CONSUMO|COMPRA)\s+DE\s+\$\s?([\d.]+).{0,40}?REINTEGRO\s+DE\s+\$\s?([\d.]+)', text)
+        if not match:
+            return None
+        base, back = (int(re.sub(r'\D', '', v)) for v in match.groups())
+        if not base:
+            return None
+        ratio = back * 100 / base
+        return int(ratio) if ratio.is_integer() and 0 < ratio < 100 else None
+
+    @staticmethod
+    def _format_amount(raw: str) -> str:
+        digits = re.sub(r'[.,]\d{2}$', '', raw.strip().rstrip('.-,'))
+        digits = re.sub(r'\D', '', digits)
+        return f"${int(digits):,}".replace(',', '.') if digits else ''
+
+    def _plan_tope(self, text: str, discount: str) -> Optional[str]:
+        pct = re.match(r'(\d{1,3})%', discount)
+        if not pct:
+            return None
+        match = re.search(
+            rf'PLAN\s+[A-ZÉ]+:\s*{pct.group(1)}%[^.;()]*?TOPE\s+DE\s+\$\s?([\d.,]+)\s+POR\s+SEMANA', text)
+        return f"{self._format_amount(match.group(1))} semanal" if match else None
+
+    def _extract_tope(self, text: str) -> Optional[str]:
+        if not text:
+            return None
+        amounts = []
+        for match in re.finditer(
+            r'(?:TOPE|L[ÍI]MITE)\s+(?:M[ÁA]XIMO\s+)?(?:DE\s+)?(?:REINTEGRO\s+|DEVOLUCI[ÓO]N\s*|DESCUENTO\s+DEL\s+BENEFICIO\s+ES\s+)?'
+            r'(?:UNIFICADO\s+)?(?:DE\s+)?:?\s*(?:HASTA\s+)?(?:PESOS\s+[A-Z ]+)?\(?\$\s?(\d[\d.,]*)([^$]{0,70})',
+            text,
+        ):
+            value = int(re.sub(r'\D', '', re.sub(r'[.,]\d{2}$', '', match.group(1).rstrip('.-,'))) or 0)
+            if not value:
+                continue
+            if value >= 1_000_000:
+                # "Límite de $ 9999999 por usuario": en la práctica sin tope.
+                return 'Sin tope'
+            tail = re.split(r'\.\s', match.group(2), maxsplit=1)[0]
+            period = ''
+            if re.search(r'SEMANA', tail):
+                period = ' semanal'
+            elif re.search(r'\bMES\b|MENSUAL', tail):
+                period = ' mensual'
+            elif re.search(r'TRANSACCI', tail):
+                period = ' por transacción'
+            amounts.append((self._format_amount(match.group(1)), period))
+        if amounts:
+            amount, period = amounts[0]
+            # "(CON TOPE DE $5.000,00)" ... "TOPE DE PESOS CINCO MIL ($5.000,00) POR TRANSACCIÓN"
+            period = period or next((p for a, p in amounts if a == amount and p), '')
+            return f"{amount}{period}"
+        if re.search(r'SIN\s+(?:TOPE|L[ÍI]MITE)', text):
+            return 'Sin tope'
+        return None
+
+    @staticmethod
+    def _min_purchase(text: str) -> Optional[str]:
+        match = re.search(
+            r'(?:M[ÍI]NIMO\s+DE\s+(?:COMPRA\s+DE\s+)?|MONTO\s+MAYOR\s+O\s+IGUAL\s+A\s+|'
+            r'COMPRAS?\s+MAYOR(?:ES)?\s+O\s+IGUAL(?:ES)?\s+A\s+|COMPRAS\s+DESDE\s+)\$\s?(\d[\d.]*)',
+            text,
+        )
+        if not match:
+            return None
+        return DiaScraper._format_amount(match.group(1))
+
+    @staticmethod
+    def _valid_days(days: Dict) -> Optional[str]:
+        names = [name for key, name in _DAY_KEYS if days.get(key)]
+        if not names or len(names) == 7:
+            return 'Todos los días' if names else None
+        return ', '.join(names)
+
+    @staticmethod
+    def _validity(text: str) -> Tuple[Optional[str], Optional[str]]:
+        def iso(d, m, y) -> Optional[str]:
+            y = int(y)
+            y += 2000 if y < 100 else 0
+            try:
+                return date(y, int(m), int(d)).isoformat()
+            except ValueError:
+                return None
+
+        # "DEL 01/10/2026 AL 31/10/2026", "DESDE EL 01/10/2026 HASTA EL 31/03/2027"
+        match = re.search(
+            r'(\d{1,2})/(\d{1,2})/(\d{2,4})(?:\s+\d{1,2}:\d{2})?\s+(?:AL|HASTA(?:\s+EL)?|Y\s+EL)\s+'
+            r'(\d{1,2})/(\d{1,2})/(\d{2,4})', text)
+        if match:
+            g = match.groups()
+            return iso(*g[:3]), iso(*g[3:])
+        # "ENTRE EL 1 DE OCTUBRE Y EL 31 DE DICIEMBRE DE 2026"
+        match = re.search(
+            rf'(\d{{1,2}})\s+DE\s+({_MONTH_RE.upper()})(?:\s+DE\s+(\d{{4}}))?\s+(?:Y\s+EL|AL|HASTA\s+EL)\s+'
+            rf'(\d{{1,2}})\s+DE\s+({_MONTH_RE.upper()})\s+DE(?:L)?\s+(\d{{4}})', text)
+        if match:
+            d1, m1, y1, d2, m2, y2 = match.groups()
+            return iso(d1, _MONTHS[m1.lower()], y1 or y2), iso(d2, _MONTHS[m2.lower()], y2)
+        # "LOS MARTES DEL MES DE OCTUBRE DE 2026", "LOS MIÉRCOLES DE OCTUBRE, NOVIEMBRE Y DICIEMBRE DE 2026"
+        match = re.search(
+            rf'(?:DEL\s+MES\s+DE\s+|\bDE\s+)((?:(?:{_MONTH_RE.upper()})(?:\s*,\s*|\s+Y\s+)?)+)\s+DE(?:L)?\s+(\d{{4}})',
+            text)
+        if match:
+            months = [_MONTHS[m.lower()] for m in re.findall(_MONTH_RE.upper(), match.group(1))]
+            year = int(match.group(2))
+            last = date(year + (months[-1] == 12), months[-1] % 12 + 1, 1)
+            from datetime import timedelta
+            return date(year, months[0], 1).isoformat(), (last - timedelta(days=1)).isoformat()
+        # Fecha puntual: "EL DÍA LUNES 05/10/2026"
+        match = re.search(r'(\d{1,2})/(\d{1,2})/(\d{4})', text)
+        if match:
+            single = iso(*match.groups())
+            return single, single
+        return None, None
+
+    @staticmethod
+    def _store_types(available: Dict, text: str, bank: Optional[str]) -> str:
+        channels = []
+        if available.get('online'):
+            channels.append('Online')
+        if available.get('store'):
+            region = _REGIONAL_ENTITIES.get(bank or '')
+            province = re.search(r'TIENDAS D[ÍI]A ADHERIDAS:\s*SOLO LAS LOCALIZADAS EN LA PROVINCIA DE ([A-ZÁÉÍÓÚ ]+?)\.', text)
+            if province:
+                region = province.group(1).title().replace('Rios', 'Ríos')
+            channels.append(f"Tiendas de {region}" if region else 'Tiendas')
+        return ', '.join(channels) or 'Online, Tiendas'
+
+    @staticmethod
+    def _card_type(text: str, discount: str) -> Optional[str]:
+        positive = DiaScraper._positive_text(text)
+        types = []
+        if re.search(r'CR[ÉE]DITO', positive):
+            types.append('Crédito')
+        if re.search(r'D[ÉE]BITO', positive):
+            types.append('Débito')
+        if not types and 'cuotas' in discount:
+            types.append('Crédito')
+        return ', '.join(types) or None
+
+    @staticmethod
+    def _payment_method(text: str, wallet: Optional[str], brands: List[str],
+                        card_type: Optional[str], bank: Optional[str] = None) -> Optional[str]:
+        if brands:
+            return ', '.join(dict.fromkeys(brands))
+        positive = DiaScraper._positive_text(text)
+        text_brands = [name for pattern, name in _CARD_BRANDS if re.search(pattern, positive, re.I)]
+        if wallet == 'MODO':
+            return ' - '.join(['QR MODO'] + ([', '.join(text_brands)] if bank and text_brands else []))
+        if wallet == 'Cuenta DNI':
+            return 'Cuenta DNI (Clave DNI)' if 'CLAVE DNI' in text else 'Cuenta DNI (NFC)' if 'NFC' in text else 'Cuenta DNI'
+        if wallet == 'Mercado Pago':
+            return 'QR Mercado Pago' if re.search(r'\bQR\b', text) else 'Mercado Pago'
+        if wallet:
+            return wallet
+        if 'CIUDADAN' in text:
+            return 'Tarjeta Ciudadanía Porteña'
+        if bank and text_brands:
+            return ', '.join(text_brands) + (f" ({card_type})" if card_type else '')
+        return card_type
+
+    @staticmethod
+    def _positive_text(text: str) -> str:
+        # Las frases de exclusión ("no aplica a ... tarjeta de crédito") no
+        # definen el medio de pago de la promo.
+        return ' '.join(s for s in re.split(r'(?<=\.)\s+', text)
+                        if not re.search(r'NO APLICA|NO PARTICIPAN|EXCLU|NI LAS', s))
+
+
+async def main():
+    scraper = DiaScraper()
+    promotions = await scraper.scrape()
+    print(f"\n{'='*100}")
+    for i, promo in enumerate(promotions, 1):
+        print(f"{i:2d}. {promo['title']}")
+        print(f"    💰 {promo['discount']} | 🏦 {promo.get('bank')} / {promo.get('wallet')} | "
+              f"💳 {promo.get('card_type')} · {promo.get('payment_method')} | 🏪 {promo['store_types']} | "
+              f"📅 {promo.get('valid_days')} {promo.get('valid_from')}→{promo.get('valid_until')} | "
+              f"🧢 {promo.get('tope')} | 🛒 {promo.get('min_purchase')}")
+        if promo.get('requirements'):
+            print(f"    ✅ {promo['requirements']}")
+
+
+if __name__ == "__main__":
+    asyncio.run(main())

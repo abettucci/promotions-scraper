@@ -113,6 +113,7 @@ class AIExtractor:
     """
 
     def __init__(self, model: str = None, max_tokens: int = 4096):
+        self._system_prompt = _SYSTEM_PROMPT
         gemini_key = os.getenv("GEMINI_API_KEY")
         anthropic_key = os.getenv("ANTHROPIC_API_KEY")
 
@@ -123,7 +124,7 @@ class AIExtractor:
             self.model_name = _resolve_gemini_model(preferred)
             self._gemini_model = genai.GenerativeModel(
                 model_name=self.model_name,
-                system_instruction=_SYSTEM_PROMPT,
+                system_instruction=self._system_prompt,
             )
             print(f"   🤖 AI provider: Gemini ({self.model_name})")
         elif anthropic_key and ANTHROPIC_AVAILABLE:
@@ -220,11 +221,27 @@ class AIExtractor:
 
         return None
 
+    @property
+    def system_prompt(self) -> str:
+        return self._system_prompt
+
+    @system_prompt.setter
+    def system_prompt(self, value: str) -> None:
+        # Gemini fija system_instruction al crear el modelo: sin recrearlo,
+        # fuel_base asignaba FUEL_SYSTEM_PROMPT pero Gemini seguía usando el
+        # prompt de supermercados.
+        self._system_prompt = value
+        if getattr(self, "provider", None) == "gemini":
+            self._gemini_model = genai.GenerativeModel(
+                model_name=self.model_name,
+                system_instruction=value,
+            )
+
     def _switch_to(self, model_name: str) -> None:
         self.model_name = model_name
         self._gemini_model = genai.GenerativeModel(
             model_name=model_name,
-            system_instruction=_SYSTEM_PROMPT,
+            system_instruction=self._system_prompt,
         )
         print(f"      🔄 Cambiando a modelo Gemini: '{model_name}'")
 
@@ -321,6 +338,9 @@ class AIExtractor:
             "tope": promo.get("tope"),
             "exclusions": json.dumps(exclusions, ensure_ascii=False) if isinstance(exclusions, list) else exclusions,
             "requirements": json.dumps(requirements, ensure_ascii=False) if isinstance(requirements, list) else requirements,
+            # El ruteo de aggregators (bancos/MODO → YPF/Shell/Axion) depende
+            # de este campo; si se pierde, todo termina en una marca genérica.
+            "merchant_brands": promo.get("merchant_brands") or [],
             "extracted_by": f"ai_vision_{self.provider}",
             "extracted_at": datetime.now().isoformat(),
         }

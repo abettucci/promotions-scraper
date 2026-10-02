@@ -218,7 +218,7 @@ export function FilterBar({
             value={filters.supermarket || ALL_VALUE}
             onValueChange={(v) => onChange({ supermarket: v === ALL_VALUE ? "" : v, page: 1 })}
           >
-            <SelectTrigger className="h-11 w-[170px] rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
+            <SelectTrigger className="h-11 min-w-[170px] w-auto rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
               <SelectValue placeholder={merchantLabel} />
             </SelectTrigger>
             <SelectContent>
