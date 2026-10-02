@@ -278,6 +278,9 @@ class PromoScraper:
                             self.db.deactivate_for_source(brand_id, supermarket_key)
                             touched[brand_id] = []
 
+                        if self.db.has_equivalent_promotion(brand_id, supermarket_key, promo):
+                            self.log(f"   ↔️ {brand} ya publica: {promo.get('title')}")
+                            continue
                         promo_for_brand = dict(promo)
                         promo_for_brand['merchant_brand'] = brand
                         promo_for_brand['source'] = supermarket_key
@@ -467,11 +470,16 @@ class PromoScraper:
         return kept, expired
 
     def _terms_for_promo(self, promo: dict) -> dict:
-        """Preserva condiciones explícitas del scraper si el parser no las detecta."""
+        """Las condiciones explícitas del scraper mandan sobre el parser genérico.
+
+        Los scrapers leen exclusiones/requisitos de la estructura del legal
+        (p. ej. la lista de marcas excluidas de Coto); el parser por regex
+        sacaba frases sueltas y la API mostraba ésas en lugar de las reales.
+        """
         terms_data = self.terms_parser.parse(promo['terms_raw'])
         for field in ('exclusions', 'requirements'):
             source_value = promo.get(field)
-            if source_value and not terms_data.get(field):
+            if source_value:
                 terms_data[field] = source_value
         return terms_data
 

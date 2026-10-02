@@ -16,6 +16,7 @@ Notas del feed:
     Comafi"), por eso el icono manda.
 """
 import asyncio
+import html as html_lib
 import json
 import os
 import re
@@ -112,6 +113,124 @@ _CARD_BRANDS = (
 )
 
 
+# Página de legales: cada promo tiene una "legal-card" con el texto completo
+# (mínimos por nota al pie, exclusiones de marcas/productos). El feed
+# multicanal sólo trae un resumen de ~150 caracteres.
+_COTO_TERMS_URL = "https://www.coto.com.ar/sitios/cdigi/terminos-descuentos?format=json"
+_GLOBAL_EXCLUSIONS_TITLE = "PRODUCTOS EXCLUIDOS"
+_LEGAL_CARD_RE = re.compile(
+    r'<div class="legal-header"[^>]*>(.*?)</div>\s*<div class="legal-body"[^>]*>(.*?)</div>',
+    re.S,
+)
+# Palabras del encabezado del legal que identifican a cada entidad.
+_LEGAL_ENTITY_KEYS = {
+    "Banco Ciudad": "CIUDAD LUNES|CIUDAD 2", "Banco Supervielle": "SUPERVIELLE",
+    "ICBC": "ICBC", "Banco Nación": "NACI", "Banco Comafi": "COMAFI",
+    "Banco Patagonia": "PATAGONIA", "Banco Columbia": "COLUMBIA",
+    "Naranja X": "NARANJA", "Ciudadanía Porteña": "CIUDADAN", "ANSES": "ANSES",
+    "MODO": "MODO", "Comunidad Coto": "COMUNIDAD",
+}
+
+
+def _legal_text(fragment: str) -> str:
+    text = html_lib.unescape(re.sub(r"<[^>]+>", " ", fragment))
+    return re.sub(r"\s+", " ", text).strip()
+
+
+def parse_legal_cards(content: str) -> List[tuple]:
+    """[(encabezado, cuerpo)] de la página de términos de Coto."""
+    return [(_legal_text(h), _legal_text(b)) for h, b in _LEGAL_CARD_RE.findall(content or "")]
+
+
+def global_exclusions(cards: List[tuple]) -> List[str]:
+    """Oraciones del legal "PRODUCTOS EXCLUIDOS PARA TODOS LOS DESCUENTOS"."""
+    body = next((b for h, b in cards if h.upper().startswith(_GLOBAL_EXCLUSIONS_TITLE)), "")
+    body = re.sub(r"^PRODUCTOS EXCLUIDOS:\s*", "", body, flags=re.I)
+    sentences = re.split(r"(?<=[.])\s+(?=(?:NO|DESCUENTOS?|EL DESCUENTO|TAMPOCO)\b)", body)
+    sentences = [s.strip() for s in sentences if len(s.strip()) > 15]
+    # Marcas y productos excluidos primero: es lo que se mira antes de ir a la caja.
+    return sorted(sentences, key=lambda s: not s.upper().startswith(("NO INCLUYE", "EL DESCUENTO EN")))
+
+
+def footnote_segment(body: str, discount: str) -> str:
+    """Tramo "(N) ..." del legal que describe este beneficio.
+
+    Un mismo legal suele cubrir varias promos con notas al pie: en "DESCUENTOS
+    VIERNES" el (1) es el 25% con QR Mercado Pago (sin mínimo) y el (2) las
+    3 cuotas desde $150.000. Sin esto el mínimo de una se le pegaba a la otra.
+    """
+    parts = re.split(r"\(\d\)\s*", body)
+    if len(parts) <= 2:
+        return body
+    number = re.match(r"\s*(?:hasta\s+)?(\d{1,3})", discount or "", re.I)
+    if not number:
+        return body
+    token = number.group(1)
+    is_cuotas = "cuota" in (discount or "").lower()
+    pattern = rf"\b{token}\s*CUOTAS" if is_cuotas else rf"\b{token}\s*%"
+    matches = [part for part in parts[1:] if re.search(pattern, part, re.I)]
+    return matches[0] if len(matches) == 1 else body
+
+
+_DAY_WORDS = ("LUNES", "MARTES", "MIERCOLES", "JUEVES", "VIERNES", "SABADO", "DOMINGO")
+
+
+def _fold(text: str) -> str:
+    return (text or "").upper().translate(str.maketrans("ÁÉÍÓÚÜ", "AEIOUU"))
+
+
+def match_legal(promo: Dict, cards: List[tuple]) -> Optional[tuple]:
+    """Legal-card de la promo, sólo si no hay ninguna contradicción.
+
+    Un legal equivocado es peor que ninguno (pisaba topes y mínimos), así que
+    se exige: entidad principal en el encabezado (o Mercado Pago en el texto),
+    mismo tipo de beneficio (% vs cuotas) con el número presente, y que el
+    canal y el día del encabezado no contradigan a la promo.
+    """
+    primary = promo.get("bank") or promo.get("wallet") or ""
+    title = promo.get("title") or ""
+    online = (promo.get("store_types") or "").lower() == "online"
+    discount = promo.get("discount") or ""
+    is_cuotas = "cuota" in discount.lower()
+    number = re.match(r"\s*(?:hasta\s+)?(\d{1,3})", discount, re.I)
+    if not number:
+        return None
+    days = {_fold(d) for d in re.split(r",\s*", promo.get("valid_days") or "") if d}
+    candidates = []
+    for header, body in cards:
+        h = _fold(header)
+        if h.startswith(_GLOBAL_EXCLUSIONS_TITLE):
+            continue
+        keys = [k for name, k in _LEGAL_ENTITY_KEYS.items()
+                if name.lower() in f"{primary} {title}".lower() and name != "MODO"]
+        entity_ok = any(re.search(k, h) for k in keys)
+        if primary == "Mercado Pago":
+            entity_ok = "MERCADO PAGO" in _fold(body)
+        elif primary == "MODO" and not promo.get("bank"):
+            entity_ok = re.search(r"\bMODO\b", h) and not re.search(r"BANCO|SUPERVIELLE|ICBC|COMAFI|COLUMBIA|NACI", h)
+        if not entity_ok:
+            continue
+        if is_cuotas != ("CUOTA" in h or "ELECTRO" in h):
+            continue
+        segment = footnote_segment(body, discount)
+        unit = r"CUOTAS" if is_cuotas else r"%"
+        if not re.search(rf"\b{number.group(1)}\s*{unit}", _fold(segment)):
+            continue
+        if online and ("EXCLUSIVO COMPRAS PRESENCIALES" in h or re.search(r"[–-]\s*PRESENCIAL$", h)):
+            continue
+        if not online and ("EXCLUSIVO COMPRAS ONLINE" in h or h.endswith("– ONLINE") or h.endswith("- ONLINE")):
+            continue
+        header_days = {d for d in _DAY_WORDS if d in h}
+        if "FIN DE SEMANA" in h:
+            header_days |= {"SABADO", "DOMINGO"}
+        if header_days and days and not header_days & days:
+            continue
+        candidates.append((header, body))
+    # Si quedan varias posibles (p. ej. dos legales del mismo banco), no se
+    # elige al azar.
+    return candidates[0] if len(candidates) == 1 else None
+
+
 def _debug_dump(name: str, content: str) -> None:
     """Guarda artefactos de debug fuera del repo, sólo con DEBUG_SCRAPER."""
     if os.environ.get("DEBUG_SCRAPER", "").lower() not in ("1", "true", "yes"):
@@ -144,8 +263,46 @@ class CotoScraper:
             return []
 
         promotions = self._parse_payload(payload)
+        cards = await asyncio.to_thread(self._fetch_legal_cards)
+        if cards:
+            self._apply_legals(promotions, cards)
         print(f"\n✅ {self.name}: {len(promotions)} promociones encontradas (fuente oficial)")
         return promotions
+
+    @staticmethod
+    def _fetch_legal_cards() -> List[tuple]:
+        """Descarga los legales; si falla, las promos quedan con el resumen del feed."""
+        try:
+            import requests
+            response = requests.get(_COTO_TERMS_URL, headers=_HEADERS, timeout=(8, 30))
+            response.raise_for_status()
+            main = response.json().get("Main") or []
+            content = " ".join(item.get("content", "") for item in main if isinstance(item, dict))
+            cards = parse_legal_cards(content)
+            print(f"   📜 Legales de Coto: {len(cards)} secciones")
+            return cards
+        except Exception as error:
+            print(f"   ⚠️ No se pudieron leer los legales de Coto ({type(error).__name__}: {error})")
+            return []
+
+    def _apply_legals(self, promotions: List[Dict], cards: List[tuple]) -> None:
+        exclusions = global_exclusions(cards)
+        matched = 0
+        for promo in promotions:
+            legal = match_legal(promo, cards)
+            if legal:
+                matched += 1
+                header, body = legal
+                promo["terms_raw"] = f"{promo.get('terms_raw', '')}\n\n{header}: {body}".strip()
+                segment = footnote_segment(body, promo.get("discount", ""))
+                promo["min_purchase"] = promo.get("min_purchase") or self._extract_min_purchase(segment)
+                if not promo.get("tope"):
+                    promo["tope"] = self._extract_tope(segment)
+            # El legal de exclusiones aplica "a todos los descuentos y/o
+            # promociones"; reemplaza el aviso genérico por la lista concreta.
+            if exclusions:
+                promo["exclusions"] = exclusions
+        print(f"   📜 Legal específico asignado a {matched}/{len(promotions)} promos")
 
     # ──────────────────────────────────────────────────────────────────────
     # Descarga

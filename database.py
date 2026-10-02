@@ -745,6 +745,32 @@ class Database:
         conn.commit()
         conn.close()
 
+    def has_equivalent_promotion(self, supermarket_id: int, source: str, promo: Dict) -> bool:
+        """¿Otra fuente ya publicó esta promo en el comercio?
+
+        Cuenta DNI, Personal Pay o MODO repiten promos que el súper/estación
+        ya publica con más detalle; mismo comercio + entidad + número del
+        beneficio + días se considera la misma promo.
+        """
+        entities = {e.strip().lower() for e in (promo.get('bank'), promo.get('wallet')) if e}
+        number = re.match(r'\s*(?:hasta\s+)?(\d{1,3})', promo.get('discount') or '', re.I)
+        if not entities or not number:
+            return False
+        days = (promo.get('valid_days') or '').strip().lower()
+        conn = self.get_connection()
+        rows = conn.execute("""
+            SELECT bank, wallet, discount, valid_days FROM promotions
+            WHERE supermarket_id = ? AND is_active = 1 AND COALESCE(source, '') != ?
+        """, (supermarket_id, source)).fetchall()
+        conn.close()
+        for bank, wallet, discount, valid_days in rows:
+            row_entities = {e.strip().lower() for e in (bank, wallet) if e}
+            row_number = re.match(r'\s*(?:hasta\s+)?(\d{1,3})', discount or '', re.I)
+            if (entities & row_entities and row_number and row_number.group(1) == number.group(1)
+                    and (valid_days or '').strip().lower() == days):
+                return True
+        return False
+
     def deactivate_for_source(self, supermarket_id: int, source: str, include_legacy: bool = False) -> int:
         """Desactiva sólo las promos que publicó `source` en este comercio.
 

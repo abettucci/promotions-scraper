@@ -86,7 +86,46 @@ _IMAGE_FACTS = {
     # Credicoop: el legal sólo da el ejemplo ($60.000 → $15.000); la imagen
     # confirma "25% de reintegro - Tope de $15.000 semanal".
     '7f92d03b-ce19-4469-a08c-8ea2283bde5d': {'percent': 25, 'tope': '$15.000 semanal'},
+    # BNA + MODO viernes y sábados (oct–dic 2026): el legal trae tope y mínimo
+    # pero no el porcentaje; la imagen dice "10% de reintegro".
+    '91ba2a98-330a-446a-81ea-58f7ddb0b2e9': {'percent': 10},
 }
+
+_IMAGE_PROMPT = (
+    "Es la tarjeta de una promoción bancaria de un supermercado argentino. "
+    "Respondé SOLO un JSON: {\"percent\": <número entero del porcentaje de "
+    "descuento o reintegro que se ve en grande, o null si no hay>}."
+)
+
+
+def _percent_from_image(url: str) -> Optional[int]:
+    """Lee el % de la imagen de la tarjeta con Gemini cuando el legal no lo trae.
+
+    Es un respaldo para tarjetas nuevas sin dato en _IMAGE_FACTS; sin
+    GEMINI_API_KEY devuelve None y la tarjeta se omite con un aviso.
+    """
+    key = os.environ.get('GEMINI_API_KEY')
+    if not key or not url:
+        return None
+    try:
+        import google.generativeai as genai
+        import requests
+        from scrapers.ai_extractor import _resolve_gemini_model
+
+        genai.configure(api_key=key)
+        image = requests.get(url, headers=_HEADERS, timeout=20)
+        image.raise_for_status()
+        model = genai.GenerativeModel(_resolve_gemini_model(os.environ.get('AI_MODEL', 'gemini-2.5-flash')))
+        response = model.generate_content([
+            {'mime_type': image.headers.get('content-type', 'image/jpeg').split(';')[0], 'data': image.content},
+            _IMAGE_PROMPT,
+        ])
+        match = re.search(r'\{.*\}', response.text or '', re.S)
+        percent = json.loads(match.group(0)).get('percent') if match else None
+        return int(percent) if percent and 0 < int(percent) <= 100 else None
+    except Exception as exc:
+        print(f"   ⚠️ No se pudo leer el porcentaje de la imagen: {exc}")
+        return None
 
 
 def _debug_dump(name: str, content: str) -> None:
@@ -195,6 +234,14 @@ class DiaScraper:
 
         discount, plan = self._discount(editor_title, text, facts)
         if not discount:
+            image_percent = _percent_from_image(image)
+            if image_percent:
+                facts = {**facts, 'percent': image_percent}
+                discount, plan = self._discount(editor_title, text, facts)
+        if not discount:
+            # Antes se descartaba en silencio: una tarjeta activa sin % en el
+            # legal (sólo en la imagen) desaparecía de la web sin que nadie lo note.
+            print(f"   ⚠️ Tarjeta activa sin beneficio legible, se omite: {editor_title!r} ({image})")
             return None
 
         # Naranja X publica una tarjeta por plan con el mismo legal: el tope
@@ -296,7 +343,7 @@ class DiaScraper:
     def _card_qualifier(editor_title: str, entity_label: str) -> str:
         # "Sidecreer BLACK", "Cuenta Dni Visa": la variante va en el título.
         extra = re.sub(r'\b\d{2}-\d{2}\b', ' ', editor_title)  # "Prex 05-10" (fecha)
-        extra = re.sub(r'\d{1,3}\s*%|\b\d*\s*C?SI\b|\bCI\b|de reintegro|-', ' ', extra, flags=re.I)
+        extra = re.sub(r'\d{1,3}\s*%|\b\d*\s*C?SI\b|\bCI\b|de reintegro|[-+]', ' ', extra, flags=re.I)
         for word in re.split(r'\s+', entity_label):
             extra = re.sub(rf'\b{re.escape(word)}\b', ' ', extra, flags=re.I)
         extra = re.sub(r'\b(dni|cuenta|banco|naranja|tc|modo|bna)\b', ' ', extra, flags=re.I)
@@ -404,7 +451,7 @@ class DiaScraper:
     @staticmethod
     def _min_purchase(text: str) -> Optional[str]:
         match = re.search(
-            r'(?:M[ÍI]NIMO\s+DE\s+(?:COMPRA\s+DE\s+)?|MONTO\s+MAYOR\s+O\s+IGUAL\s+A\s+|'
+            r'(?:M[ÍI]NIMO\s+DE\s+(?:COMPRA\s*:?\s*(?:DE\s+)?)?|MONTO\s+MAYOR\s+O\s+IGUAL\s+A\s+|'
             r'COMPRAS?\s+MAYOR(?:ES)?\s+O\s+IGUAL(?:ES)?\s+A\s+|COMPRAS\s+DESDE\s+)\$\s?(\d[\d.]*)',
             text,
         )

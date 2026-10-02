@@ -11,6 +11,7 @@ import { AlertTriangle, ChevronLeft, ChevronRight, ExternalLink, FileText, Layou
 import { api } from "@/lib/api"
 import type { Promotion, PromotionDetails } from "@/lib/types"
 import { benefitLabel } from "@/lib/benefit"
+import { channelLabel, entityLabel, paymentMethods } from "@/lib/promo-meta"
 
 interface Props {
   promotions: Promotion[]
@@ -46,11 +47,9 @@ function safeOfficialPromotionUrl(value: string | null | undefined): string | nu
 }
 
 function conditionMarkers(promo: Promotion) {
-  const storeTypes = (promo.store_types || "").toLocaleLowerCase("es-AR")
   return {
-    online: storeTypes.includes("online"),
-    presencial: storeTypes.includes("presencial"),
-    exclusions: Array.isArray(promo.exclusions) && promo.exclusions.length > 0,
+    channel: channelLabel(promo),
+    exclusions: Array.isArray(promo.exclusions) ? promo.exclusions : [],
   }
 }
 
@@ -120,6 +119,8 @@ function ConditionsDialog({ promo, onClose }: { promo: Promotion; onClose: () =>
             <Detail label="Modalidad" value={display.store_types || "No informada"} />
             <Detail label="Medio de pago" value={display.payment_method || display.card_type || "No informado"} />
             <Detail label="Tope" value={display.tope || display.max_discount || "No informado"} />
+            <Detail label="Método" value={paymentMethods(display).join(" · ") || "No informado"} />
+            <Detail label="Compra mínima" value={display.min_purchase || "Sin mínimo informado"} />
           </div>
 
           {requirements.length > 0 && (
@@ -176,37 +177,51 @@ function PromotionTable({ promotions, marketName, onOpenConditions }: { promotio
       </header>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[760px] border-collapse text-left">
+        <table className="w-full min-w-[980px] border-collapse text-left">
           <thead className="bg-[#edf2f7] text-[10px] font-semibold uppercase tracking-[0.13em] text-[#52657d]">
             <tr>
               <th scope="col" className="whitespace-nowrap px-5 py-3 sm:px-6">Día</th>
               <th scope="col" className="whitespace-nowrap px-4 py-3">Banco / billetera</th>
               <th scope="col" className="whitespace-nowrap px-4 py-3">Descuento</th>
+              <th scope="col" className="whitespace-nowrap px-4 py-3">Método</th>
               <th scope="col" className="whitespace-nowrap px-4 py-3">Tope</th>
+              <th scope="col" className="whitespace-nowrap px-4 py-3">Mínimo</th>
               <th scope="col" className="px-4 py-3">Condición</th>
               <th scope="col" className="whitespace-nowrap px-5 py-3 sm:px-6">Vigencia</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e5ebf2]">
             {promotions.map((promo) => {
-              const entity = promo.bank || promo.wallet || "Sin entidad"
+              const entity = entityLabel(promo)
               const limit = promo.tope || promo.max_discount || "Sin tope informado"
               const validity = promo.valid_until ? `Hasta ${promo.valid_until}` : promo.valid_from ? `Desde ${promo.valid_from}` : "Vigencia en condiciones"
               const markers = conditionMarkers(promo)
+              const methods = paymentMethods(promo)
 
               return (
                 <tr key={promo.id} className="transition-colors hover:bg-[#f5f8fc]">
                   <td className="whitespace-nowrap px-5 py-4 align-top text-sm font-semibold text-[#102a4c] sm:px-6">{promo.valid_days || "Todos los días"}</td>
                   <td className="px-4 py-4 align-top"><BankBadge name={entity} size="sm" showLabel /></td>
                   <td className="px-4 py-4 align-top"><DiscountBadge discount={benefitLabel(promo)} /></td>
+                  <td className="px-4 py-4 align-top">
+                    {methods.length > 0
+                      ? <div className="flex flex-wrap gap-1">{methods.map((method) => <span key={method} className="whitespace-nowrap rounded-full border border-[#d6e0eb] bg-[#f5f8fc] px-2 py-0.5 text-[11px] font-bold text-[#102a4c]">{method}</span>)}</div>
+                      : <span className="text-xs text-[#8a9ab0]">No informado</span>}
+                  </td>
                   <td className="max-w-48 px-4 py-4 align-top text-sm font-semibold leading-snug text-[#102a4c]">{limit}</td>
+                  <td className="whitespace-nowrap px-4 py-4 align-top text-sm font-semibold text-[#102a4c]">{promo.min_purchase ? `Desde ${promo.min_purchase}` : <span className="text-xs font-normal text-[#8a9ab0]">Sin mínimo</span>}</td>
                   <td className="min-w-72 px-4 py-4 align-top text-sm leading-snug text-[#52657d]">
                     <p>{promo.title}</p>
-                    {(markers.online || markers.presencial || markers.exclusions) && <div className="mt-2 flex flex-wrap gap-1.5">
-                      {markers.online && <span className="rounded-full border border-[#c7d9f7] bg-[#f0f5ff] px-2 py-0.5 text-[10px] font-bold text-[#315fae]">Solo online</span>}
-                      {markers.presencial && <span className="rounded-full border border-[#cde7c1] bg-[#f4ffec] px-2 py-0.5 text-[10px] font-bold text-[#3b6a27]">Presencial</span>}
-                      {markers.exclusions && <span className="rounded-full border border-[#f0b7b2] bg-[#fff3f2] px-2 py-0.5 text-[10px] font-bold text-[#8f2d28]">Aplica exclusiones</span>}
+                    {(markers.channel || markers.exclusions.length > 0) && <div className="mt-2 flex flex-wrap gap-1.5">
+                      {markers.channel && <span className="rounded-full border border-[#c7d9f7] bg-[#f0f5ff] px-2 py-0.5 text-[10px] font-bold text-[#315fae]">{markers.channel}</span>}
+                      {markers.exclusions.length > 0 && <span className="rounded-full border border-[#f0b7b2] bg-[#fff3f2] px-2 py-0.5 text-[10px] font-bold text-[#8f2d28]">Aplica exclusiones</span>}
                     </div>}
+                    {/* Las exclusiones concretas (marcas, rubros) se ven sin abrir el
+                        legal; la lista completa queda en "Ver condiciones". */}
+                    {markers.exclusions.length > 0 && <>
+                      <p className="mt-2 line-clamp-2 text-xs text-[#8f2d28]">Excluye: {markers.exclusions.join(" ")}</p>
+                      <button type="button" onClick={() => onOpenConditions(promo)} className="mt-1 text-xs font-bold text-[#8f2d28] underline">Ver todas las exclusiones</button>
+                    </>}
                   </td>
                   <td className="px-5 py-4 align-top text-xs font-medium text-[#52657d] sm:px-6">
                     <p className="whitespace-nowrap">{validity}</p>

@@ -137,3 +137,54 @@ class CotoScraperTests(unittest.TestCase):
 
 if __name__ == "__main__":
     unittest.main()
+
+
+class CotoLegalsTest(unittest.TestCase):
+    """Legales de terminos-descuentos: exclusiones, notas al pie y emparejamiento."""
+
+    CONTENT = (
+        '<div class="legal-header" x>PRODUCTOS EXCLUIDOS PARA TODOS LOS DESCUENTOS Y O PROMOCIONES</div>'
+        '<div class="legal-body" x>PRODUCTOS EXCLUIDOS: DESCUENTOS NO VÁLIDOS PARA COMPRAS EN CUOTAS. '
+        'NO INCLUYE PRODUCTOS DE BODEGAS CATENA ZAPATA. NO INCLUYE TODAS LAS PRESENTACIONES DE COCA COLA.</div>'
+        '<div class="legal-header" x>DESCUENTOS VIERNES</div>'
+        '<div class="legal-body" x>(1) PAGOS CON QR DE MERCADO PAGO. EL BENEFICIO CONSISTE EN UN 25% DE '
+        'DESCUENTO, SIN TOPE DE REINTEGRO. (2) VALIDO EN COMPRAS A PARTIR DE $150.000 PAGANDO CON QR DE '
+        'MERCADO PAGO EN 3 CUOTAS SIN INTERÉS. (3) 15% CON CUALQUIER TARJETA DE DÉBITO.</div>'
+        '<div class="legal-header" x>BANCO CIUDAD LUNES &ndash; PRESENCIAL</div>'
+        '<div class="legal-body" x>25% DE DESCUENTO PAGANDO CON MODO. TOPE $30.000.</div>'
+        '<div class="legal-header" x>BANCO CIUDAD LUNES &ndash; ONLINE</div>'
+        '<div class="legal-body" x>25% DE DESCUENTO EN COTO DIGITAL. TOPE $30.000.</div>'
+    )
+
+    def setUp(self):
+        from scrapers.coto_scraper import parse_legal_cards
+        self.cards = parse_legal_cards(self.CONTENT)
+
+    def test_global_exclusions_are_split_into_sentences(self):
+        from scrapers.coto_scraper import global_exclusions
+        exclusions = global_exclusions(self.cards)
+        self.assertIn("NO INCLUYE PRODUCTOS DE BODEGAS CATENA ZAPATA.", exclusions)
+        self.assertEqual(len(exclusions), 3)
+
+    def test_footnote_min_purchase_belongs_to_cuotas_not_percentage(self):
+        from scrapers.coto_scraper import CotoScraper, footnote_segment
+        body = self.cards[1][1]
+        self.assertIsNone(CotoScraper._extract_min_purchase(footnote_segment(body, "25% descuento")))
+        self.assertEqual(
+            CotoScraper._extract_min_purchase(footnote_segment(body, "3 cuotas sin interés")), "$150.000",
+        )
+
+    def test_match_uses_channel_and_rejects_wrong_entity(self):
+        from scrapers.coto_scraper import match_legal
+        online = {"bank": "Banco Ciudad", "title": "Banco Ciudad 25% descuento - Lunes - Online",
+                  "discount": "25% descuento", "valid_days": "Lunes", "store_types": "Online"}
+        store = {**online, "title": "Banco Ciudad + MODO 25% descuento - Lunes - Sucursal",
+                 "wallet": "MODO", "store_types": "Tiendas"}
+        mp = {"wallet": "Mercado Pago", "title": "Mercado Pago 25% descuento - Viernes - Sucursal",
+              "discount": "25% descuento", "valid_days": "Viernes", "store_types": "Tiendas"}
+        other = {"bank": "Banco Credicoop", "title": "Banco Credicoop 25% descuento - Lunes - Online",
+                 "discount": "25% descuento", "valid_days": "Lunes", "store_types": "Online"}
+        self.assertEqual(match_legal(online, self.cards)[0], "BANCO CIUDAD LUNES – ONLINE")
+        self.assertEqual(match_legal(store, self.cards)[0], "BANCO CIUDAD LUNES – PRESENCIAL")
+        self.assertEqual(match_legal(mp, self.cards)[0], "DESCUENTOS VIERNES")
+        self.assertIsNone(match_legal(other, self.cards))

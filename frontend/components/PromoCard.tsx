@@ -10,6 +10,7 @@ import { ChevronDown, ChevronUp, ExternalLink, FileText } from "lucide-react"
 import type { Promotion } from "@/lib/types"
 import { SupermarketLogo } from "./SupermarketLogo"
 import { benefitLabel } from "@/lib/benefit"
+import { paymentMethods } from "@/lib/promo-meta"
 
 interface Props {
   promo: Promotion
@@ -141,6 +142,11 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
                 {store}
               </Badge>
             ))}
+            {paymentMethods(promo).map((method) => (
+              <Badge key={method} variant="outline" className="h-5 border-[#d6e0eb] bg-[#f5f8fc] px-1.5 py-0 text-[10px] font-semibold text-[#102a4c]">
+                {method}
+              </Badge>
+            ))}
             {meaningfulTope && (
               <Badge variant="outline" className="h-5 border-[#b8f36b] bg-[#efffdc] px-1.5 py-0 text-[10px] text-[#36561a]">
                 Tope: {meaningfulTope}
@@ -148,7 +154,7 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
             )}
             {promo.min_purchase && (
               <Badge variant="outline" className="h-5 border-[#cbd8e6] px-1.5 py-0 text-[10px] text-[#52657d]">
-                Min: {promo.min_purchase}
+                Mín. compra: {promo.min_purchase}
               </Badge>
             )}
             {requirements.length > 0 && (
