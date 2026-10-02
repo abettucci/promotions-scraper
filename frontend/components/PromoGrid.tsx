@@ -46,6 +46,19 @@ function safeOfficialPromotionUrl(value: string | null | undefined): string | nu
   }
 }
 
+/** "2026-10-31" → "31/10/2026": entra en la columna sin partirse. */
+function shortDate(value: string): string {
+  const match = value.match(/^(\d{4})-(\d{2})-(\d{2})/)
+  return match ? `${match[3]}/${match[2]}/${match[1]}` : value
+}
+
+const CHANNEL_STYLES: Record<string, string> = {
+  "Solo online": "border-[#c7d9f7] bg-[#f0f5ff] text-[#315fae]",
+  "Solo tiendas": "border-[#cde7c1] bg-[#f4ffec] text-[#3b6a27]",
+  "Online y tiendas": "border-[#ddd0f5] bg-[#f7f2ff] text-[#5b3a9a]",
+  default: "border-[#d6e0eb] bg-[#f5f8fc] text-[#52657d]",
+}
+
 function conditionMarkers(promo: Promotion) {
   return {
     channel: channelLabel(promo),
@@ -177,56 +190,71 @@ function PromotionTable({ promotions, marketName, onOpenConditions }: { promotio
       </header>
 
       <div className="overflow-x-auto">
-        <table className="w-full min-w-[980px] border-collapse text-left">
+        {/* Anchos fijos por columna: con table-auto la columna Condición se
+            comía el espacio y Vigencia quedaba cortada fuera de la tarjeta. */}
+        <table className="w-full min-w-[1180px] table-fixed border-collapse text-left">
+          <colgroup>
+            <col className="w-[110px]" />
+            <col className="w-[160px]" />
+            <col className="w-[130px]" />
+            <col className="w-[110px]" />
+            <col className="w-[100px]" />
+            <col className="w-[120px]" />
+            <col className="w-[110px]" />
+            <col />
+            <col className="w-[150px]" />
+          </colgroup>
           <thead className="bg-[#edf2f7] text-[10px] font-semibold uppercase tracking-[0.13em] text-[#52657d]">
             <tr>
-              <th scope="col" className="whitespace-nowrap px-5 py-3 sm:px-6">Día</th>
-              <th scope="col" className="whitespace-nowrap px-4 py-3">Banco / billetera</th>
-              <th scope="col" className="whitespace-nowrap px-4 py-3">Descuento</th>
-              <th scope="col" className="whitespace-nowrap px-4 py-3">Método</th>
-              <th scope="col" className="whitespace-nowrap px-4 py-3">Tope</th>
-              <th scope="col" className="whitespace-nowrap px-4 py-3">Mínimo</th>
-              <th scope="col" className="px-4 py-3">Condición</th>
-              <th scope="col" className="whitespace-nowrap px-5 py-3 sm:px-6">Vigencia</th>
+              <th scope="col" className="px-4 py-3 sm:px-5">Día</th>
+              <th scope="col" className="px-3 py-3">Banco / billetera</th>
+              <th scope="col" className="px-3 py-3">Descuento</th>
+              <th scope="col" className="px-3 py-3">Modalidad</th>
+              <th scope="col" className="px-3 py-3">Método</th>
+              <th scope="col" className="px-3 py-3">Tope</th>
+              <th scope="col" className="px-3 py-3">Mínimo</th>
+              <th scope="col" className="px-3 py-3">Condición</th>
+              <th scope="col" className="px-4 py-3 sm:px-5">Vigencia</th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e5ebf2]">
             {promotions.map((promo) => {
               const entity = entityLabel(promo)
               const limit = promo.tope || promo.max_discount || "Sin tope informado"
-              const validity = promo.valid_until ? `Hasta ${promo.valid_until}` : promo.valid_from ? `Desde ${promo.valid_from}` : "Vigencia en condiciones"
+              const validity = promo.valid_until ? `Hasta ${shortDate(promo.valid_until)}` : promo.valid_from ? `Desde ${shortDate(promo.valid_from)}` : "Ver legal"
               const markers = conditionMarkers(promo)
               const methods = paymentMethods(promo)
 
               return (
                 <tr key={promo.id} className="transition-colors hover:bg-[#f5f8fc]">
-                  <td className="whitespace-nowrap px-5 py-4 align-top text-sm font-semibold text-[#102a4c] sm:px-6">{promo.valid_days || "Todos los días"}</td>
-                  <td className="px-4 py-4 align-top"><BankBadge name={entity} size="sm" showLabel /></td>
-                  <td className="px-4 py-4 align-top"><DiscountBadge discount={benefitLabel(promo)} /></td>
-                  <td className="px-4 py-4 align-top">
+                  <td className="break-words px-4 py-4 align-top text-sm font-semibold leading-snug text-[#102a4c] sm:px-5">{promo.valid_days || "Todos los días"}</td>
+                  <td className="min-w-0 px-3 py-4 align-top"><BankBadge name={entity} size="sm" showLabel /></td>
+                  <td className="px-3 py-4 align-top"><DiscountBadge discount={benefitLabel(promo)} /></td>
+                  <td className="px-3 py-4 align-top">
+                    {markers.channel
+                      ? <span className={`inline-block rounded-full border px-2 py-0.5 text-[11px] font-bold leading-snug ${CHANNEL_STYLES[markers.channel] ?? CHANNEL_STYLES.default}`}>{markers.channel}</span>
+                      : <span className="text-xs text-[#8a9ab0]">No informada</span>}
+                  </td>
+                  <td className="px-3 py-4 align-top">
                     {methods.length > 0
-                      ? <div className="flex flex-wrap gap-1">{methods.map((method) => <span key={method} className="whitespace-nowrap rounded-full border border-[#d6e0eb] bg-[#f5f8fc] px-2 py-0.5 text-[11px] font-bold text-[#102a4c]">{method}</span>)}</div>
+                      ? <div className="flex flex-wrap gap-1">{methods.map((method) => <span key={method} className="rounded-full border border-[#d6e0eb] bg-[#f5f8fc] px-2 py-0.5 text-[11px] font-bold leading-snug text-[#102a4c]">{method}</span>)}</div>
                       : <span className="text-xs text-[#8a9ab0]">No informado</span>}
                   </td>
-                  <td className="max-w-48 px-4 py-4 align-top text-sm font-semibold leading-snug text-[#102a4c]">{limit}</td>
-                  <td className="whitespace-nowrap px-4 py-4 align-top text-sm font-semibold text-[#102a4c]">{promo.min_purchase ? `Desde ${promo.min_purchase}` : <span className="text-xs font-normal text-[#8a9ab0]">Sin mínimo</span>}</td>
-                  <td className="min-w-72 px-4 py-4 align-top text-sm leading-snug text-[#52657d]">
-                    <p>{promo.title}</p>
-                    {(markers.channel || markers.exclusions.length > 0) && <div className="mt-2 flex flex-wrap gap-1.5">
-                      {markers.channel && <span className="rounded-full border border-[#c7d9f7] bg-[#f0f5ff] px-2 py-0.5 text-[10px] font-bold text-[#315fae]">{markers.channel}</span>}
-                      {markers.exclusions.length > 0 && <span className="rounded-full border border-[#f0b7b2] bg-[#fff3f2] px-2 py-0.5 text-[10px] font-bold text-[#8f2d28]">Aplica exclusiones</span>}
-                    </div>}
+                  <td className="break-words px-3 py-4 align-top text-[13px] font-semibold leading-snug text-[#102a4c]">{limit}</td>
+                  <td className="px-3 py-4 align-top text-[13px] font-semibold leading-snug text-[#102a4c]">{promo.min_purchase ? `Desde ${promo.min_purchase}` : <span className="text-xs font-normal text-[#8a9ab0]">Sin mínimo</span>}</td>
+                  <td className="px-3 py-4 align-top text-[13px] leading-snug text-[#52657d]">
+                    <p className="break-words">{promo.title}</p>
                     {/* Las exclusiones concretas (marcas, rubros) se ven sin abrir el
                         legal; la lista completa queda en "Ver condiciones". */}
                     {markers.exclusions.length > 0 && <>
-                      <p className="mt-2 line-clamp-2 text-xs text-[#8f2d28]">Excluye: {markers.exclusions.join(" ")}</p>
+                      <p className="mt-2 line-clamp-2 text-xs text-[#8f2d28]"><span className="font-bold">Excluye:</span> {markers.exclusions.join(" ")}</p>
                       <button type="button" onClick={() => onOpenConditions(promo)} className="mt-1 text-xs font-bold text-[#8f2d28] underline">Ver todas las exclusiones</button>
                     </>}
                   </td>
-                  <td className="px-5 py-4 align-top text-xs font-medium text-[#52657d] sm:px-6">
+                  <td className="px-4 py-4 align-top text-xs font-medium leading-snug text-[#52657d] sm:px-5">
                     <p className="whitespace-nowrap">{validity}</p>
-                    <button type="button" onClick={() => onOpenConditions(promo)} className="mt-2 inline-flex items-center gap-1 font-bold text-[#2758d8] transition hover:text-[#102a4c]" aria-label={`Ver condiciones de ${promo.title}`}>
-                      <FileText className="h-3.5 w-3.5" /> Ver condiciones
+                    <button type="button" onClick={() => onOpenConditions(promo)} className="mt-2 inline-flex items-center gap-1 whitespace-nowrap font-bold text-[#2758d8] transition hover:text-[#102a4c]" aria-label={`Ver condiciones de ${promo.title}`}>
+                      <FileText className="h-3.5 w-3.5 shrink-0" /> Ver condiciones
                     </button>
                   </td>
                 </tr>
