@@ -449,16 +449,46 @@ def _format_ars(value: int) -> str:
     return f"${value:,}".replace(",", ".")
 
 
-def _answer_price_comparison(question: str) -> str:
+def _answer_product_prices(product: str, promotions: list[dict], methods: list[dict],
+                           today: Optional[date] = None) -> str:
+    """Compara el precio en supermercados y tiendas de electro + la mejor promo."""
+    from prices import search_prices
+
+    result = search_prices(product, promotions=promotions, day=today, methods=methods or None, max_groups=3)
+    groups = result.get("groups") or []
+    if not groups:
+        return (f"No encontré <b>{_esc(product)}</b> en las tiendas que comparo "
+                "(Carrefour, Coto, Día, Jumbo, Disco, Vea, ChangoMás, Frávega, Naldo, Easy, Cetrogar, On City, Coppel). "
+                "Probá con marca y tamaño, p. ej. <i>leche La Serenísima 1 L</i>.")
+    group = groups[0]
+    offers = group["offers"]
+    best = offers[0]
+    lines = [f"💸 <b>{_esc(group['name'])}</b> — en {group['store_count']} tiendas"]
+    for offer in offers[:4]:
+        line = f"• <b>{_esc(offer['store_name'])}</b>: {_format_ars(round(offer['price']))}"
+        promo = offer.get("promo")
+        if promo and offer.get("savings"):
+            line += (f" → <b>{_format_ars(round(offer['final_price']))}</b> con {_esc(promo['discount'])} "
+                     f"{_esc(promo['entity'])}")
+            if promo.get("requires_min_purchase"):
+                line += f" (compra mín. {_esc(promo['min_purchase'])})"
+        lines.append(line)
+    if best.get("savings"):
+        lines.append(f"\n✅ Hoy conviene <b>{_esc(best['store_name'])}</b>: {_format_ars(round(best['final_price']))} "
+                     f"pagando con {_esc(best['promo']['entity'])}.")
+    lines.append(f'<a href="{_esc(best["url"])}">Ver en {_esc(best["store_name"])}</a>')
+    lines.append("<i>Precios online publicados; el precio final con promo es estimado (topes y reintegros según cada banco).</i>")
+    return "\n".join(lines)
+
+
+def _answer_price_comparison(question: str, promotions: Optional[list[dict]] = None,
+                             methods: Optional[list[dict]] = None, today: Optional[date] = None) -> str:
     product = _extract_price_product(question)
     if not product:
-        return "¿Qué suplemento querés comparar? Ej.: <i>¿En qué lugar está más barata la proteína Star Nutrition 2 lb?</i>"
+        return "¿Qué producto querés comparar? Ej.: <i>¿Dónde está más barato el aceite Cocinero 1,5 L?</i>"
     normalized = _norm(product)
     if not any(term in normalized for term in _SUPPLEMENT_TERMS):
-        return (
-            "Por ahora puedo comparar precios publicados de <b>suplementos</b>. "
-            "Para supermercados y combustibles comparo promociones y sus condiciones, no precios ni stock de productos."
-        )
+        return _answer_product_prices(product, promotions or [], methods or [], today)
     result = find_supplement_price(product)
     if not result:
         return (
@@ -718,7 +748,7 @@ def answer_promo_question(
         normalized,
     ))
     if _is_price_comparison_question(question):
-        return _answer_price_comparison(question)
+        return _answer_price_comparison(question, promotions, methods, today)
     query = parse_promo_query(question, promotions, today)
     if exclusion_intent:
         return _answer_exclusion(question, promotions)

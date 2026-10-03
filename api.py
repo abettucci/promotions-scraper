@@ -643,6 +643,49 @@ def ask_public_assistant(body: AssistantQuestionBody, request: Request):
         raise HTTPException(422, "No pude interpretar una consulta válida sobre promociones.")
     return {"answer": _assistant_plain_text(answer)}
 
+# ── Comparador de precios ─────────────────────────────────────────────────────
+_PRICE_CATEGORIES = {"supermarket", "electro", "supplements"}
+
+
+def _optional_user(credentials: Optional[HTTPAuthorizationCredentials]) -> Optional[dict]:
+    """Usuario de la sesión si hay token válido; anónimo si no (sin error)."""
+    if not credentials or not _auth_is_ready():
+        return None
+    user_id = _decode_token(credentials.credentials)
+    return _db.get_user_by_id(user_id) if user_id else None
+
+
+@app.get("/api/prices/search")
+def search_product_prices(
+    request: Request,
+    q: str = Query(..., min_length=2, max_length=120),
+    category: Optional[str] = Query(None),
+    day: Optional[date] = Query(None),
+    mine: bool = Query(False),
+    credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
+):
+    """Compara el precio de un producto entre tiendas y aplica la mejor promo.
+
+    Consulta en vivo los catálogos públicos (con cache de 2 h). Con ``mine``
+    y sesión iniciada, sólo considera promos de los medios de pago del usuario.
+    """
+    from prices import search_prices
+
+    if category and category not in _PRICE_CATEGORIES:
+        raise HTTPException(422, "Categoría inválida")
+    retry_after = _db.consume_public_assistant_quota(
+        # Clave distinta a la del asistente: cuotas separadas, mismo HMAC de IP.
+        hashlib.sha256(b"prices:" + _public_assistant_rate_key(request).encode()).hexdigest(),
+        config.PRICES_RATE_LIMIT_MAX,
+        config.PRICES_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(429, "Alcanzaste el límite de búsquedas de precios. Probá en un rato.")
+    user = _optional_user(credentials) if mine else None
+    methods = _db.get_user_payment_methods(user["id"]) if user else None
+    return search_prices(q, category=category, promotions=_assistant_promotions(), day=day, methods=methods)
+
+
 # ── Catálogo de medios de pago ────────────────────────────────────────────────
 @app.get("/api/catalog/payment-methods")
 def get_payment_methods_catalog():

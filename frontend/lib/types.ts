@@ -125,3 +125,52 @@ export interface MyPromotionsResponse {
 export interface AssistantResponse {
   answer: string
 }
+
+// ── Comparador de precios ────────────────────────────────────────────────────
+export interface PriceOfferPromo {
+  id: number | null
+  title: string | null
+  discount: string | null
+  entity: string
+  tope: string | null
+  min_purchase: string | null
+  valid_days: string | null
+  store_types: string | null
+  requires_min_purchase: boolean
+}
+
+export interface PriceOffer {
+  store: string
+  store_name: string
+  merchant: string | null
+  title: string
+  price: number
+  list_price: number | null
+  percentage_off: number | null
+  url: string
+  brand: string
+  ean: string
+  in_stock: boolean
+  image: string
+  installments: number
+  final_price: number | null
+  savings: number
+  promo: PriceOfferPromo | null
+}
+
+export interface PriceGroup {
+  key: string
+  name: string
+  brand: string
+  ean: string
+  image: string
+  store_count: number
+  offers: PriceOffer[]
+}
+
+export interface PriceSearchResponse {
+  query: string
+  day?: string
+  groups: PriceGroup[]
+  failed_stores: string[]
+}

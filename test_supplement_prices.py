@@ -41,9 +41,18 @@ class SupplementPriceTests(unittest.TestCase):
         self.assertIn("Ver comparación", answer)
         self.assertTrue(is_allowed_promo_question("En que lugar esta mas barata la protein star nutrition 2 lb doypack?"))
 
-    def test_explains_the_limit_for_non_supplement_price_questions(self):
-        answer = answer_promo_question("¿En qué lugar está más barata la yerba?", [])
-        self.assertIn("supermercados", answer)
+    def test_non_supplement_price_questions_use_the_store_comparator(self):
+        result = {"groups": [{"name": "Yerba Playadito 1 kg", "store_count": 2, "offers": [
+            {"store_name": "Día", "price": 5000, "final_price": 4000, "savings": 1000, "url": "https://x/p",
+             "promo": {"discount": "20% reintegro", "entity": "MODO", "requires_min_purchase": False,
+                       "min_purchase": None}},
+            {"store_name": "Jumbo", "price": 5200, "final_price": 5200, "savings": 0, "url": "https://y/p", "promo": None},
+        ]}]}
+        with patch("prices.search_prices", return_value=result) as search:
+            answer = answer_promo_question("¿En qué lugar está más barata la yerba playadito?", [])
+        search.assert_called_once()
+        self.assertIn("Yerba Playadito", answer)
+        self.assertIn("Hoy conviene <b>Día</b>", answer)
 
 
 if __name__ == "__main__":

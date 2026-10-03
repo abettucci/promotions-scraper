@@ -327,6 +327,11 @@ if len(_public_rate_limit_secret.encode("utf-8")) < 32:
     _public_rate_limit_secret = secrets.token_urlsafe(32)
 ASSISTANT_PUBLIC_RATE_LIMIT_SECRET = _public_rate_limit_secret
 
+# Comparador de precios: cada búsqueda consulta ~13 tiendas en vivo, así que
+# se limita por IP (mismo HMAC que el asistente público) aunque más generoso.
+PRICES_RATE_LIMIT_MAX = int(os.getenv("PRICES_RATE_LIMIT_MAX", "60"))
+PRICES_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("PRICES_RATE_LIMIT_WINDOW_SECONDS", "3600"))
+
 # ============================================
 # CATÁLOGO DE MEDIOS DE PAGO
 # ============================================

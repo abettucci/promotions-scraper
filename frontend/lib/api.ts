@@ -1,6 +1,7 @@
 import type {
   PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, PromotionDetails,
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
+  PriceSearchResponse,
 } from "./types"
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
@@ -71,6 +72,8 @@ export const api = {
   getSupermarkets: (category?: string) =>
     fetchJSON<Supermarket[]>("/api/supermarkets", category ? { category } : undefined),
   getStats: () => fetchJSON<Stats>("/api/stats"),
+  searchPrices: (params: { q: string; category?: string; mine?: boolean }, token?: string | null) =>
+    fetchJSON<PriceSearchResponse>("/api/prices/search", params, token),
   getPaymentMethodsCatalog: () => fetchJSON<PaymentMethodsCatalog>("/api/catalog/payment-methods"),
 
   // ── Auth ────────────────────────────────────────────────────────────────────

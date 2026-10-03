@@ -1,0 +1,70 @@
+{
+ "productName": "Smart Tv 50 Samsung 4k Con Barra De Sonido B400f De Regalo",
+ "brand": "Samsung",
+ "link": "https://www.fravega.com/smart-tv-50-samsung-4k-con-barra-de-sonido-b400f-de-regalo-990537973/p",
+ "items": [
+  {
+   "ean": "8806095478128",
+   "images": [
+    {
+     "imageId": "45896016",
+     "imageLabel": null,
+     "imageTag": "<img src=\"~/arquivos/ids/45896016-#width#-#height#/image-54964695a48547efa33c028511814a0b.jpg?v=638986595311930000\" width=\"#width#\" height=\"#height#\" alt=\"image-54964695a48547efa33c028511814a0b\" id=\"\" />",
+     "imageUrl": "https://fravega.vteximg.com.br/arquivos/ids/45896016/image-54964695a48547efa33c028511814a0b.jpg?v=638986595311930000",
+     "imageText": "image-54964695a48547efa33c028511814a0b",
+     "imageLastModified": "2025-11-13T19:38:51.1930000Z"
+    }
+   ],
+   "sellers": [
+    {
+     "sellerDefault": true,
+     "commertialOffer": {
+      "Price": 826445.45,
+      "ListPrice": 1159999.0,
+      "Tax": 173553.54,
+      "IsAvailable": true,
+      "AvailableQuantity": 100,
+      "Installments": [
+       {
+        "Value": 999998.99,
+        "InterestRate": 0.0,
+        "TotalValuePlusInterestRate": 999998.99,
+        "NumberOfInstallments": 1,
+        "PaymentSystemName": "American Express",
+        "PaymentSystemGroupName": "creditCardPaymentGroup",
+        "Name": "American Express à vista"
+       },
+       {
+        "Value": 529132.18,
+        "InterestRate": 3.86,
+        "TotalValuePlusInterestRate": 1058264.36,
+        "NumberOfInstallments": 2,
+        "PaymentSystemName": "American Express",
+        "PaymentSystemGroupName": "creditCardPaymentGroup",
+        "Name": "American Express 2 vezes com juros"
+       },
+       {
+        "Value": 359664.46,
+        "InterestRate": 3.9,
+        "TotalValuePlusInterestRate": 1078993.38,
+        "NumberOfInstallments": 3,
+        "PaymentSystemName": "American Express",
+        "PaymentSystemGroupName": "creditCardPaymentGroup",
+        "Name": "American Express 3 vezes com juros"
+       },
+       {
+        "Value": 190389.25,
+        "InterestRate": 3.94,
+        "TotalValuePlusInterestRate": 1142335.5,
+        "NumberOfInstallments": 6,
+        "PaymentSystemName": "American Express",
+        "PaymentSystemGroupName": "creditCardPaymentGroup",
+        "Name": "American Express 6 vezes com juros"
+       }
+      ]
+     }
+    }
+   ]
+  }
+ ]
+}

@@ -1,0 +1,446 @@
+{
+ "@type": "Page",
+ "endeca:contentPath": "/categoria",
+ "contents": [
+  {
+   "Main": [
+    {
+     "@type": "Category_SearchAdjustments",
+     "originalTerms": [
+      "leche la serenisima"
+     ]
+    },
+    {
+     "contents": [
+      {
+       "@type": "Category_ResultsList",
+       "totalNumRecs": 6,
+       "recsPerPage": 24,
+       "firstRecNum": 1,
+       "lastRecNum": 6,
+       "records": [
+        {
+         "@class": "com.endeca.infront.cartridge.model.Record",
+         "detailsAction": {
+          "recordState": "/leche-la-serenísima-protein-1-litro/_/A-00633499-00633499-200?format=json"
+         },
+         "attributes": {
+          "product.displayName": [
+           "Leche La Serenísima Protein 1 Litro"
+          ],
+          "product.repositoryId": [
+           "prod00633499"
+          ]
+         },
+         "numRecords": 1,
+         "records": [
+          {
+           "@class": "com.endeca.infront.cartridge.model.Record",
+           "attributes": {
+            "product.brand": [
+             "LA SERENISIMA"
+            ],
+            "sku.displayName": [
+             "Leche La Serenísima Protein 1 Litro"
+            ],
+            "sku.referencePrice": [
+             "2378.000000"
+            ],
+            "product.mediumImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/medium/00633400/00633499.jpg"
+            ],
+            "product.dtoDescuentos": [
+             "[]"
+            ],
+            "product.displayName": [
+             "Leche La Serenísima Protein 1 Litro"
+            ],
+            "product.dtoDescuentosMediosPago": [
+             "[]"
+            ],
+            "product.priceListPair": [
+             "priceList200"
+            ],
+            "product.eanPrincipal": [
+             "7790742352101"
+            ],
+            "product.repositoryId": [
+             "prod00633499"
+            ],
+            "product.MARCA": [
+             "LA SERENISIMA"
+            ],
+            "record.id": [
+             "00633499-00633499-200"
+            ],
+            "sku.activePrice": [
+             "2378.000000"
+            ],
+            "product.sDisp_200": [
+             "1004"
+            ],
+            "sku.dtoPrice": [
+             "{\"id\":\"pl200_00633499\",\"skuId\":\"sku00633499\",\"precioLista\":2378.0,\"precio\":2378.0,\"precioSinImp\":1965.29}"
+            ],
+            "product.largeImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/large/00633400/00633499.jpg"
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "@class": "com.endeca.infront.cartridge.model.Record",
+         "detailsAction": {
+          "recordState": "/leche-uat-zero-lactosa-la-serenisima-1l/_/A-00490643-00490643-200?format=json"
+         },
+         "attributes": {
+          "product.displayName": [
+           "Leche UAT Zero lactosa La Serenisima 1L"
+          ],
+          "product.repositoryId": [
+           "prod00490643"
+          ]
+         },
+         "numRecords": 1,
+         "records": [
+          {
+           "@class": "com.endeca.infront.cartridge.model.Record",
+           "attributes": {
+            "product.brand": [
+             "LA SERENISIMA"
+            ],
+            "sku.displayName": [
+             "Leche UAT Zero lactosa La Serenisima 1L"
+            ],
+            "sku.referencePrice": [
+             "3118.000000"
+            ],
+            "product.mediumImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/medium/00490600/00490643.jpg"
+            ],
+            "product.dtoDescuentos": [
+             "[{\"id\":\"38136330\",\"textoVigencia\":\" \",\"textoPrecioRegular\":\"Precio Contado: $3118\",\"precioRegular\":\"\",\"textoDescuento\":\"25%Dto\",\"precioDescuento\":\"$2338.50\",\"precioDesc\":\"2338.50\",\"precioDescTextoAdicional\":\"\",\"imagenDescuento\":\" \",\"comentarios\":\" No acumulable con otras promos\"}]"
+            ],
+            "product.displayName": [
+             "Leche UAT Zero lactosa La Serenisima 1L"
+            ],
+            "product.dtoDescuentosMediosPago": [
+             "[]"
+            ],
+            "product.priceListPair": [
+             "priceList200"
+            ],
+            "product.eanPrincipal": [
+             "7790742333605"
+            ],
+            "product.repositoryId": [
+             "prod00490643"
+            ],
+            "product.MARCA": [
+             "LA SERENISIMA"
+            ],
+            "record.id": [
+             "00490643-00490643-200"
+            ],
+            "sku.activePrice": [
+             "3118.000000"
+            ],
+            "product.sDisp_200": [
+             "1004"
+            ],
+            "sku.dtoPrice": [
+             "{\"id\":\"pl200_00490643\",\"skuId\":\"sku00490643\",\"precioLista\":3118.0,\"precio\":3118.0,\"precioSinImp\":2576.86,\"imagenOferta1\":\"oferta.png\"}"
+            ],
+            "product.largeImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/large/00490600/00490643.jpg"
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "@class": "com.endeca.infront.cartridge.model.Record",
+         "detailsAction": {
+          "recordState": "/leche-parcialmente-descremada-liviana-la-serenisima-sachet-1l/_/A-00009955-00009955-200?format=json"
+         },
+         "attributes": {
+          "product.displayName": [
+           "Leche Parcialmente Descremada Liviana LA SERENISIMA Sachet 1l"
+          ],
+          "product.repositoryId": [
+           "prod00009955"
+          ]
+         },
+         "numRecords": 1,
+         "records": [
+          {
+           "@class": "com.endeca.infront.cartridge.model.Record",
+           "attributes": {
+            "product.brand": [
+             "LA SERENISIMA"
+            ],
+            "sku.displayName": [
+             "Leche Parcialmente Descremada Liviana LA SERENISIMA Sachet 1l"
+            ],
+            "sku.referencePrice": [
+             "2050.000000"
+            ],
+            "product.mediumImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/medium/00009900/00009955.jpg"
+            ],
+            "product.dtoDescuentos": [
+             "[{\"id\":\"38133984\",\"textoVigencia\":\" \",\"textoPrecioRegular\":\"Precio Contado:\",\"precioRegular\":\"\",\"textoDescuento\":\"\",\"precioDescuento\":\"$2050.00\",\"precioDesc\":\"2050.00\",\"precioDescTextoAdicional\":\"\",\"imagenDescuento\":\" \",\"comentarios\":\" \"}]"
+            ],
+            "product.displayName": [
+             "Leche Parcialmente Descremada Liviana LA SERENISIMA Sachet 1l"
+            ],
+            "product.dtoDescuentosMediosPago": [
+             "[]"
+            ],
+            "product.priceListPair": [
+             "priceList200"
+            ],
+            "product.eanPrincipal": [
+             "7790742448101"
+            ],
+            "product.repositoryId": [
+             "prod00009955"
+            ],
+            "product.MARCA": [
+             "LA SERENISIMA"
+            ],
+            "record.id": [
+             "00009955-00009955-200"
+            ],
+            "sku.activePrice": [
+             "2050.000000"
+            ],
+            "product.sDisp_200": [
+             "1004"
+            ],
+            "sku.dtoPrice": [
+             "{\"id\":\"pl200_00009955\",\"skuId\":\"sku00009955\",\"precioLista\":2050.0,\"precio\":2050.0,\"precioSinImp\":1694.21,\"imagenOferta2\":\"NoAcumulable.png\"}"
+            ],
+            "product.largeImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/large/00009900/00009955.jpg"
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "@class": "com.endeca.infront.cartridge.model.Record",
+         "detailsAction": {
+          "recordState": "/bebida-gasificada-con-yerba-limón-y-jengibre-yací-354ml/_/A-00592060-00592060-200?format=json"
+         },
+         "attributes": {
+          "product.displayName": [
+           "Bebida Gasificada Con Yerba Limón Y Jengibre Yací 354ml"
+          ],
+          "product.repositoryId": [
+           "prod00592060"
+          ]
+         },
+         "numRecords": 1,
+         "records": [
+          {
+           "@class": "com.endeca.infront.cartridge.model.Record",
+           "attributes": {
+            "product.brand": [
+             "YACÍ"
+            ],
+            "sku.displayName": [
+             "Bebida Gasificada Con Yerba Limón Y Jengibre Yací 354ml"
+            ],
+            "sku.referencePrice": [
+             "5090.390000"
+            ],
+            "product.mediumImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/medium/00592000/00592060.jpg"
+            ],
+            "product.dtoDescuentos": [
+             "[{\"id\":\"38137331\",\"textoVigencia\":\" \",\"textoPrecioRegular\":\"Precio Contado: $1802\",\"precioRegular\":\"\",\"textoDescuento\":\"2x1\",\"precioDescuento\":\"$901.00c/u\",\"precioDesc\":\"901.00\",\"precioDescTextoAdicional\":\"c/u\",\"imagenDescuento\":\" \",\"comentarios\":\" No acumulable con otras promos\",\"textoLlevando\":\"Llevando 2\"}]"
+            ],
+            "product.displayName": [
+             "Bebida Gasificada Con Yerba Limón Y Jengibre Yací 354ml"
+            ],
+            "product.dtoDescuentosMediosPago": [
+             "[]"
+            ],
+            "product.priceListPair": [
+             "priceList200"
+            ],
+            "product.eanPrincipal": [
+             "7798383430011"
+            ],
+            "product.repositoryId": [
+             "prod00592060"
+            ],
+            "product.MARCA": [
+             "YACÍ"
+            ],
+            "record.id": [
+             "00592060-00592060-200"
+            ],
+            "sku.activePrice": [
+             "1802.000000"
+            ],
+            "product.sDisp_200": [
+             "1004"
+            ],
+            "sku.dtoPrice": [
+             "{\"id\":\"pl200_00592060\",\"skuId\":\"sku00592060\",\"precioLista\":1802.0,\"precio\":5090.39,\"precioSinImp\":1489.26,\"imagenOferta1\":\"oferta.png\"}"
+            ],
+            "product.largeImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/large/00592000/00592060.jpg"
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "@class": "com.endeca.infront.cartridge.model.Record",
+         "detailsAction": {
+          "recordState": "/lavarropas-automático-samsung-carga-frontal-7-kg-ww70a40000su-plata/_/A-00543791-00543791-200?format=json"
+         },
+         "attributes": {
+          "product.displayName": [
+           "Lavarropas Automático Samsung Carga Frontal 7 Kg Ww70a40000su Plata"
+          ],
+          "product.repositoryId": [
+           "prod00543791"
+          ]
+         },
+         "numRecords": 1,
+         "records": [
+          {
+           "@class": "com.endeca.infront.cartridge.model.Record",
+           "attributes": {
+            "product.brand": [
+             "SAMSUNG"
+            ],
+            "sku.displayName": [
+             "Lavarropas Automático Samsung Carga Frontal 7 Kg Ww70a40000su Plata"
+            ],
+            "product.mediumImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/medium/00543700/00543791.jpg"
+            ],
+            "product.dtoDescuentos": [
+             "[{\"id\":\"38147548\",\"textoPrecioRegular\":\"Precio Contado: $1049999\",\"precioRegular\":\"\",\"textoDescuento\":\"1 Pago 20%\",\"precioDescuento\":\"$839999.20\",\"precioDesc\":\"839999.20\",\"precioDescTextoAdicional\":\"\",\"imagenDescuento\":\"/content/images/cdigi/ofertas/comunidad.png\",\"comentarios\":\" No acumulable con otras promos\"}]"
+            ],
+            "product.displayName": [
+             "Lavarropas Automático Samsung Carga Frontal 7 Kg Ww70a40000su Plata"
+            ],
+            "product.dtoDescuentosMediosPago": [
+             "[{\"id\":\"82127194\",\"precioCuota\":\"$87499.92\",\"cantidadCuotas\":\"12\",\"imagenDescuento\":\"/content/images/cdigi/ofertas/pagando-con-todas-tarjetas.png\"}]"
+            ],
+            "product.priceListPair": [
+             "priceList200"
+            ],
+            "product.eanPrincipal": [
+             "8806094365580"
+            ],
+            "product.repositoryId": [
+             "prod00543791"
+            ],
+            "product.MARCA": [
+             "SAMSUNG"
+            ],
+            "record.id": [
+             "00543791-00543791-200"
+            ],
+            "sku.activePrice": [
+             "1049999.000000"
+            ],
+            "product.sDisp_200": [
+             "1004"
+            ],
+            "sku.dtoPrice": [
+             "{\"id\":\"pl200_00543791\",\"skuId\":\"sku00543791\",\"precioLista\":1049999.0,\"precioSinImp\":867767.77,\"imagenOferta1\":\"oferta.png\",\"imagenOferta3\":\"CucardaCuotas_Visa_18CSI.png\"}"
+            ],
+            "product.largeImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/large/00543700/00543791.jpg"
+            ]
+           }
+          }
+         ]
+        },
+        {
+         "@class": "com.endeca.infront.cartridge.model.Record",
+         "detailsAction": {
+          "recordState": "/aceite-girasol-cocinero-botella-900-ml/_/A-00183553-00183553-200?format=json"
+         },
+         "attributes": {
+          "product.displayName": [
+           "Aceite Girasol  COCINERO   Botella 900 Ml"
+          ],
+          "product.repositoryId": [
+           "prod00183553"
+          ]
+         },
+         "numRecords": 1,
+         "records": [
+          {
+           "@class": "com.endeca.infront.cartridge.model.Record",
+           "attributes": {
+            "product.brand": [
+             "COCINERO"
+            ],
+            "sku.displayName": [
+             "Aceite Girasol  COCINERO   Botella 900 Ml"
+            ],
+            "sku.referencePrice": [
+             "4855.550000"
+            ],
+            "product.mediumImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/medium/00183500/00183553.jpg"
+            ],
+            "product.dtoDescuentos": [
+             "[]"
+            ],
+            "product.displayName": [
+             "Aceite Girasol  COCINERO   Botella 900 Ml"
+            ],
+            "product.dtoDescuentosMediosPago": [
+             "[{\"id\":\"82139147\",\"precioCuota\":\"$1456.67\",\"cantidadCuotas\":\"3\",\"imagenDescuento\":\"/content/images/cdigi/ofertas/pagando-con-todas-tarjetas.png\"}]"
+            ],
+            "product.priceListPair": [
+             "priceList200"
+            ],
+            "product.eanPrincipal": [
+             "7790070012050"
+            ],
+            "product.repositoryId": [
+             "prod00183553"
+            ],
+            "product.MARCA": [
+             "COCINERO"
+            ],
+            "record.id": [
+             "00183553-00183553-200"
+            ],
+            "sku.activePrice": [
+             "4370.000000"
+            ],
+            "product.sDisp_200": [
+             "1004"
+            ],
+            "sku.dtoPrice": [
+             "{\"id\":\"pl200_00183553\",\"skuId\":\"sku00183553\",\"precioLista\":4370.0,\"precio\":4855.55,\"precioSinImp\":3611.57,\"imagenOferta2\":\"NoAcumulable.png\"}"
+            ],
+            "product.largeImage.url": [
+             "https://static.cotodigital3.com.ar/sitios/fotos/large/00183500/00183553.jpg"
+            ]
+           }
+          }
+         ]
+        }
+       ]
+      }
+     ]
+    }
+   ]
+  }
+ ]
+}
