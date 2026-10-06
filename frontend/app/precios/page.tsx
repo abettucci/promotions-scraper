@@ -23,8 +23,39 @@ const EXAMPLES = ["leche La Serenísima 1 L", "aceite Cocinero 1,5 L", "heladera
 
 const ars = (value: number) => `$${Math.round(value).toLocaleString("es-AR")}`
 
+/** Promo por cantidad de la tienda: la que se aplica, o la que habría llevando más unidades. */
+function MultiBuyNote({ offer }: { offer: PriceOffer }) {
+  const mb = offer.multibuy
+  if (!mb) return null
+  if (offer.deal === "multibuy") {
+    return <p className="text-xs font-semibold text-[#3d6626]">Llevando {offer.qty}: {mb.label}{mb.max_units ? ` (máx. ${mb.max_units} u.)` : ""}</p>
+  }
+  if (mb.exact && mb.unit_at_min) {
+    return <p className="text-xs text-[#52657d]"><b>{mb.label}</b>: llevando {mb.min_qty}, {ars(mb.unit_at_min)} c/u</p>
+  }
+  return <p className="text-xs text-[#52657d]"><b>{mb.label}</b> <span className="text-[#8a9ab0]">(según producto)</span></p>
+}
+
+function FinalPrice({ offer }: { offer: PriceOffer }) {
+  const unit = offer.final_price ?? offer.price
+  if (offer.qty > 1 && offer.total != null) {
+    return (
+      <>
+        <p className="text-base font-bold text-[#102a4c]">{ars(offer.total)}</p>
+        <p className="text-xs text-[#52657d]">por {offer.qty} · {ars(unit)} c/u</p>
+        {offer.savings > 0 && <p className="text-xs font-semibold text-[#3d6626]">Ahorrás {ars(offer.savings)}</p>}
+      </>
+    )
+  }
+  return (
+    <>
+      <p className="text-base font-bold text-[#102a4c]">{ars(unit)}</p>
+      {offer.savings > 0 && <p className="text-xs font-semibold text-[#3d6626]">Ahorrás {ars(offer.savings)}</p>}
+    </>
+  )
+}
+
 function OfferRow({ offer, best }: { offer: PriceOffer; best: boolean }) {
-  const final = offer.final_price ?? offer.price
   const promo = offer.promo
   return (
     <tr className={best ? "bg-[#f4ffec]" : "transition-colors hover:bg-[#f5f8fc]"}>
@@ -40,19 +71,19 @@ function OfferRow({ offer, best }: { offer: PriceOffer; best: boolean }) {
         {offer.installments > 0 && <p className="text-xs text-[#52657d]">Hasta {offer.installments} cuotas sin interés</p>}
       </td>
       <td className="px-3 py-3 align-top">
-        {promo && offer.savings > 0 ? (
-          <div className="space-y-1">
-            <div className="flex items-center gap-2"><BankBadge name={promo.entity} size="sm" showLabel /></div>
-            <p className="text-xs font-semibold text-[#3d6626]">{promo.discount}{promo.tope ? ` · tope ${promo.tope}` : ""}</p>
-            {promo.requires_min_purchase && <p className="text-xs text-[#8f2d28]">Compra mínima {promo.min_purchase}</p>}
-            {promo.store_types && promo.store_types.toLowerCase() !== "online, tiendas" && <p className="text-xs text-[#52657d]">{promo.store_types}</p>}
-          </div>
-        ) : <span className="text-xs text-[#8a9ab0]">Sin promo bancaria hoy</span>}
+        <div className="space-y-1">
+          {promo && offer.deal === "bank" ? (
+            <>
+              <div className="flex items-center gap-2"><BankBadge name={promo.entity} size="sm" showLabel /></div>
+              <p className="text-xs font-semibold text-[#3d6626]">{promo.discount}{promo.tope && /\d|sin tope/i.test(promo.tope) ? ` · tope ${promo.tope}` : ""}</p>
+              {promo.requires_min_purchase && <p className="text-xs text-[#8f2d28]">Compra mínima {promo.min_purchase}</p>}
+              {promo.store_types && promo.store_types.toLowerCase() !== "online, tiendas" && <p className="text-xs text-[#52657d]">{promo.store_types}</p>}
+            </>
+          ) : offer.deal !== "multibuy" && <span className="text-xs text-[#8a9ab0]">Sin promo bancaria hoy</span>}
+          <MultiBuyNote offer={offer} />
+        </div>
       </td>
-      <td className="px-3 py-3 align-top">
-        <p className="text-base font-bold text-[#102a4c]">{ars(final)}</p>
-        {offer.savings > 0 && <p className="text-xs font-semibold text-[#3d6626]">Ahorrás {ars(offer.savings)}</p>}
-      </td>
+      <td className="px-3 py-3 align-top"><FinalPrice offer={offer} /></td>
       <td className="px-4 py-3 align-top sm:px-5">
         <a href={offer.url} target="_blank" rel="noopener noreferrer" className="inline-flex items-center gap-1 whitespace-nowrap text-xs font-bold text-[#2758d8] hover:text-[#102a4c]">
           Ver en la tienda <ExternalLink className="h-3.5 w-3.5" />
@@ -63,7 +94,6 @@ function OfferRow({ offer, best }: { offer: PriceOffer; best: boolean }) {
 }
 
 function OfferItem({ offer, best }: { offer: PriceOffer; best: boolean }) {
-  const final = offer.final_price ?? offer.price
   const promo = offer.promo
   return (
     <li className={`px-4 py-3 ${best ? "bg-[#f4ffec]" : ""}`}>
@@ -72,17 +102,15 @@ function OfferItem({ offer, best }: { offer: PriceOffer; best: boolean }) {
           <p className="text-sm font-semibold text-[#102a4c]">{offer.store_name}</p>
           {best && <span className="mt-1 inline-block rounded-full bg-[#b8f36b] px-2 py-0.5 text-[10px] font-bold text-[#102a4c]">MÁS BARATO HOY</span>}
         </div>
-        <div className="text-right">
-          <p className="text-base font-bold text-[#102a4c]">{ars(final)}</p>
-          {offer.savings > 0 && <p className="text-xs text-[#8a9ab0] line-through">{ars(offer.price)}</p>}
-        </div>
+        <div className="text-right"><FinalPrice offer={offer} /></div>
       </div>
-      {promo && offer.savings > 0 ? (
+      <MultiBuyNote offer={offer} />
+      {promo && offer.deal === "bank" ? (
         <p className="mt-1 text-xs text-[#3d6626]">
-          <b>{promo.discount}</b> con {promo.entity}{promo.tope ? ` · tope ${promo.tope}` : ""}
+          <b>{promo.discount}</b> con {promo.entity}{promo.tope && /\d|sin tope/i.test(promo.tope) ? ` · tope ${promo.tope}` : ""}
           {promo.requires_min_purchase && <span className="text-[#8f2d28]"> · mín. {promo.min_purchase}</span>}
         </p>
-      ) : <p className="mt-1 text-xs text-[#8a9ab0]">Sin promo bancaria hoy{offer.installments > 0 ? ` · hasta ${offer.installments} cuotas sin interés` : ""}</p>}
+      ) : offer.deal !== "multibuy" && <p className="mt-1 text-xs text-[#8a9ab0]">Sin promo bancaria hoy{offer.installments > 0 ? ` · hasta ${offer.installments} cuotas sin interés` : ""}</p>}
       <a href={offer.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#2758d8]">
         Ver en la tienda <ExternalLink className="h-3 w-3" />
       </a>
@@ -165,10 +193,11 @@ export default function PreciosPage() {
   const [query, setQuery] = useState("")
   const [category, setCategory] = useState("")
   const [mine, setMine] = useState(false)
+  const [qty, setQty] = useState(1)
 
   const { data, isFetching, error } = useQuery({
-    queryKey: ["prices", query, category, mine],
-    queryFn: () => api.searchPrices({ q: query, category: category || undefined, mine: mine || undefined }, token),
+    queryKey: ["prices", query, category, mine, qty],
+    queryFn: () => api.searchPrices({ q: query, category: category || undefined, mine: mine || undefined, qty }, token),
     enabled: query.trim().length >= 2,
     staleTime: 5 * 60 * 1000,
   })
@@ -213,6 +242,14 @@ export default function PreciosPage() {
                 <Icon className="h-3.5 w-3.5" /> {label}
               </button>
             ))}
+            <div className="inline-flex items-center gap-1 rounded-lg bg-white/10 px-2" role="group" aria-label="Cantidad a comprar">
+              <span className="px-1 text-xs font-semibold">Llevo</span>
+              {[1, 2, 3, 6].map((n) => (
+                <button key={n} type="button" onClick={() => setQty(n)} aria-pressed={qty === n}
+                  className={`min-h-8 min-w-8 rounded-md px-2 text-xs font-bold transition-colors ${qty === n ? "bg-[#b8f36b] text-[#102a4c]" : "text-white hover:bg-white/20"}`}>{n}</button>
+              ))}
+              <span className="px-1 text-xs">{qty === 1 ? "unidad" : "unidades"}</span>
+            </div>
             {user && (
               <label className="inline-flex min-h-9 cursor-pointer items-center gap-2 rounded-lg bg-white/10 px-3 text-xs font-semibold">
                 <input type="checkbox" checked={mine} onChange={(event) => setMine(event.target.checked)} className="accent-[#b8f36b]" />
@@ -242,7 +279,7 @@ export default function PreciosPage() {
               <div className="space-y-5">{data.groups.map((group) => <GroupCard key={group.key} group={group} query={data.query} />)}</div>
             )}
             <p className="text-xs leading-relaxed text-[#73836e]">
-              Precios online publicados por cada tienda; pueden variar por sucursal y no incluyen envío. El precio final es estimado con la mejor promo bancaria vigente hoy (reintegros y topes según cada banco).
+              Precios online publicados por cada tienda; pueden variar por sucursal y no incluyen envío. El precio final es estimado con lo que más conviene entre la promo por cantidad de la tienda y la mejor promo bancaria de hoy; no se suman, porque no siempre se acumulan (reintegros y topes según cada banco).
               {data.failed_stores.length > 0 && <> No respondieron: {data.failed_stores.join(", ")}.</>}
             </p>
           </>

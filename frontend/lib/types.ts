@@ -156,6 +156,21 @@ export interface PriceOffer {
   final_price: number | null
   savings: number
   promo: PriceOfferPromo | null
+  multibuy: PriceMultiBuy | null
+  qty: number
+  total: number | null
+  deal: "multibuy" | "bank" | null
+  category: string
+}
+
+export interface PriceMultiBuy {
+  label: string
+  kind: string
+  min_qty: number
+  /** false: etiqueta orientativa de campaña ("hasta 2do al 70%"), sin precio calculado */
+  exact: boolean
+  max_units: number | null
+  unit_at_min?: number
 }
 
 export interface PriceGroup {
@@ -171,6 +186,7 @@ export interface PriceGroup {
 export interface PriceSearchResponse {
   query: string
   day?: string
+  qty?: number
   groups: PriceGroup[]
   failed_stores: string[]
 }

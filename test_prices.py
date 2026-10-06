@@ -84,6 +84,10 @@ class EffectivePriceTests(unittest.TestCase):
         self.assertEqual(money("$10.000 semanal"), 10000)
         self.assertEqual(money("Sin tope"), float("inf"))
 
+    def test_money_does_not_crash_on_garbage_caps_from_old_rows(self):
+        for garbage in ("$.", "$,", "$ ", "$.,", "tope $"):
+            self.assertEqual(money(garbage), float("inf"), garbage)
+
     def test_only_promos_valid_that_day_apply_and_min_purchase_is_flagged(self):
         result = apply_best_promo(offer("dia", "Aceite 1,5 L", 6925), self.PROMOS, SATURDAY)
         self.assertEqual(result.savings, 1385)

@@ -72,7 +72,7 @@ export const api = {
   getSupermarkets: (category?: string) =>
     fetchJSON<Supermarket[]>("/api/supermarkets", category ? { category } : undefined),
   getStats: () => fetchJSON<Stats>("/api/stats"),
-  searchPrices: (params: { q: string; category?: string; mine?: boolean }, token?: string | null) =>
+  searchPrices: (params: { q: string; category?: string; mine?: boolean; qty?: number }, token?: string | null) =>
     fetchJSON<PriceSearchResponse>("/api/prices/search", params, token),
   getPriceHistory: (key: string, days = 90) =>
     fetchJSON<PriceHistoryResponse>("/api/prices/history", { key, days }),

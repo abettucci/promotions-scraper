@@ -100,7 +100,30 @@ def parse_record(store: Store, record: dict) -> Optional[Offer]:
         url=_product_url(host, record, inner, attrs),
         image=image.strip(),
         installments=_installments(attrs),
+        multibuy=_multibuy(attrs),
     )
+
+
+def _multibuy(attrs: dict) -> Optional[dict]:
+    """Promo por cantidad: "2x1", "6x4", "50% 2da" (traen "Llevando N" y precio c/u)."""
+    from ..multibuy import parse_multibuy
+
+    for promo in _json(_first(attrs, "product.dtoDescuentos"), []) or []:
+        if not isinstance(promo, dict):
+            continue
+        taking = re.search(r"(\d+)", promo.get("textoLlevando") or "")
+        per_unit = "c/u" in (promo.get("precioDescTextoAdicional") or "") or "c/u" in (promo.get("precioDescuento") or "")
+        if not taking and not per_unit:
+            continue
+        found = parse_multibuy(
+            promo.get("textoDescuento"), min_qty=int(taking.group(1)) if taking else None,
+            unit_price=_num(promo.get("precioDesc")) if per_unit else None,
+        )
+        if found:
+            if taking and int(taking.group(1)) >= 2:
+                found.min_qty = int(taking.group(1))
+            return found.to_dict()
+    return None
 
 
 # --- helpers -----------------------------------------------------------------

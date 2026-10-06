@@ -701,6 +701,7 @@ def search_product_prices(
     category: Optional[str] = Query(None),
     day: Optional[date] = Query(None),
     mine: bool = Query(False),
+    qty: int = Query(1, ge=1, le=12),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ):
     """Compara el precio de un producto entre tiendas y aplica la mejor promo.
@@ -722,7 +723,8 @@ def search_product_prices(
         raise HTTPException(429, "Alcanzaste el límite de búsquedas de precios. Probá en un rato.")
     user = _optional_user(credentials) if mine else None
     methods = _db.get_user_payment_methods(user["id"]) if user else None
-    return search_prices(q, category=category, promotions=_assistant_promotions(), day=day, methods=methods)
+    return search_prices(q, category=category, promotions=_assistant_promotions(), day=day,
+                         methods=methods, qty=qty)
 
 
 @app.get("/api/prices/history")

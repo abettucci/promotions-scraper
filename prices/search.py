@@ -92,7 +92,7 @@ def _merge_by_model(groups: dict[str, ProductGroup], scores: dict[str, float]) -
 
 def search_prices(query: str, *, category: Optional[str] = None, promotions: Optional[list[dict]] = None,
                   day: Optional[date] = None, methods: Optional[list[dict]] = None,
-                  max_groups: int = 8) -> dict:
+                  max_groups: int = 8, qty: int = 1) -> dict:
     """Busca ``query`` y devuelve grupos de producto con sus ofertas.
 
     ``promotions`` son las promos vigentes (mismo formato que el asistente);
@@ -126,7 +126,7 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
     groups = _merge_by_model(groups, scores)
     for group in groups.values():
         for offer in group.offers:
-            apply_best_promo(offer, promotions or [], day, methods)
+            apply_best_promo(offer, promotions or [], day, methods, qty)
 
     ranked = sorted(
         groups.values(),
@@ -136,6 +136,7 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
     return {
         "query": query,
         "day": (day or date.today()).isoformat(),
+        "qty": max(1, int(qty)),
         "groups": [g.to_dict() for g in ranked[:max_groups]],
         "failed_stores": sorted(set(failed)),
     }

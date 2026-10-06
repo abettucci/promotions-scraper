@@ -24,6 +24,13 @@ class Offer:
     final_price: Optional[float] = None
     savings: float = 0.0
     promo: Optional[dict] = None
+    # Promo por cantidad ("2do al 50%") tal como la publica la tienda, y qué
+    # conviene al llevar ``qty`` unidades: total a pagar y de dónde sale el ahorro.
+    multibuy: Optional[dict] = None
+    qty: int = 1
+    total: Optional[float] = None
+    deal: Optional[str] = None      # "multibuy" | "bank" | None
+    category: str = ""              # "/Almacén/Aceites/" tal como lo publica la tienda
 
     @property
     def percentage_off(self) -> Optional[int]:

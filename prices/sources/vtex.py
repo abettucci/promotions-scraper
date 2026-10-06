@@ -11,6 +11,7 @@ from urllib.parse import quote
 import requests
 
 from ..models import Offer
+from ..multibuy import parse_multibuy
 from ..registry import Store
 
 _HEADERS = {
@@ -54,6 +55,7 @@ def parse_product(store: Store, product: dict) -> Optional[Offer]:
         if not i.get("InterestRate")
     ]
     images = item.get("images") or []
+    categories = product.get("categories") or []
     link = product.get("link") or ""
     if link.startswith("/"):
         link = f"https://{store.host}{link}"
@@ -67,4 +69,40 @@ def parse_product(store: Store, product: dict) -> Optional[Offer]:
         in_stock=bool(offer.get("IsAvailable", (offer.get("AvailableQuantity") or 0) > 0)),
         url=link, image=images[0].get("imageUrl", "") if images else "",
         installments=max(installments, default=0) if max(installments, default=0) > 1 else 0,
+        multibuy=_multibuy(product, offer),
+        # categories[0] es la ruta más específica ("/Almacén/Aceites/Girasol/")
+        category=categories[0] if categories and isinstance(categories[0], str) else "",
     )
+
+
+def _teaser_name(teaser: dict) -> str:
+    """Los teasers de VTEX usan claves como "<Name>k__BackingField"."""
+    return str(teaser.get("<Name>k__BackingField") or teaser.get("Name") or teaser.get("name") or "")
+
+
+def _multibuy(product: dict, offer: dict) -> Optional[dict]:
+    """Promo por cantidad del producto, en orden de confianza.
+
+    1. Teaser con la promo y su cantidad mínima (Carrefour: "2do al 50% Max 48
+       unidades"). Los teasers de tarjeta (RestrictionsBins) no son por cantidad.
+    2. Etiqueta de campaña en los clusters (Jumbo/Vea: "Hasta 2do al 70% en
+       Almacén y Bebidas"): sólo orientativa, no se calcula.
+    """
+    for teaser in offer.get("Teasers") or []:
+        if not isinstance(teaser, dict):
+            continue
+        conditions = teaser.get("<Conditions>k__BackingField") or {}
+        minimum = conditions.get("<MinimumQuantity>k__BackingField") or None
+        found = parse_multibuy(_teaser_name(teaser), min_qty=minimum)
+        if found:
+            if minimum and minimum >= 2 and found.kind != "tag":
+                found.min_qty = int(minimum)
+            return found.to_dict()
+    clusters = product.get("clusterHighlights")
+    names = list(clusters.values()) if isinstance(clusters, dict) else []
+    for name in names:
+        found = parse_multibuy(name)
+        if found:
+            found.exact = False
+            return found.to_dict()
+    return None

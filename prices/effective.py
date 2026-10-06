@@ -7,6 +7,7 @@ from datetime import date
 from typing import Optional
 
 from .models import Offer
+from .multibuy import MultiBuy
 
 
 def money(value: object) -> float:
@@ -14,10 +15,14 @@ def money(value: object) -> float:
     text = str(value or "")
     if not text or re.search(r"sin\s+tope", text, re.I):
         return math.inf
-    match = re.search(r"\$\s*([\d.]+(?:,\d+)?)", text)
+    # Exige un dígito: filas viejas traen topes basura como "$." o "$,".
+    match = re.search(r"\$\s*(\d[\d.]*(?:,\d+)?)", text)
     if not match:
         return math.inf
-    return float(match.group(1).replace(".", "").replace(",", "."))
+    try:
+        return float(match.group(1).replace(".", "").replace(",", "."))
+    except ValueError:
+        return math.inf
 
 
 def percent(discount: object) -> float:
@@ -71,33 +76,61 @@ def applicable_promos(offer: Offer, promotions: list[dict], day: date,
 
 
 def apply_best_promo(offer: Offer, promotions: list[dict], day: Optional[date] = None,
-                     methods: Optional[list[dict]] = None) -> Offer:
-    """Completa final_price/savings/promo con la promo que más ahorra.
+                     methods: Optional[list[dict]] = None, qty: int = 1) -> Offer:
+    """Completa total/final_price/savings con lo que más conviene al llevar ``qty``.
 
+    Compara dos caminos y elige el más barato, sin sumarlos (no se sabe si la
+    tienda los acumula):
+      - promo por cantidad de la tienda ("2do al 50%"), y
+      - la mejor promo bancaria del día (el tope aplica al total de la compra).
     El mínimo de compra se informa pero no descarta la promo: en el súper el
     ticket suele sumar varios productos. Las cuotas sin interés no descuentan.
     """
     day = day or date.today()
-    best: tuple[float, Optional[dict]] = (0.0, None)
+    qty = max(1, int(qty))
+    base_total = offer.price * qty
+
+    bank_savings, bank_promo = 0.0, None
     for promo in applicable_promos(offer, promotions, day, methods):
         pct = percent(promo.get("discount"))
         if not pct:
             continue
-        savings = min(offer.price * pct, money(promo.get("tope")))
-        if savings > best[0]:
-            best = (savings, promo)
-    savings, promo = best
-    offer.final_price = round(offer.price - savings, 2)
+        savings = min(base_total * pct, money(promo.get("tope")))
+        if savings > bank_savings:
+            bank_savings, bank_promo = savings, promo
+
+    mb = MultiBuy.from_dict(offer.multibuy)
+    mb_total = mb.total(offer.price, qty) if mb and mb.exact else base_total
+    mb_savings = base_total - mb_total
+    if mb:
+        # Para mostrar "llevando 2: $X c/u" aunque se esté mirando 1 unidad.
+        info = mb.to_dict()
+        if mb.exact:
+            info["unit_at_min"] = round(mb.total(offer.price, mb.min_qty) / mb.min_qty, 2)
+        offer.multibuy = info
+
+    if mb_savings > bank_savings:
+        savings, bank_promo, offer.deal = mb_savings, None, "multibuy"
+    elif bank_savings > 0:
+        savings, offer.deal = bank_savings, "bank"
+    else:
+        savings, bank_promo, offer.deal = 0.0, None, None
+
+    offer.qty = qty
+    offer.total = round(base_total - savings, 2)
+    offer.final_price = round(offer.total / qty, 2)
     offer.savings = round(savings, 2)
-    if promo:
-        entity = promo.get("bank") or promo.get("wallet") or promo.get("payment_method") or ""
-        if promo.get("bank") and promo.get("wallet"):
-            entity = f"{promo['bank']} vía {promo['wallet']}"
+    if bank_promo:
+        entity = bank_promo.get("bank") or bank_promo.get("wallet") or bank_promo.get("payment_method") or ""
+        if bank_promo.get("bank") and bank_promo.get("wallet"):
+            entity = f"{bank_promo['bank']} vía {bank_promo['wallet']}"
         offer.promo = {
-            "id": promo.get("id"), "title": promo.get("title"), "discount": promo.get("discount"),
-            "entity": entity, "tope": promo.get("tope"), "min_purchase": promo.get("min_purchase"),
-            "valid_days": promo.get("valid_days"), "store_types": promo.get("store_types"),
-            "requires_min_purchase": money(promo.get("min_purchase")) not in (math.inf,)
-            and money(promo.get("min_purchase")) > offer.price,
+            "id": bank_promo.get("id"), "title": bank_promo.get("title"), "discount": bank_promo.get("discount"),
+            "entity": entity, "tope": bank_promo.get("tope"), "min_purchase": bank_promo.get("min_purchase"),
+            "valid_days": bank_promo.get("valid_days"), "store_types": bank_promo.get("store_types"),
+            "requires_min_purchase": money(bank_promo.get("min_purchase")) not in (math.inf,)
+            and money(bank_promo.get("min_purchase")) > offer.price,
         }
+    else:
+        offer.promo = None
     return offer
