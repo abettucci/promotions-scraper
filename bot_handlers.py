@@ -383,6 +383,7 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "• Escribime una pregunta — ej. <i>¿Cuál es el mejor descuento en nafta el sábado?</i>\n"
         "• /stats — estadísticas\n\n"
         "<b>Comandos personalizados</b> (requieren cuenta):\n"
+        "• /alerta &lt;producto&gt; — aviso cuando baje el precio (ver /alertas)\n"
         "• /mis — promos para tus medios de pago\n"
         "• /medios — ver tus medios\n"
         "• /notify on|off — toggle notificaciones diarias\n"
@@ -417,6 +418,10 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "<i>¿Dónde está más barata la proteína Star Nutrition 2 lb?</i>\n\n"
         "Las recomendaciones usan tus medios vinculados si tenés cuenta y aclaran "
         "cuando los T&amp;C no permiten confirmar un producto.\n\n"
+        "<b>Alertas de precio</b> (requieren cuenta)\n\n"
+        "<code>/alerta leche la serenisima 1l</code> — te aviso ante cualquier baja.\n"
+        "<code>/alerta heladera samsung rt29k577j a $1000000</code> — te aviso al llegar a ese precio.\n"
+        "<code>/alertas</code> — ver tus alertas. <code>/quitar 3</code> — borrar la #3.\n\n"
         "<code>/stats</code> — Total de promos, supers y bancos.\n\n"
         "<b>Comandos privados</b> (requieren cuenta linkeada)\n\n"
         "<code>/mis</code> — Promos que matchean tus medios de pago.\n"
@@ -820,7 +825,70 @@ def _format_conditions_html(promo: dict) -> str:
 
 
 # ── Dispatcher ────────────────────────────────────────────────────────────────
+def _ars(value: float) -> str:
+    return "$" + f"{round(value):,}".replace(",", ".")
+
+
+def cmd_alerta(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    """/alerta <producto> [a $precio] — avisa cuando baje (o llegue al precio)."""
+    from prices.alerts import create_alert, parse_alert_args
+
+    user = user_db.get_user_by_telegram_chat_id(chat_id)
+    if not user:
+        return "🔒 Linkea tu cuenta primero. Usá /start.", {}
+    query, target = parse_alert_args(args)
+    if len(query) < 2:
+        return (
+            "🔔 <b>Alertas de precio</b>\n\n"
+            "<code>/alerta leche la serenisima 1l</code> — te aviso ante cualquier baja\n"
+            "<code>/alerta heladera samsung rt29k577j a $1000000</code> — te aviso al llegar a ese precio\n\n"
+            "<code>/alertas</code> — ver las tuyas · <code>/quitar &lt;n&gt;</code> — borrar una",
+            {},
+        )
+    alert = create_alert(user_db, user["id"], query, target=target)
+    if alert is None:
+        return f"🔎 No encontré <b>{_esc(query)}</b> en las tiendas. Probá con marca y tamaño.", {}
+    if alert.get("error") == "limit":
+        return f"⚠️ Llegaste al máximo de {user_db.MAX_PRICE_ALERTS_PER_USER} alertas. Borrá alguna con /quitar.", {}
+    when = (f"cuando llegue a <b>{_ars(target)}</b> o menos" if target else "ante cualquier baja")
+    return (
+        f"🔔 Alerta #{alert['id']} creada: <b>{_esc(alert['name'])}</b>\n"
+        f"Hoy el más barato es {_ars(alert['price'])} en {_esc(alert['store_name'])}. Te aviso {when}.",
+        {},
+    )
+
+
+def cmd_alertas(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    user = user_db.get_user_by_telegram_chat_id(chat_id)
+    if not user:
+        return "🔒 Linkea tu cuenta primero. Usá /start.", {}
+    alerts = user_db.list_price_alerts(user["id"])
+    if not alerts:
+        return "No tenés alertas. Creá una con <code>/alerta leche la serenisima 1l</code>", {}
+    lines = ["🔔 <b>Tus alertas de precio</b>"]
+    for alert in alerts:
+        goal = f"≤ {_ars(alert['target_price'])}" if alert["target_price"] else "cualquier baja"
+        lines.append(f"#{alert['id']} · {_esc(alert['product_name'])} — {goal} (último: {_ars(alert['baseline_price'])})")
+    lines.append("\nBorrar: <code>/quitar &lt;n&gt;</code>")
+    return "\n".join(lines), {}
+
+
+def cmd_quitar(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    user = user_db.get_user_by_telegram_chat_id(chat_id)
+    if not user:
+        return "🔒 Linkea tu cuenta primero. Usá /start.", {}
+    raw = (args or "").strip().lstrip("#")
+    if not raw.isdigit():
+        return "Uso: <code>/quitar 3</code> (el número está en /alertas)", {}
+    if user_db.delete_price_alert(user["id"], int(raw)):
+        return f"🗑️ Alerta #{raw} borrada.", {}
+    return f"No encontré la alerta #{_esc(raw)}.", {}
+
+
 COMMANDS = {
+    "alerta": cmd_alerta,
+    "alertas": cmd_alertas,
+    "quitar": cmd_quitar,
     "start": cmd_start,
     "ayuda": cmd_ayuda,
     "help": cmd_ayuda,

@@ -1,7 +1,7 @@
 import type {
   PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, PromotionDetails,
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
-  PriceSearchResponse,
+  PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated,
 } from "./types"
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
@@ -31,7 +31,7 @@ async function fetchJSON<T>(
 
 // ── POST / PUT helper ─────────────────────────────────────────────────────────
 async function fetchMutation<T>(
-  method: "POST" | "PUT",
+  method: "POST" | "PUT" | "DELETE",
   path: string,
   body: unknown,
   token?: string | null,
@@ -43,7 +43,7 @@ async function fetchMutation<T>(
   const res = await fetch(new URL(path, API_BASE).toString(), {
     method,
     headers,
-    body: JSON.stringify(body),
+    body: method === "DELETE" ? undefined : JSON.stringify(body),
   })
   if (!res.ok) {
     const text = await res.text()
@@ -74,6 +74,14 @@ export const api = {
   getStats: () => fetchJSON<Stats>("/api/stats"),
   searchPrices: (params: { q: string; category?: string; mine?: boolean }, token?: string | null) =>
     fetchJSON<PriceSearchResponse>("/api/prices/search", params, token),
+  getPriceHistory: (key: string, days = 90) =>
+    fetchJSON<PriceHistoryResponse>("/api/prices/history", { key, days }),
+  createPriceAlert: (body: { query: string; key?: string; target_price?: number }, token: string) =>
+    fetchMutation<PriceAlertCreated>("POST", "/api/prices/alerts", body, token),
+  listPriceAlerts: (token: string) =>
+    fetchJSON<{ alerts: PriceAlert[]; telegram_linked: boolean }>("/api/prices/alerts", undefined, token),
+  deletePriceAlert: (id: number, token: string) =>
+    fetchMutation<{ ok: boolean }>("DELETE", `/api/prices/alerts/${id}`, undefined, token),
   getPaymentMethodsCatalog: () => fetchJSON<PaymentMethodsCatalog>("/api/catalog/payment-methods"),
 
   // ── Auth ────────────────────────────────────────────────────────────────────

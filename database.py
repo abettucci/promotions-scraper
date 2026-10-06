@@ -893,6 +893,18 @@ class UserDatabase:
                 window_started_at INTEGER NOT NULL,
                 request_count INTEGER NOT NULL DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS price_alerts (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                product_key TEXT NOT NULL,
+                product_name TEXT NOT NULL,
+                query TEXT NOT NULL,
+                target_price REAL,
+                baseline_price REAL NOT NULL,
+                last_notified_price REAL,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, product_key)
+            );
         """)
         conn.commit()
         conn.close()
@@ -983,6 +995,72 @@ class UserDatabase:
         ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
+
+    # ── Alertas de precio ─────────────────────────────────────────────────────
+    MAX_PRICE_ALERTS_PER_USER = 20
+
+    def add_price_alert(self, user_id: int, product_key: str, product_name: str, query: str,
+                        baseline_price: float, target_price: Optional[float] = None) -> Optional[int]:
+        """Crea (o actualiza el objetivo de) la alerta. None si superó el máximo."""
+        conn = self._conn()
+        try:
+            existing = conn.execute(
+                "SELECT id FROM price_alerts WHERE user_id = ? AND product_key = ?", (user_id, product_key),
+            ).fetchone()
+            if existing:
+                conn.execute(
+                    "UPDATE price_alerts SET target_price = ?, baseline_price = ?, last_notified_price = NULL "
+                    "WHERE id = ?", (target_price, baseline_price, existing["id"]),
+                )
+                conn.commit()
+                return existing["id"]
+            total = conn.execute(
+                "SELECT COUNT(*) FROM price_alerts WHERE user_id = ?", (user_id,)).fetchone()[0]
+            if total >= self.MAX_PRICE_ALERTS_PER_USER:
+                return None
+            cursor = conn.execute(
+                "INSERT INTO price_alerts (user_id, product_key, product_name, query, target_price, baseline_price) "
+                "VALUES (?, ?, ?, ?, ?, ?)",
+                (user_id, product_key, product_name[:200], query[:120], target_price, baseline_price),
+            )
+            conn.commit()
+            return cursor.lastrowid
+        finally:
+            conn.close()
+
+    def list_price_alerts(self, user_id: int) -> List[Dict]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT * FROM price_alerts WHERE user_id = ? ORDER BY id DESC", (user_id,)).fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def delete_price_alert(self, user_id: int, alert_id: int) -> bool:
+        conn = self._conn()
+        deleted = conn.execute(
+            "DELETE FROM price_alerts WHERE id = ? AND user_id = ?", (alert_id, user_id)).rowcount
+        conn.commit()
+        conn.close()
+        return bool(deleted)
+
+    def alerts_to_check(self) -> List[Dict]:
+        """Alertas de usuarios con Telegram vinculado (único canal de aviso)."""
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT a.*, u.telegram_chat_id FROM price_alerts a JOIN users u ON u.id = a.user_id "
+            "WHERE u.telegram_chat_id IS NOT NULL AND u.telegram_chat_id != ''").fetchall()
+        conn.close()
+        return [dict(r) for r in rows]
+
+    def update_price_alert_state(self, alert_id: int, baseline_price: float,
+                                 last_notified_price: Optional[float]) -> None:
+        conn = self._conn()
+        conn.execute(
+            "UPDATE price_alerts SET baseline_price = ?, last_notified_price = ? WHERE id = ?",
+            (baseline_price, last_notified_price, alert_id),
+        )
+        conn.commit()
+        conn.close()
 
     # ── Password reset ────────────────────────────────────────────────────────
     def create_password_reset(self, user_id: int, token_hash: str, expires_at: str):

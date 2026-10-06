@@ -48,6 +48,10 @@ if os.getenv("ENABLE_SCRAPER", "").lower() in ("1", "true", "yes"):
     import scheduler
     scheduler.start()
 
+if os.getenv("ENABLE_PRICES_JOB", "").lower() in ("1", "true", "yes"):
+    import scheduler as _prices_scheduler
+    _prices_scheduler.start_prices()
+
 app = FastAPI(
     title="Promo Scraper API",
     description="API de promociones de supermercados argentinos con descuentos bancarios",
@@ -214,6 +218,35 @@ class ForgotPasswordBody(BaseModel):
 class ResetPasswordBody(BaseModel):
     token: str
     new_password: str
+
+class PriceAlertBody(BaseModel):
+    """Alta de una alerta de precio: producto (texto o clave) y objetivo opcional."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    query: str
+    key: Optional[str] = None
+    target_price: Optional[float] = None
+
+    @field_validator("query")
+    @classmethod
+    def validate_query(cls, value: str) -> str:
+        if not 2 <= len(value) <= 120 or any(ord(char) < 32 for char in value):
+            raise ValueError("El producto debe tener entre 2 y 120 caracteres")
+        return value
+
+    @field_validator("key")
+    @classmethod
+    def validate_key(cls, value: Optional[str]) -> Optional[str]:
+        if value is not None and (len(value) > 120 or not value.startswith(("ean:", "model:"))):
+            raise ValueError("Clave de producto inválida")
+        return value
+
+    @field_validator("target_price")
+    @classmethod
+    def validate_target(cls, value: Optional[float]) -> Optional[float]:
+        if value is not None and not 0 < value < 1e9:
+            raise ValueError("Precio objetivo inválido")
+        return value
+
 
 class AssistantQuestionBody(BaseModel):
     """Contrato mínimo y estricto para el asistente de promociones."""
@@ -684,6 +717,52 @@ def search_product_prices(
     user = _optional_user(credentials) if mine else None
     methods = _db.get_user_payment_methods(user["id"]) if user else None
     return search_prices(q, category=category, promotions=_assistant_promotions(), day=day, methods=methods)
+
+
+@app.get("/api/prices/history")
+def product_price_history(key: str = Query(..., max_length=120), days: int = Query(90, ge=7, le=365)):
+    """Serie diaria (mín/prom/máx entre tiendas) de un producto de la canasta."""
+    from prices.history import PriceHistory
+
+    if not key.startswith(("ean:", "model:")):
+        raise HTTPException(422, "Clave de producto inválida")
+    history = PriceHistory()
+    product = history.product(key)
+    if not product:
+        # Productos fuera de la canasta todavía no tienen historial.
+        return {"key": key, "days": days, "tracked": False, "points": [], "current": [], "summary": None}
+    return {**history.series(key, days), "tracked": True, "name": product["name"]}
+
+
+@app.post("/api/prices/alerts")
+def create_price_alert(body: PriceAlertBody, current_user=Depends(get_current_user)):
+    """Avisa por Telegram cuando baje el precio (o llegue al objetivo)."""
+    from prices.alerts import create_alert
+
+    retry_after = _db.consume_assistant_quota(
+        current_user["id"], config.ASSISTANT_RATE_LIMIT_MAX, config.ASSISTANT_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(429, "Alcanzaste el límite temporal de consultas. Probá nuevamente en un momento.")
+    alert = create_alert(_db, current_user["id"], body.query, key=body.key, target=body.target_price)
+    if alert is None:
+        raise HTTPException(404, "No encontré ese producto en las tiendas.")
+    if alert.get("error") == "limit":
+        raise HTTPException(409, f"Llegaste al máximo de {_db.MAX_PRICE_ALERTS_PER_USER} alertas.")
+    return {**alert, "telegram_linked": bool(current_user.get("telegram_chat_id"))}
+
+
+@app.get("/api/prices/alerts")
+def list_price_alerts(current_user=Depends(get_current_user)):
+    return {"alerts": _db.list_price_alerts(current_user["id"]),
+            "telegram_linked": bool(current_user.get("telegram_chat_id"))}
+
+
+@app.delete("/api/prices/alerts/{alert_id}")
+def delete_price_alert(alert_id: int, current_user=Depends(get_current_user)):
+    if not _db.delete_price_alert(current_user["id"], alert_id):
+        raise HTTPException(404, "Alerta no encontrada")
+    return {"ok": True}
 
 
 # ── Catálogo de medios de pago ────────────────────────────────────────────────

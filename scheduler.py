@@ -48,3 +48,46 @@ def start():
     t = threading.Thread(target=loop, daemon=True, name="scraper-scheduler")
     t.start()
     print(f"[scheduler] Scraper programado cada {SCRAPE_INTERVAL_HOURS}h (primer run en {SCRAPE_DELAY_SECONDS}s)")
+
+
+# ── Canasta diaria de precios + alertas ──────────────────────────────────────
+# Opt-in (ENABLE_PRICES_JOB): consulta ~90 productos en ~13 tiendas por día.
+PRICES_TICK_SECONDS = int(os.getenv("PRICES_TICK_SECONDS", "1800"))
+PRICES_BASKET_EVERY_HOURS = float(os.getenv("PRICES_BASKET_EVERY_HOURS", "20"))
+PRICE_ALERTS_EVERY_HOURS = float(os.getenv("PRICE_ALERTS_EVERY_HOURS", "6"))
+
+
+def _prices_tick(history, user_db, notifier):
+    """Una pasada: corre la canasta y/o revisa alertas si les toca."""
+    from datetime import datetime, timedelta
+    from prices.alerts import check_alerts
+    from prices.basket import due, run_basket
+
+    if due(history, PRICES_BASKET_EVERY_HOURS):
+        print("[prices] Corriendo canasta diaria...")
+        run_basket(history, log=lambda line: print(f"[prices]{line}"))
+    last = history.get_meta("alerts_last_check")
+    if not last or datetime.now() - datetime.fromisoformat(last) >= timedelta(hours=PRICE_ALERTS_EVERY_HOURS):
+        stats = check_alerts(user_db, lambda chat_id, text: notifier.send_message_to(chat_id, text, parse_mode="HTML"))
+        history.set_meta("alerts_last_check", datetime.now().isoformat(timespec="seconds"))
+        print(f"[prices] Alertas: {stats}")
+
+
+def start_prices():
+    """Hilo en background para la canasta de precios y las alertas."""
+    from database import UserDatabase
+    from notifier import TelegramNotifier
+    from prices.history import PriceHistory
+
+    def loop():
+        time.sleep(120)  # que la API termine de arrancar
+        history, user_db, notifier = PriceHistory(), UserDatabase(), TelegramNotifier()
+        while True:
+            try:
+                _prices_tick(history, user_db, notifier)
+            except Exception as error:  # el hilo no puede morir por una pasada fallida
+                print(f"[prices] Error: {type(error).__name__}: {error}")
+            time.sleep(PRICES_TICK_SECONDS)
+
+    threading.Thread(target=loop, daemon=True, name="prices-scheduler").start()
+    print(f"[prices] Canasta cada {PRICES_BASKET_EVERY_HOURS}h y alertas cada {PRICE_ALERTS_EVERY_HOURS}h")

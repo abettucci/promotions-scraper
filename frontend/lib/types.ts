@@ -174,3 +174,34 @@ export interface PriceSearchResponse {
   groups: PriceGroup[]
   failed_stores: string[]
 }
+
+export interface PricePoint { date: string; min: number; avg: number; max: number; stores: number }
+
+export interface PriceHistoryResponse {
+  key: string
+  days: number
+  tracked: boolean
+  name?: string
+  points: PricePoint[]
+  current: { store: string; store_name: string; price: number; date: string }[]
+  summary: { today: number; lowest: number; lowest_date: string; highest: number; change_pct: number } | null
+}
+
+export interface PriceAlert {
+  id: number
+  product_key: string
+  product_name: string
+  query: string
+  target_price: number | null
+  baseline_price: number
+}
+
+export interface PriceAlertCreated {
+  id: number
+  key: string
+  name: string
+  price: number
+  store_name: string
+  target: number | null
+  telegram_linked: boolean
+}

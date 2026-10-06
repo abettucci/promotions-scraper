@@ -35,6 +35,9 @@ SCRAPER_RESULT_CACHE_PATH = Path(os.getenv(
 _USERS_DB_DIR = Path(os.getenv("USERS_DB_DIR", str(BASE_DIR / "userdata")))
 _USERS_DB_DIR.mkdir(exist_ok=True)
 USERS_DB_PATH = _USERS_DB_DIR / "users.db"
+# Historial de precios de la canasta diaria. Vive en el mismo volumen que los
+# usuarios: persiste entre deploys y no engorda la base de promos del repo.
+PRICES_DB_PATH = _USERS_DB_DIR / "prices.db"
 
 # Configuración de scraping
 MIN_DELAY = 2  # segundos entre requests

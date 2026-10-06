@@ -4,10 +4,12 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, ExternalLink, Loader2, Search, ShoppingCart, Tv, Dumbbell } from "lucide-react"
+import { ArrowLeft, ExternalLink, LineChart, Loader2, Search, ShoppingCart, Tv, Dumbbell } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
 import { BankBadge } from "@/components/BankBadge"
+import { PriceHistoryChart } from "@/components/PriceHistoryChart"
+import { PriceAlertButton } from "@/components/PriceAlertButton"
 import type { PriceGroup, PriceOffer } from "@/lib/types"
 
 const CATEGORIES = [
@@ -35,7 +37,7 @@ function OfferRow({ offer, best }: { offer: PriceOffer; best: boolean }) {
         {offer.percentage_off && offer.list_price && (
           <p className="text-xs text-[#8a9ab0]"><span className="line-through">{ars(offer.list_price)}</span> −{offer.percentage_off}%</p>
         )}
-        {offer.installments > 0 && <p className="text-xs text-[#52657d]">{offer.installments} cuotas sin interés</p>}
+        {offer.installments > 0 && <p className="text-xs text-[#52657d]">Hasta {offer.installments} cuotas sin interés</p>}
       </td>
       <td className="px-3 py-3 align-top">
         {promo && offer.savings > 0 ? (
@@ -80,7 +82,7 @@ function OfferItem({ offer, best }: { offer: PriceOffer; best: boolean }) {
           <b>{promo.discount}</b> con {promo.entity}{promo.tope ? ` · tope ${promo.tope}` : ""}
           {promo.requires_min_purchase && <span className="text-[#8f2d28]"> · mín. {promo.min_purchase}</span>}
         </p>
-      ) : <p className="mt-1 text-xs text-[#8a9ab0]">Sin promo bancaria hoy{offer.installments > 0 ? ` · ${offer.installments} cuotas sin interés` : ""}</p>}
+      ) : <p className="mt-1 text-xs text-[#8a9ab0]">Sin promo bancaria hoy{offer.installments > 0 ? ` · hasta ${offer.installments} cuotas sin interés` : ""}</p>}
       <a href={offer.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#2758d8]">
         Ver en la tienda <ExternalLink className="h-3 w-3" />
       </a>
@@ -88,7 +90,21 @@ function OfferItem({ offer, best }: { offer: PriceOffer; best: boolean }) {
   )
 }
 
-function GroupCard({ group }: { group: PriceGroup }) {
+/** Foto del producto; si la tienda no la sirve (hotlink bloqueado), no mostramos un ícono roto. */
+function ProductImage({ src }: { src: string }) {
+  const [failed, setFailed] = useState(false)
+  if (!src || failed) return null
+  return (
+    <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white">
+      <Image src={src} alt="" fill sizes="64px" className="object-contain" unoptimized onError={() => setFailed(true)} />
+    </span>
+  )
+}
+
+function GroupCard({ group, query }: { group: PriceGroup; query: string }) {
+  const [showHistory, setShowHistory] = useState(false)
+  // Las claves por título no identifican al producto entre días: sin historial ni alertas.
+  const trackable = group.key.startsWith("ean:") || group.key.startsWith("model:")
   const offers = group.offers
   const cheapest = offers[0]
   const priciest = offers[offers.length - 1]
@@ -96,11 +112,7 @@ function GroupCard({ group }: { group: PriceGroup }) {
   return (
     <section className="overflow-hidden rounded-2xl border border-[#dbe4ee] bg-white shadow-[0_14px_36px_rgb(16_42_76_/_0.07)]">
       <header className="flex items-center gap-4 border-b border-[#e5ebf2] px-4 py-4 sm:px-5">
-        {group.image && (
-          <span className="relative h-16 w-16 shrink-0 overflow-hidden rounded-xl bg-white">
-            <Image src={group.image} alt="" fill sizes="64px" className="object-contain" unoptimized />
-          </span>
-        )}
+        <ProductImage src={group.image} />
         <div className="min-w-0">
           <p className="text-[10px] font-semibold uppercase tracking-[0.14em] text-[#52657d]">{group.brand || "Producto"}{group.ean ? ` · EAN ${group.ean}` : ""}</p>
           <h3 className="display text-lg font-semibold leading-snug tracking-[-0.03em] text-[#102a4c]">{group.name}</h3>
@@ -110,6 +122,16 @@ function GroupCard({ group }: { group: PriceGroup }) {
           </p>
         </div>
       </header>
+      {trackable && (
+        <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-[#e5ebf2] px-4 py-2.5 sm:px-5">
+          <button type="button" onClick={() => setShowHistory((value) => !value)} aria-expanded={showHistory}
+            className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2758d8] hover:text-[#102a4c]">
+            <LineChart className="h-3.5 w-3.5" /> {showHistory ? "Ocultar historial" : "Ver historial de precios"}
+          </button>
+          <PriceAlertButton query={query} productKey={group.key} />
+        </div>
+      )}
+      {trackable && showHistory && <div className="border-b border-[#e5ebf2] bg-[#fbfcfe]"><PriceHistoryChart productKey={group.key} /></div>}
       {/* Mobile: una tarjeta por tienda; desde sm, tabla comparativa. */}
       <ul className="divide-y divide-[#e5ebf2] sm:hidden">
         {offers.map((offer, index) => <OfferItem key={`${offer.store}-${index}`} offer={offer} best={index === 0 && offers.length > 1} />)}
@@ -217,7 +239,7 @@ export default function PreciosPage() {
             {data.groups.length === 0 ? (
               <p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-[#52657d]">No encontramos <b>{data.query}</b>. Probá con marca y tamaño.</p>
             ) : (
-              <div className="space-y-5">{data.groups.map((group) => <GroupCard key={group.key} group={group} />)}</div>
+              <div className="space-y-5">{data.groups.map((group) => <GroupCard key={group.key} group={group} query={data.query} />)}</div>
             )}
             <p className="text-xs leading-relaxed text-[#73836e]">
               Precios online publicados por cada tienda; pueden variar por sucursal y no incluyen envío. El precio final es estimado con la mejor promo bancaria vigente hoy (reintegros y topes según cada banco).

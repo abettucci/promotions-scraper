@@ -1,0 +1,358 @@
+[
+{
+"query": "leche la serenisima entera 1l",
+"category": "supermarket"
+},
+{
+"query": "leche la serenisima descremada 1l",
+"category": "supermarket"
+},
+{
+"query": "leche sancor larga vida 1l",
+"category": "supermarket"
+},
+{
+"query": "manteca la serenisima 200g",
+"category": "supermarket"
+},
+{
+"query": "queso cremoso la paulina 1kg",
+"category": "supermarket"
+},
+{
+"query": "yogur ser frutilla 190g",
+"category": "supermarket"
+},
+{
+"query": "dulce de leche la serenisima 400g",
+"category": "supermarket"
+},
+{
+"query": "aceite cocinero girasol 1.5l",
+"category": "supermarket"
+},
+{
+"query": "aceite natura girasol 1.5l",
+"category": "supermarket"
+},
+{
+"query": "aceite de oliva cocinero 500ml",
+"category": "supermarket"
+},
+{
+"query": "yerba playadito 1kg",
+"category": "supermarket"
+},
+{
+"query": "yerba taragui 1kg",
+"category": "supermarket"
+},
+{
+"query": "yerba mananita 1kg",
+"category": "supermarket"
+},
+{
+"query": "azucar ledesma 1kg",
+"category": "supermarket"
+},
+{
+"query": "harina pureza 000 1kg",
+"category": "supermarket"
+},
+{
+"query": "fideos matarazzo spaghetti 500g",
+"category": "supermarket"
+},
+{
+"query": "fideos lucchetti tirabuzon 500g",
+"category": "supermarket"
+},
+{
+"query": "arroz gallo oro largo fino 1kg",
+"category": "supermarket"
+},
+{
+"query": "polenta presto pronta 500g",
+"category": "supermarket"
+},
+{
+"query": "cafe la virginia 250g",
+"category": "supermarket"
+},
+{
+"query": "cafe nescafe dolca 170g",
+"category": "supermarket"
+},
+{
+"query": "te taragui 25 saquitos",
+"category": "supermarket"
+},
+{
+"query": "galletitas oreo 118g",
+"category": "supermarket"
+},
+{
+"query": "galletitas criollitas 300g",
+"category": "supermarket"
+},
+{
+"query": "galletitas terrabusi variedad 400g",
+"category": "supermarket"
+},
+{
+"query": "coca cola 2.25l",
+"category": "supermarket"
+},
+{
+"query": "coca cola sin azucar 2.25l",
+"category": "supermarket"
+},
+{
+"query": "sprite 2.25l",
+"category": "supermarket"
+},
+{
+"query": "fanta naranja 2.25l",
+"category": "supermarket"
+},
+{
+"query": "agua villavicencio 2l",
+"category": "supermarket"
+},
+{
+"query": "agua mineral eco de los andes 2l",
+"category": "supermarket"
+},
+{
+"query": "cerveza quilmes 1l",
+"category": "supermarket"
+},
+{
+"query": "cerveza brahma 1l",
+"category": "supermarket"
+},
+{
+"query": "cerveza stella artois 1l",
+"category": "supermarket"
+},
+{
+"query": "vino malbec trapiche 750ml",
+"category": "supermarket"
+},
+{
+"query": "vino alma mora malbec 750ml",
+"category": "supermarket"
+},
+{
+"query": "papel higienico elite 12 rollos",
+"category": "supermarket"
+},
+{
+"query": "papel higienico higienol 4 rollos",
+"category": "supermarket"
+},
+{
+"query": "rollo de cocina sussex 3 rollos",
+"category": "supermarket"
+},
+{
+"query": "detergente magistral limon 750ml",
+"category": "supermarket"
+},
+{
+"query": "lavandina ayudin 1l",
+"category": "supermarket"
+},
+{
+"query": "jabon en polvo skip 3kg",
+"category": "supermarket"
+},
+{
+"query": "suavizante vivere 900ml",
+"category": "supermarket"
+},
+{
+"query": "shampoo pantene 400ml",
+"category": "supermarket"
+},
+{
+"query": "desodorante rexona aerosol",
+"category": "supermarket"
+},
+{
+"query": "pasta dental colgate 90g",
+"category": "supermarket"
+},
+{
+"query": "atun la campagnola 170g",
+"category": "supermarket"
+},
+{
+"query": "mayonesa hellmanns 475g",
+"category": "supermarket"
+},
+{
+"query": "pure de tomate arcor 520g",
+"category": "supermarket"
+},
+{
+"query": "sal celusal 500g",
+"category": "supermarket"
+},
+{
+"query": "mermelada arcor durazno 454g",
+"category": "supermarket"
+},
+{
+"query": "alimento perro dogui 21kg",
+"category": "supermarket"
+},
+{
+"query": "alimento gato whiskas 1kg",
+"category": "supermarket"
+},
+{
+"query": "panales pampers xg",
+"category": "supermarket"
+},
+{
+"query": "leche en polvo nido 800g",
+"category": "supermarket"
+},
+{
+"query": "cacao nesquik 360g",
+"category": "supermarket"
+},
+{
+"query": "queso rallado la serenisima 40g",
+"category": "supermarket"
+},
+{
+"query": "fideos don vicente 500g",
+"category": "supermarket"
+},
+{
+"query": "salsa de tomate la campagnola 500g",
+"category": "supermarket"
+},
+{
+"query": "arvejas lata la campagnola 300g",
+"category": "supermarket"
+},
+{
+"query": "huevos de campo maple 30 unidades",
+"category": "supermarket"
+},
+{
+"query": "heladera samsung no frost 300 litros",
+"category": "electro"
+},
+{
+"query": "heladera philco no frost",
+"category": "electro"
+},
+{
+"query": "heladera whirlpool no frost",
+"category": "electro"
+},
+{
+"query": "lavarropas samsung 8kg",
+"category": "electro"
+},
+{
+"query": "lavarropas drean 7kg",
+"category": "electro"
+},
+{
+"query": "lavarropas lg 9kg",
+"category": "electro"
+},
+{
+"query": "smart tv 50 samsung",
+"category": "electro"
+},
+{
+"query": "smart tv 43 philips",
+"category": "electro"
+},
+{
+"query": "smart tv 55 lg",
+"category": "electro"
+},
+{
+"query": "smart tv 32 noblex",
+"category": "electro"
+},
+{
+"query": "aire acondicionado split 3000 frigorias",
+"category": "electro"
+},
+{
+"query": "microondas samsung 23l",
+"category": "electro"
+},
+{
+"query": "freidora de aire 4l",
+"category": "electro"
+},
+{
+"query": "celular samsung galaxy a15",
+"category": "electro"
+},
+{
+"query": "celular motorola moto g",
+"category": "electro"
+},
+{
+"query": "iphone 15",
+"category": "electro"
+},
+{
+"query": "notebook lenovo ideapad",
+"category": "electro"
+},
+{
+"query": "tablet samsung galaxy tab",
+"category": "electro"
+},
+{
+"query": "auriculares jbl bluetooth",
+"category": "electro"
+},
+{
+"query": "playstation 5",
+"category": "electro"
+},
+{
+"query": "cafetera nespresso",
+"category": "electro"
+},
+{
+"query": "aspiradora robot",
+"category": "electro"
+},
+{
+"query": "ventilador de pie 20 pulgadas",
+"category": "electro"
+},
+{
+"query": "pava electrica",
+"category": "electro"
+},
+{
+"query": "cocina a gas 4 hornallas",
+"category": "electro"
+},
+{
+"query": "termotanque electrico 80 litros",
+"category": "electro"
+},
+{
+"query": "monitor 24 pulgadas",
+"category": "electro"
+},
+{
+"query": "joystick ps5",
+"category": "electro"
+}
+]

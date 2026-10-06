@@ -97,3 +97,7 @@ htmlcov/
 .coverage.*
 coverage.xml
 *.cover
+
+# Datos de usuarios (emails, hashes) e historial de precios locales: viven en el
+# volumen de Railway, nunca en el repo.
+userdata/
