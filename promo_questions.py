@@ -253,6 +253,18 @@ _EXCLUSION_CATEGORY_TERMS = {
 }
 
 
+def html_to_web_text(value: Optional[str]) -> str:
+    """HTML del bot de Telegram → texto para la web.
+
+    Conserva los saltos de línea, pasa ``<b>`` a ``**negrita**`` y los links a
+    ``texto: URL``; el frontend los dibuja con elementos de React, sin HTML.
+    """
+    text = value or ""
+    text = re.sub(r'<a href="([^"]+)">(.*?)</a>', r"\2: \1", text)
+    text = re.sub(r"<b>(.*?)</b>", r"**\1**", text)
+    return html.unescape(re.sub(r"</?(?:b|i)>", "", text))
+
+
 def _norm(value: object) -> str:
     text = unicodedata.normalize("NFD", str(value or ""))
     text = "".join(c for c in text if unicodedata.category(c) != "Mn")

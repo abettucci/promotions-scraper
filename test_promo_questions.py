@@ -1,7 +1,7 @@
 import unittest
 from datetime import date
 
-from promo_questions import answer_promo_question, is_allowed_promo_question
+from promo_questions import answer_promo_question, html_to_web_text, is_allowed_promo_question
 
 
 PROMOTIONS = [
@@ -133,6 +133,22 @@ class PromoQueryInterpretationTests(unittest.TestCase):
         self.assertIn("Galicia", answer)
         self.assertTrue(is_allowed_promo_question("hola, ¿qué podés hacer?"))
         self.assertTrue(is_allowed_promo_question("¿Qué hay hoy en Coto?"))
+
+
+class WebTextTests(unittest.TestCase):
+    def test_keeps_line_breaks_bold_and_links_readable(self):
+        html_answer = ('📋 <b>Promos vigentes — Coto</b>\n• <b>25%</b> con MP &amp; QR\n'
+                       '<a href="https://x.test/p?a=1&amp;b=2">Ver en Coto</a>\n<i>nota</i>')
+        text = html_to_web_text(html_answer)
+        self.assertEqual(text.splitlines(), [
+            "📋 **Promos vigentes — Coto**", "• **25%** con MP & QR",
+            "Ver en Coto: https://x.test/p?a=1&b=2", "nota",
+        ])
+        self.assertNotIn("<", text)
+
+    def test_a_real_search_answer_has_one_line_per_promo(self):
+        text = html_to_web_text(answer_promo_question("promos en coto", PROMOTIONS))
+        self.assertGreaterEqual(len(text.splitlines()), 3)
 
 
 if __name__ == "__main__":

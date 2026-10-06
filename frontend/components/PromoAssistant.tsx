@@ -4,6 +4,7 @@ import { FormEvent, useEffect, useState } from "react"
 import Link from "next/link"
 import { ArrowUp, BotMessageSquare, ShieldCheck, Sparkles, X } from "lucide-react"
 import { api } from "@/lib/api"
+import { AssistantMessage } from "./AssistantMessage"
 
 type Message = { role: "user" | "assistant"; text: string }
 
@@ -105,7 +106,7 @@ export function PromoAssistant({ token }: { token: string | null }) {
               <div className="space-y-2.5" aria-live="polite">
                 {messages.map((message, index) => (
                   <div key={`${message.role}-${index}`} className={`rounded-2xl px-3.5 py-2.5 text-sm leading-relaxed ${message.role === "user" ? "ml-10 bg-[#102a4c] text-white" : "mr-5 border border-[#e0e8df] bg-white text-[#29452d]"}`}>
-                    {message.text}
+                    {message.role === "assistant" ? <AssistantMessage text={message.text} /> : message.text}
                   </div>
                 ))}
                 {loading && <div className="mr-5 rounded-2xl border border-[#e0e8df] bg-white px-3.5 py-2.5 text-sm text-[#58705b]">Revisando promociones vigentes…</div>}

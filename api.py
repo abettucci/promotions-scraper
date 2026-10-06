@@ -583,8 +583,14 @@ def _assistant_promotions() -> list[dict]:
 
 
 def _assistant_plain_text(value: str) -> str:
-    """El bot de Telegram devuelve HTML; la web recibe exclusivamente texto."""
-    return html.unescape(re.sub(r"</?(?:b|i)>", "", value or ""))
+    """El bot de Telegram devuelve HTML; la web recibe exclusivamente texto.
+
+    Se conservan los saltos de línea, las negritas como ``**texto**`` y los
+    links como ``texto: URL``; el frontend los dibuja sin usar HTML.
+    """
+    from promo_questions import html_to_web_text
+
+    return html_to_web_text(value)
 
 
 def _public_assistant_rate_key(request: Request) -> str:
