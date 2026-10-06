@@ -179,14 +179,39 @@ export interface PriceGroup {
   brand: string
   ean: string
   image: string
+  category: string
+  category_path: string[]
   store_count: number
   offers: PriceOffer[]
+}
+
+export interface PriceFacet {
+  name: string
+  count: number
+  children: { name: string; count: number }[]
+}
+
+export interface PriceSuggestion {
+  key: string
+  name: string
+  brand: string
+  image: string
+  category: string
+  category_path: string[]
+  stores: number
+}
+
+export interface PriceSuggestResponse {
+  query: string
+  suggestions: PriceSuggestion[]
+  categories: { name: string; path: string[]; count: number }[]
 }
 
 export interface PriceSearchResponse {
   query: string
   day?: string
   qty?: number
+  facets?: PriceFacet[]
   groups: PriceGroup[]
   failed_stores: string[]
 }

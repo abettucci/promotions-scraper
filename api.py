@@ -702,6 +702,7 @@ def search_product_prices(
     day: Optional[date] = Query(None),
     mine: bool = Query(False),
     qty: int = Query(1, ge=1, le=12),
+    limit: int = Query(8, ge=1, le=30),
     credentials: Optional[HTTPAuthorizationCredentials] = Depends(security),
 ):
     """Compara el precio de un producto entre tiendas y aplica la mejor promo.
@@ -724,7 +725,31 @@ def search_product_prices(
     user = _optional_user(credentials) if mine else None
     methods = _db.get_user_payment_methods(user["id"]) if user else None
     return search_prices(q, category=category, promotions=_assistant_promotions(), day=day,
-                         methods=methods, qty=qty)
+                         methods=methods, qty=qty, max_groups=limit)
+
+
+@app.get("/api/prices/suggest")
+def suggest_products(request: Request, q: str = Query(..., min_length=2, max_length=80),
+                     live: bool = Query(False)):
+    """Sugerencias de productos con miniatura mientras se escribe.
+
+    ``live=false`` responde al instante con el índice de la canasta diaria;
+    ``live=true`` además consulta unas tiendas (1-3 s, con cache).
+    """
+    from prices.history import PriceHistory
+    from prices.suggest import suggest
+
+    retry_after = _db.consume_public_assistant_quota(
+        hashlib.sha256(b"suggest:" + _public_assistant_rate_key(request).encode()).hexdigest(),
+        config.PRICES_SUGGEST_RATE_LIMIT_MAX, config.PRICES_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(429, "Demasiadas sugerencias. Probá en un rato.")
+    try:
+        products = PriceHistory().all_products()
+    except Exception:
+        products = []   # sin índice local igual se puede sugerir en vivo
+    return suggest(q, products=products, live=live)
 
 
 @app.get("/api/prices/history")

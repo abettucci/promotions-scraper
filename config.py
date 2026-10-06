@@ -334,6 +334,8 @@ ASSISTANT_PUBLIC_RATE_LIMIT_SECRET = _public_rate_limit_secret
 # se limita por IP (mismo HMAC que el asistente público) aunque más generoso.
 PRICES_RATE_LIMIT_MAX = int(os.getenv("PRICES_RATE_LIMIT_MAX", "60"))
 PRICES_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("PRICES_RATE_LIMIT_WINDOW_SECONDS", "3600"))
+# Autocompletado: una consulta por pausa al escribir, así que el límite es más alto.
+PRICES_SUGGEST_RATE_LIMIT_MAX = int(os.getenv("PRICES_SUGGEST_RATE_LIMIT_MAX", "600"))
 
 # ============================================
 # CATÁLOGO DE MEDIOS DE PAGO

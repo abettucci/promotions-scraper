@@ -40,6 +40,7 @@ class PriceHistory:
                 ean TEXT,
                 query TEXT,
                 image TEXT,
+                category TEXT,
                 first_seen TEXT NOT NULL,
                 last_seen TEXT NOT NULL
             );
@@ -56,6 +57,10 @@ class PriceHistory:
             CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(product_key, date);
             CREATE TABLE IF NOT EXISTS price_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
         """)
+        try:  # bases creadas antes de existir la columna
+            conn.execute("ALTER TABLE price_products ADD COLUMN category TEXT")
+        except sqlite3.OperationalError:
+            pass
         conn.commit()
         conn.close()
 
@@ -74,12 +79,12 @@ class PriceHistory:
                 if not key.startswith(_TRACKED_PREFIXES):
                     continue
                 conn.execute(
-                    "INSERT INTO price_products (key, name, brand, ean, query, image, first_seen, last_seen) "
-                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                    "INSERT INTO price_products (key, name, brand, ean, query, image, category, first_seen, last_seen) "
+                    "VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?) "
                     "ON CONFLICT(key) DO UPDATE SET name = excluded.name, image = excluded.image, "
-                    "query = excluded.query, last_seen = excluded.last_seen",
+                    "category = excluded.category, query = excluded.query, last_seen = excluded.last_seen",
                     (key, group.get("name", ""), group.get("brand", ""), group.get("ean", ""),
-                     query, group.get("image", ""), iso, iso),
+                     query, group.get("image", ""), group.get("category", ""), iso, iso),
                 )
                 for offer in group.get("offers", []):
                     if not offer.get("in_stock", True) or not offer.get("price"):
@@ -122,6 +127,13 @@ class PriceHistory:
         row = conn.execute("SELECT * FROM price_products WHERE key = ?", (key,)).fetchone()
         conn.close()
         return dict(row) if row else None
+
+    def all_products(self) -> list[dict]:
+        """Productos de la canasta: índice instantáneo para el autocompletado."""
+        conn = self._conn()
+        rows = conn.execute("SELECT key, name, brand, image, category FROM price_products").fetchall()
+        conn.close()
+        return [dict(row) for row in rows]
 
     def series(self, key: str, days: int = 90, today: Optional[date] = None) -> dict:
         """Serie diaria (mínimo/promedio/máximo entre tiendas) con carry-forward."""

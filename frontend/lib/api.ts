@@ -1,7 +1,7 @@
 import type {
   PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, PromotionDetails,
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
-  PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated,
+  PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated, PriceSuggestResponse,
 } from "./types"
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
@@ -11,6 +11,7 @@ async function fetchJSON<T>(
   path: string,
   params?: Record<string, string | number | boolean | undefined>,
   token?: string | null,
+  signal?: AbortSignal,
 ): Promise<T> {
   const url = new URL(path, API_BASE)
   if (params) {
@@ -19,7 +20,7 @@ async function fetchJSON<T>(
     })
   }
   const headers: HeadersInit = token ? { Authorization: `Bearer ${token}` } : {}
-  const res = await fetch(url.toString(), { cache: "no-store", headers })
+  const res = await fetch(url.toString(), { cache: "no-store", headers, signal })
   if (!res.ok) {
     const text = await res.text()
     let detail = text
@@ -72,8 +73,10 @@ export const api = {
   getSupermarkets: (category?: string) =>
     fetchJSON<Supermarket[]>("/api/supermarkets", category ? { category } : undefined),
   getStats: () => fetchJSON<Stats>("/api/stats"),
-  searchPrices: (params: { q: string; category?: string; mine?: boolean; qty?: number }, token?: string | null) =>
+  searchPrices: (params: { q: string; category?: string; mine?: boolean; qty?: number; limit?: number }, token?: string | null) =>
     fetchJSON<PriceSearchResponse>("/api/prices/search", params, token),
+  suggestPrices: (q: string, live: boolean, signal?: AbortSignal) =>
+    fetchJSON<PriceSuggestResponse>("/api/prices/suggest", { q, live }, null, signal),
   getPriceHistory: (key: string, days = 90) =>
     fetchJSON<PriceHistoryResponse>("/api/prices/history", { key, days }),
   createPriceAlert: (body: { query: string; key?: string; target_price?: number }, token: string) =>

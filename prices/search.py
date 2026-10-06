@@ -9,6 +9,7 @@ from typing import Optional
 
 from .effective import apply_best_promo
 from .matching import _SIZE_RE, group_key, model_code, norm, relevance
+from .categories import OTHER, category_string, classify
 from .models import Offer, ProductGroup
 from .registry import Store, stores_for
 
@@ -58,6 +59,41 @@ def _fetch_offers(query: str, category: Optional[str]) -> tuple[list[Offer], lis
                 failed.append(store.name)
     _cache[key] = (time.monotonic(), offers, failed)
     return offers, failed
+
+
+def _fill_group_metadata(group: ProductGroup) -> None:
+    """Categoría más específica y una imagen que cargue (Coto bloquea el hotlink)."""
+    # Categoría propia (igual para todas las tiendas); las rutas que publica cada
+    # tienda sólo sirven de pista cuando el nombre no alcanza.
+    group.category = category_string(classify(group.name, [o.category for o in group.offers]))
+    by_trust = sorted(group.offers, key=lambda o: o.store == "coto")
+    group.image = next((o.image for o in by_trust if o.image), group.image)
+
+
+def build_facets(groups: list[dict]) -> list[dict]:
+    """Categorías de los resultados con su cantidad: nivel 1 y, adentro, nivel 2.
+
+    Cada tienda usa su propio árbol, así que las categorías salen de lo que
+    devolvieron los productos de esta búsqueda, no de un árbol fijo.
+    """
+    top: dict[str, dict] = {}
+    for group in groups:
+        path = group.get("category_path") or []
+        if not path:
+            continue
+        # Mismo nombre con otra capitalización ("Aceites y vinagres"/"Aceites y Vinagres") = una categoría.
+        node = top.setdefault(norm(path[0]), {"name": path[0], "count": 0, "children": {}})
+        node["count"] += 1
+        if len(path) > 1:
+            child = node["children"].setdefault(norm(path[1]), [path[1], 0])
+            child[1] += 1
+    facets = []
+    # "Otros" siempre al final, aunque tenga más productos.
+    for node in sorted(top.values(), key=lambda n: (norm(n["name"]) == norm(OTHER), -n["count"])):
+        children = [{"name": name, "count": count} for name, count in
+                    sorted(node["children"].values(), key=lambda item: -item[1])]
+        facets.append({"name": node["name"], "count": node["count"], "children": children})
+    return facets
 
 
 def _merge_by_model(groups: dict[str, ProductGroup], scores: dict[str, float]) -> dict[str, ProductGroup]:
@@ -125,6 +161,8 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
 
     groups = _merge_by_model(groups, scores)
     for group in groups.values():
+        _fill_group_metadata(group)
+    for group in groups.values():
         for offer in group.offers:
             apply_best_promo(offer, promotions or [], day, methods, qty)
 
@@ -133,10 +171,12 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
         key=lambda g: (-scores[g.key], -len({o.store for o in g.offers}),
                        g.best.final_price if g.best.final_price is not None else g.best.price),
     )
+    shown = [g.to_dict() for g in ranked[:max_groups]]
     return {
         "query": query,
         "day": (day or date.today()).isoformat(),
         "qty": max(1, int(qty)),
-        "groups": [g.to_dict() for g in ranked[:max_groups]],
+        "groups": shown,
+        "facets": build_facets(shown),
         "failed_stores": sorted(set(failed)),
     }

@@ -10,7 +10,8 @@ import { useAuthStore } from "@/lib/auth"
 import { BankBadge } from "@/components/BankBadge"
 import { PriceHistoryChart } from "@/components/PriceHistoryChart"
 import { PriceAlertButton } from "@/components/PriceAlertButton"
-import type { PriceGroup, PriceOffer } from "@/lib/types"
+import { ProductAutocomplete } from "@/components/ProductAutocomplete"
+import type { PriceFacet, PriceGroup, PriceOffer } from "@/lib/types"
 
 const CATEGORIES = [
   { value: "", label: "Todo", icon: Search },
@@ -187,6 +188,60 @@ function GroupCard({ group, query }: { group: PriceGroup; query: string }) {
   )
 }
 
+const PAGE_SIZE = 8
+const RESULT_LIMIT = 24   // más grupos de los que se muestran: los filtros por categoría actúan sobre ellos
+
+const fold = (text: string) => text.normalize("NFD").replace(/[\u0300-\u036f]/g, "").toLowerCase()
+
+interface CategoryFilter { level1: string | null; level2: string | null }
+const NO_FILTER: CategoryFilter = { level1: null, level2: null }
+
+function inCategory(group: PriceGroup, filter: CategoryFilter): boolean {
+  if (!filter.level1) return true
+  const [first, second] = group.category_path ?? []
+  if (!first || fold(first) !== fold(filter.level1)) return false
+  return !filter.level2 || (!!second && fold(second) === fold(filter.level2))
+}
+
+function Chip({ active, onClick, children }: { active: boolean; onClick: () => void; children: React.ReactNode }) {
+  return (
+    <button type="button" onClick={onClick} aria-pressed={active}
+      className={`min-h-8 rounded-full border px-3 text-xs font-semibold transition-colors ${active ? "border-[#102a4c] bg-[#102a4c] text-white" : "border-[#cbd8e6] bg-white text-[#102a4c] hover:border-[#102a4c]"}`}>
+      {children}
+    </button>
+  )
+}
+
+/** Filtros por categoría y subcategoría, armados con lo que devolvieron las tiendas para esta búsqueda. */
+function CategoryFilters({ facets, total, filter, onChange }: {
+  facets: PriceFacet[]; total: number; filter: CategoryFilter; onChange: (filter: CategoryFilter) => void
+}) {
+  if (facets.length < 2 && !filter.level1) return null
+  const selected = facets.find((facet) => filter.level1 && fold(facet.name) === fold(filter.level1))
+  return (
+    <div className="space-y-2 rounded-2xl border border-[#dbe4ee] bg-white px-4 py-3" aria-label="Filtrar por categoría">
+      <div className="flex flex-wrap items-center gap-2">
+        <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#52657d]">Categoría</span>
+        <Chip active={!filter.level1} onClick={() => onChange(NO_FILTER)}>Todas ({total})</Chip>
+        {facets.map((facet) => (
+          <Chip key={facet.name} active={!!filter.level1 && fold(facet.name) === fold(filter.level1)}
+            onClick={() => onChange({ level1: facet.name, level2: null })}>{facet.name} ({facet.count})</Chip>
+        ))}
+      </div>
+      {selected && selected.children.length > 1 && (
+        <div className="flex flex-wrap items-center gap-2">
+          <span className="text-[10px] font-semibold uppercase tracking-[0.13em] text-[#52657d]">Subcategoría</span>
+          <Chip active={!filter.level2} onClick={() => onChange({ level1: selected.name, level2: null })}>Todas</Chip>
+          {selected.children.map((child) => (
+            <Chip key={child.name} active={!!filter.level2 && fold(child.name) === fold(filter.level2)}
+              onClick={() => onChange({ level1: selected.name, level2: child.name })}>{child.name} ({child.count})</Chip>
+          ))}
+        </div>
+      )}
+    </div>
+  )
+}
+
 export default function PreciosPage() {
   const { token, user } = useAuthStore()
   const [input, setInput] = useState("")
@@ -194,18 +249,24 @@ export default function PreciosPage() {
   const [category, setCategory] = useState("")
   const [mine, setMine] = useState(false)
   const [qty, setQty] = useState(1)
+  const [filter, setFilter] = useState<CategoryFilter>(NO_FILTER)
+  const [shown, setShown] = useState(PAGE_SIZE)
 
   const { data, isFetching, error } = useQuery({
     queryKey: ["prices", query, category, mine, qty],
-    queryFn: () => api.searchPrices({ q: query, category: category || undefined, mine: mine || undefined, qty }, token),
+    queryFn: () => api.searchPrices({ q: query, category: category || undefined, mine: mine || undefined, qty, limit: RESULT_LIMIT }, token),
     enabled: query.trim().length >= 2,
     staleTime: 5 * 60 * 1000,
   })
 
-  const submit = (value: string) => {
+  const submit = (value: string, nextFilter: CategoryFilter = NO_FILTER) => {
     setInput(value)
     setQuery(value.trim())
+    setFilter(nextFilter)
+    setShown(PAGE_SIZE)
   }
+
+  const visible = (data?.groups ?? []).filter((group) => inCategory(group, filter))
 
   return (
     <div className="min-h-dvh bg-[#f5f7fb]">
@@ -225,11 +286,9 @@ export default function PreciosPage() {
             Comparamos el precio online en Carrefour, Coto, Día, Jumbo, Disco, Vea, ChangoMás, Frávega, Naldo, Easy, Cetrogar, On City y Coppel, y le restamos la mejor promo bancaria vigente hoy.
           </p>
           <form onSubmit={(event) => { event.preventDefault(); submit(input) }} className="mt-6 flex flex-col gap-2 sm:flex-row">
-            <label htmlFor="price-query" className="sr-only">Producto</label>
-            <input
-              id="price-query" value={input} onChange={(event) => setInput(event.target.value)} maxLength={120}
-              placeholder="Ej.: leche La Serenísima 1 L"
-              className="h-12 w-full rounded-xl sm:flex-1 border border-white/20 bg-white px-4 text-base text-[#102a4c] placeholder:text-[#8a9ab0] focus:outline-none focus:ring-2 focus:ring-[#b8f36b]"
+            <ProductAutocomplete
+              value={input} onChange={setInput}
+              onSelect={({ text, categoryPath }) => submit(text, categoryPath ? { level1: categoryPath[0] ?? null, level2: categoryPath[1] ?? null } : NO_FILTER)}
             />
             <button type="submit" disabled={input.trim().length < 2} className="inline-flex h-12 items-center justify-center gap-2 rounded-xl bg-[#b8f36b] px-5 text-sm font-semibold text-[#102a4c] transition-colors hover:bg-[#d4ff9e] disabled:opacity-50">
               <Search className="h-4 w-4" /> Comparar
@@ -276,7 +335,19 @@ export default function PreciosPage() {
             {data.groups.length === 0 ? (
               <p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-[#52657d]">No encontramos <b>{data.query}</b>. Probá con marca y tamaño.</p>
             ) : (
-              <div className="space-y-5">{data.groups.map((group) => <GroupCard key={group.key} group={group} query={data.query} />)}</div>
+              <>
+                <CategoryFilters facets={data.facets ?? []} total={data.groups.length} filter={filter}
+                  onChange={(next) => { setFilter(next); setShown(PAGE_SIZE) }} />
+                {visible.length === 0
+                  ? <p className="rounded-xl bg-white px-4 py-6 text-center text-sm text-[#52657d]">Ningún producto de <b>{data.query}</b> en esa categoría.</p>
+                  : <div className="space-y-5">{visible.slice(0, shown).map((group) => <GroupCard key={group.key} group={group} query={data.query} />)}</div>}
+                {visible.length > shown && (
+                  <button type="button" onClick={() => setShown((value) => value + PAGE_SIZE)}
+                    className="mx-auto block rounded-xl border border-[#cbd8e6] bg-white px-5 py-2.5 text-sm font-semibold text-[#102a4c] hover:border-[#102a4c]">
+                    Mostrar más productos ({visible.length - shown})
+                  </button>
+                )}
+              </>
             )}
             <p className="text-xs leading-relaxed text-[#73836e]">
               Precios online publicados por cada tienda; pueden variar por sucursal y no incluyen envío. El precio final es estimado con lo que más conviene entre la promo por cantidad de la tienda y la mejor promo bancaria de hoy; no se suman, porque no siempre se acumulan (reintegros y topes según cada banco).

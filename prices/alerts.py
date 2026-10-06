@@ -11,8 +11,8 @@ _TARGET_RE = re.compile(
     r"(?:\s+(?:a|por|en|menos\s+de|menor\s+a|hasta|<=?)\s*)?\$\s*([\d.]+(?:,\d+)?)\s*$", re.I,
 )
 _MIN_DROP = 0.01   # sólo avisamos bajas de al menos 1 %
-_SEARCH_GROUPS = 8   # igual que la página: el producto elegido tiene que reaparecer
-_CHECK_GROUPS = 12   # el ranking varía de un día a otro; margen para no perder el producto
+_SEARCH_GROUPS = 24  # igual que la página: el producto elegido tiene que reaparecer
+_CHECK_GROUPS = 30   # el ranking varía de un día a otro; margen para no perder el producto
 
 
 def parse_alert_args(text: str) -> tuple[str, Optional[float]]:

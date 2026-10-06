@@ -4,6 +4,11 @@ from dataclasses import asdict, dataclass, field
 from typing import Optional
 
 
+def category_path(category: str) -> list[str]:
+    """"/Almacén/Aceites/" → ["Almacén", "Aceites"]."""
+    return [part.strip() for part in (category or "").split("/") if part.strip()]
+
+
 @dataclass
 class Offer:
     """Una publicación de un producto en una tienda."""
@@ -56,6 +61,7 @@ class ProductGroup:
     brand: str = ""
     ean: str = ""
     image: str = ""
+    category: str = ""   # ruta más específica entre las tiendas: "/Almacén/Aceites/Girasol/"
     offers: list[Offer] = field(default_factory=list)
 
     @property
@@ -66,6 +72,8 @@ class ProductGroup:
         offers = sorted(self.offers, key=lambda o: o.final_price if o.final_price is not None else o.price)
         return {
             "key": self.key, "name": self.name, "brand": self.brand, "ean": self.ean,
-            "image": self.image, "store_count": len({o.store for o in offers}),
+            "image": self.image, "category": self.category,
+            "category_path": category_path(self.category),
+            "store_count": len({o.store for o in offers}),
             "offers": [o.to_dict() for o in offers],
         }
