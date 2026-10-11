@@ -24,6 +24,7 @@ from typing import Optional
 import config
 from database import UserDatabase
 from notifier import TelegramNotifier, _strip_accents, _today_name, DAY_NAMES_ES
+from payment_preferences import promotion_matches_payment_methods
 
 PAGE_SIZE = 8  # promos por página (Telegram tiene 4096 chars/msg)
 
@@ -188,7 +189,11 @@ def _query_promotions(
     params.append(limit)
     rows = conn.execute(sql, params).fetchall()
     conn.close()
-    return [dict(r) for r in rows]
+    promotions = [dict(r) for r in rows]
+    return [
+        promo for promo in promotions
+        if not payment_methods or promotion_matches_payment_methods(promo, payment_methods)
+    ]
 
 
 # ── Render helpers (HTML) ─────────────────────────────────────────────────────

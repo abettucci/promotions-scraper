@@ -6,7 +6,7 @@ Includes user auth (JWT) and personalized promotion endpoints
 from fastapi import FastAPI, Query, HTTPException, Depends, Request
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
-from typing import Optional, List
+from typing import Optional, List, Literal
 from datetime import date, datetime, timedelta, timezone
 from pydantic import BaseModel, ConfigDict, field_validator
 import sqlite3
@@ -202,7 +202,8 @@ class LoginBody(BaseModel):
 
 class PaymentMethod(BaseModel):
     name: str
-    type: str  # bank | wallet | club
+    type: Literal["bank", "wallet", "club"]
+    card_mode: Literal["credit", "debit", "both"] = "both"
 
 class UpdatePaymentMethodsBody(BaseModel):
     methods: List[PaymentMethod]
@@ -524,7 +525,7 @@ def update_me(body: UpdateProfileBody, current_user=Depends(get_current_user)):
 
 @app.put("/api/auth/me/payment-methods")
 def update_payment_methods(body: UpdatePaymentMethodsBody, current_user=Depends(get_current_user)):
-    methods = [{"name": m.name, "type": m.type} for m in body.methods]
+    methods = [{"name": m.name, "type": m.type, "card_mode": m.card_mode} for m in body.methods]
     _db.set_user_payment_methods(current_user["id"], methods)
     updated = _db.get_user_by_id(current_user["id"])
     return _user_response(updated)

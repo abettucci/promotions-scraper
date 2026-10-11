@@ -8,6 +8,7 @@ from datetime import datetime
 from typing import List, Dict, Optional, Iterable
 import json
 import config
+from payment_preferences import promotion_matches_payment_methods
 
 
 def _strip_accents(s: str) -> str:
@@ -305,9 +306,14 @@ class Database:
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 entity_name TEXT NOT NULL,
                 entity_type TEXT NOT NULL,
+                card_mode TEXT NOT NULL DEFAULT 'both',
                 UNIQUE(user_id, entity_name)
             )
         """)
+        try:
+            cursor.execute("ALTER TABLE user_payment_methods ADD COLUMN card_mode TEXT NOT NULL DEFAULT 'both'")
+        except sqlite3.OperationalError:
+            pass
 
         conn.commit()
         conn.close()
@@ -363,8 +369,11 @@ class Database:
         conn = self.get_connection()
         conn.execute("DELETE FROM user_payment_methods WHERE user_id = ?", (user_id,))
         conn.executemany(
-            "INSERT OR IGNORE INTO user_payment_methods (user_id, entity_name, entity_type) VALUES (?, ?, ?)",
-            [(user_id, m["name"], m["type"]) for m in methods if m.get("name") and m.get("type")],
+            "INSERT OR IGNORE INTO user_payment_methods (user_id, entity_name, entity_type, card_mode) VALUES (?, ?, ?, ?)",
+            [
+                (user_id, m["name"], m["type"], m.get("card_mode") if m.get("card_mode") in {"credit", "debit", "both"} else "both")
+                for m in methods if m.get("name") and m.get("type")
+            ],
         )
         conn.commit()
         conn.close()
@@ -372,7 +381,7 @@ class Database:
     def get_user_payment_methods(self, user_id: int) -> List[Dict]:
         conn = self.get_connection()
         rows = conn.execute(
-            "SELECT entity_name AS name, entity_type AS type FROM user_payment_methods WHERE user_id = ?",
+            "SELECT entity_name AS name, entity_type AS type, card_mode FROM user_payment_methods WHERE user_id = ?",
             (user_id,),
         ).fetchall()
         conn.close()
@@ -423,7 +432,7 @@ class Database:
                 day_params = [f"%{today_es}%", "%todos los d%"]
 
         query = f"""
-            SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.payment_method,
+            SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type, p.payment_method, p.terms_raw,
                    p.valid_days, p.store_types, p.tope, p.min_purchase,
                    p.acumulable, s.name AS supermarket_name
             FROM promotions p
@@ -437,7 +446,7 @@ class Database:
         conn = self.get_connection()
         rows = conn.execute(query, entity_params + day_params + [today_iso, today_iso]).fetchall()
         conn.close()
-        return [dict(r) for r in rows]
+        return [promo for promo in (dict(r) for r in rows) if promotion_matches_payment_methods(promo, methods)]
 
     def insert_supermarket(self, name: str, url: str, category: str = 'supermarket',
                            update_existing: bool = True) -> int:
@@ -871,6 +880,7 @@ class UserDatabase:
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
                 entity_name TEXT NOT NULL,
                 entity_type TEXT NOT NULL,
+                card_mode TEXT NOT NULL DEFAULT 'both',
                 UNIQUE(user_id, entity_name)
             );
             CREATE TABLE IF NOT EXISTS password_resets (
@@ -906,6 +916,10 @@ class UserDatabase:
                 UNIQUE(user_id, product_key)
             );
         """)
+        try:
+            conn.execute("ALTER TABLE user_payment_methods ADD COLUMN card_mode TEXT NOT NULL DEFAULT 'both'")
+        except sqlite3.OperationalError:
+            pass
         conn.commit()
         conn.close()
         print(f"✅ Users DB inicializada: {self.db_path}")
@@ -973,8 +987,11 @@ class UserDatabase:
         conn = self._conn()
         conn.execute("DELETE FROM user_payment_methods WHERE user_id = ?", (user_id,))
         conn.executemany(
-            "INSERT OR IGNORE INTO user_payment_methods (user_id, entity_name, entity_type) VALUES (?, ?, ?)",
-            [(user_id, m["name"], m["type"]) for m in methods if m.get("name") and m.get("type")],
+            "INSERT OR IGNORE INTO user_payment_methods (user_id, entity_name, entity_type, card_mode) VALUES (?, ?, ?, ?)",
+            [
+                (user_id, m["name"], m["type"], m.get("card_mode") if m.get("card_mode") in {"credit", "debit", "both"} else "both")
+                for m in methods if m.get("name") and m.get("type")
+            ],
         )
         conn.commit()
         conn.close()
@@ -982,7 +999,7 @@ class UserDatabase:
     def get_user_payment_methods(self, user_id: int) -> List[Dict]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT entity_name AS name, entity_type AS type FROM user_payment_methods WHERE user_id = ?",
+            "SELECT entity_name AS name, entity_type AS type, card_mode FROM user_payment_methods WHERE user_id = ?",
             (user_id,),
         ).fetchall()
         conn.close()
@@ -1236,7 +1253,7 @@ class UserDatabase:
 
         today_iso = datetime.now().date().isoformat()
         query = f"""
-            SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.payment_method,
+            SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type, p.payment_method, p.terms_raw,
                    p.valid_days, p.store_types, p.tope, p.min_purchase,
                    p.acumulable, s.name AS supermarket_name
             FROM promotions p
@@ -1253,7 +1270,7 @@ class UserDatabase:
             query, entity_params + day_params + [today_iso, today_iso]
         ).fetchall()
         promo_conn.close()
-        return [dict(r) for r in rows]
+        return [promo for promo in (dict(r) for r in rows) if promotion_matches_payment_methods(promo, methods)]
 
 
 # Inicializar base de datos al importar

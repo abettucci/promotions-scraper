@@ -117,7 +117,7 @@ export default function ProfilePage() {
           </div>
 
           <p className="text-sm text-slate-500 mb-5">
-            Seleccioná los bancos, billeteras y clubes que tenés. Filtraremos las promos que aplican para vos.
+            Seleccioná los bancos, billeteras y clubes que tenés. Para cada banco o billetera podés indicar si usás crédito, débito o ambas.
           </p>
 
           {catalog ? (

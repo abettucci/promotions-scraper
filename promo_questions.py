@@ -16,6 +16,7 @@ from datetime import date, timedelta
 from typing import Optional
 
 from supplement_prices import find_supplement_price
+from payment_preferences import promotion_matches_payment_methods
 
 
 _STOP_WORDS = {
@@ -562,10 +563,7 @@ def _discount_value(value: object) -> float:
 
 
 def _matches_payment_method(promo: dict, methods: list[dict]) -> bool:
-    haystack = _norm(" ".join(str(promo.get(field) or "") for field in (
-        "bank", "wallet", "payment_method", "title",
-    )))
-    return any(_norm(method.get("name")) in haystack for method in methods if method.get("name"))
+    return promotion_matches_payment_methods(promo, methods)
 
 
 def _scope_may_cover_product(promo: dict, product: str) -> bool:

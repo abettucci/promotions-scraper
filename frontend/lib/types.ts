@@ -90,6 +90,7 @@ export interface FilterState {
 export interface PaymentMethod {
   name: string
   type: "bank" | "wallet" | "club"
+  card_mode: "credit" | "debit" | "both"
 }
 
 export interface User {

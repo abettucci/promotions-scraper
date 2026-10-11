@@ -29,9 +29,15 @@ export function PaymentMethodSelector({ catalog, selected, onChange }: Props) {
     if (isSelected(name)) {
       onChange(selected.filter((m) => m.name !== name))
     } else {
-      onChange([...selected, { name, type }])
+      onChange([...selected, { name, type, card_mode: "both" }])
     }
   }
+
+  const setCardMode = (name: string, cardMode: PaymentMethod["card_mode"]) => {
+    onChange(selected.map((method) => method.name === name ? { ...method, card_mode: cardMode } : method))
+  }
+
+  const configurableMethods = selected.filter((method) => method.type === "bank" || method.type === "wallet")
 
   return (
     <div className="space-y-6">
@@ -73,6 +79,43 @@ export function PaymentMethodSelector({ catalog, selected, onChange }: Props) {
           </div>
         )
       })}
+
+      {configurableMethods.length > 0 && (
+        <section className="rounded-xl border border-slate-200 bg-slate-50/70 p-4">
+          <div className="mb-3">
+            <h3 className="text-sm font-semibold text-slate-800">Cómo pagás con cada entidad</h3>
+            <p className="mt-0.5 text-xs text-slate-500">Usaremos esto para ocultar promos exclusivas de una tarjeta que no tenés.</p>
+          </div>
+          <div className="space-y-2">
+            {configurableMethods.map((method) => {
+              const currentMode = method.card_mode ?? "both"
+              return (
+                <div key={method.name} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
+                  <span className="text-sm font-medium text-slate-700">{method.name}</span>
+                  <div className="grid grid-cols-3 rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
+                    {([
+                      ["credit", "Crédito"], ["debit", "Débito"], ["both", "Ambas"],
+                    ] as const).map(([mode, label]) => (
+                      <button
+                        key={mode}
+                        type="button"
+                        onClick={() => setCardMode(method.name, mode)}
+                        aria-pressed={currentMode === mode}
+                        className={cn(
+                          "rounded-md px-2.5 py-1.5 transition-colors",
+                          currentMode === mode ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:text-slate-900",
+                        )}
+                      >
+                        {label}
+                      </button>
+                    ))}
+                  </div>
+                </div>
+              )
+            })}
+          </div>
+        </section>
+      )}
     </div>
   )
 }
