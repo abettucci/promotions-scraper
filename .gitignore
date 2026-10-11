@@ -101,3 +101,10 @@ coverage.xml
 # Datos de usuarios (emails, hashes) e historial de precios locales: viven en el
 # volumen de Railway, nunca en el repo.
 userdata/
+
+# Local automation artifacts and generated exports
+.codex_tmp/
+.kvs_operation_report.json
+outputs/
+/promotions.db
+/uet-reprocess-ue-origins-mex-1789412360766.json
