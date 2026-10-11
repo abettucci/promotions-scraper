@@ -208,6 +208,29 @@ class PaymentMethod(BaseModel):
 class UpdatePaymentMethodsBody(BaseModel):
     methods: List[PaymentMethod]
 
+class UpdateFavoriteStoresBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    stores: List[str]
+
+    @field_validator("stores")
+    @classmethod
+    def validate_stores(cls, values: List[str]) -> List[str]:
+        if len(values) > UserDatabase.MAX_FAVORITE_STORES_PER_USER:
+            raise ValueError(
+                f"Podés guardar hasta {UserDatabase.MAX_FAVORITE_STORES_PER_USER} supermercados"
+            )
+        clean: list[str] = []
+        seen: set[str] = set()
+        for value in values:
+            name = " ".join(str(value or "").strip().split())
+            if not 2 <= len(name) <= 80 or any(ord(char) < 32 for char in name):
+                raise ValueError("Nombre de supermercado inválido")
+            key = _strip_accents(name).casefold()
+            if key not in seen:
+                clean.append(name)
+                seen.add(key)
+        return clean
+
 class UpdateProfileBody(BaseModel):
     telegram_chat_id: Optional[str] = None
     notify_daily: Optional[bool] = None
@@ -531,6 +554,49 @@ def update_payment_methods(body: UpdatePaymentMethodsBody, current_user=Depends(
     return _user_response(updated)
 
 
+def _favorite_store_catalog() -> dict[str, str]:
+    """Catálogo canónico de supermercados habilitados, indexado sin acentos."""
+    conn = get_conn()
+    try:
+        category_clause = (
+            "AND LOWER(COALESCE(category, 'supermarket')) = 'supermarket'"
+            if _HAS_SUPERMARKET_CATEGORY else ""
+        )
+        rows = conn.execute(
+            f"SELECT name FROM supermarkets WHERE enabled = 1 {category_clause} ORDER BY name"
+        ).fetchall()
+    finally:
+        conn.close()
+    return {_strip_accents(row["name"]).casefold(): row["name"] for row in rows}
+
+
+@app.get("/api/auth/me/watchlist")
+def get_watchlist(current_user=Depends(get_current_user)):
+    """Lista habitual: supermercados favoritos y productos con alerta."""
+    return {
+        "stores": _db.get_user_favorite_stores(current_user["id"]),
+        "products": _db.list_price_alerts(current_user["id"]),
+        "telegram_linked": bool(current_user.get("telegram_chat_id")),
+        "limits": {
+            "stores": _db.MAX_FAVORITE_STORES_PER_USER,
+            "products": _db.MAX_PRICE_ALERTS_PER_USER,
+        },
+    }
+
+
+@app.put("/api/auth/me/watchlist/stores")
+def update_watchlist_stores(body: UpdateFavoriteStoresBody, current_user=Depends(get_current_user)):
+    catalog = _favorite_store_catalog()
+    canonical: list[str] = []
+    for value in body.stores:
+        name = catalog.get(_strip_accents(value).casefold())
+        if not name:
+            raise HTTPException(422, f"Supermercado desconocido: {value}")
+        canonical.append(name)
+    stores = _db.set_user_favorite_stores(current_user["id"], canonical)
+    return {"stores": stores}
+
+
 @app.get("/api/auth/me/promotions")
 def get_my_promotions(
     today_only: bool = Query(True),
@@ -560,7 +626,7 @@ def _assistant_promotions() -> list[dict]:
     conn = get_conn()
     rows = conn.execute(
         """
-        SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.payment_method,
+        SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type, p.payment_method,
                p.store_types, p.valid_days, p.valid_from, p.valid_until, p.tope,
                p.min_purchase, p.terms_raw, p.acumulable,
                COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
@@ -778,7 +844,15 @@ def create_price_alert(body: PriceAlertBody, current_user=Depends(get_current_us
     )
     if retry_after:
         raise HTTPException(429, "Alcanzaste el límite temporal de consultas. Probá nuevamente en un momento.")
-    alert = create_alert(_db, current_user["id"], body.query, key=body.key, target=body.target_price)
+    alert = create_alert(
+        _db,
+        current_user["id"],
+        body.query,
+        key=body.key,
+        target=body.target_price,
+        promotions=_assistant_promotions(),
+        methods=_db.get_user_payment_methods(current_user["id"]),
+    )
     if alert is None:
         raise HTTPException(404, "No encontré ese producto en las tiendas.")
     if alert.get("error") == "limit":

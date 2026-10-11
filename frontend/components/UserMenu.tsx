@@ -4,7 +4,7 @@ import { useState, useRef, useEffect } from "react"
 import Link from "next/link"
 import { useAuthStore } from "@/lib/auth"
 import { Button } from "@/components/ui/button"
-import { User, LogOut, Settings, ChevronDown, CreditCard } from "lucide-react"
+import { User, LogOut, Settings, ChevronDown, CreditCard, ShoppingBasket } from "lucide-react"
 
 export function UserMenu() {
   const { user, logout } = useAuthStore()
@@ -85,6 +85,15 @@ export function UserMenu() {
           >
             <User className="h-4 w-4 text-[#71839a]" />
             Mis promociones
+          </Link>
+
+          <Link
+            href="/watchlist"
+            onClick={() => setOpen(false)}
+            className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#40536b] transition-colors hover:bg-[#f5f8fc]"
+          >
+            <ShoppingBasket className="h-4 w-4 text-[#71839a]" />
+            Mi lista habitual
           </Link>
 
           <div className="mt-1 border-t border-[#e5ebf2]">

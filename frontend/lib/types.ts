@@ -236,6 +236,7 @@ export interface PriceAlert {
   query: string
   target_price: number | null
   baseline_price: number
+  created_at?: string
 }
 
 export interface PriceAlertCreated {
@@ -245,5 +246,13 @@ export interface PriceAlertCreated {
   price: number
   store_name: string
   target: number | null
+  promo?: PriceOfferPromo | null
   telegram_linked: boolean
+}
+
+export interface Watchlist {
+  stores: string[]
+  products: PriceAlert[]
+  telegram_linked: boolean
+  limits: { stores: number; products: number }
 }

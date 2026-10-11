@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import type { PaymentMethod } from "@/lib/types"
 import {
   ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle,
-  Bell, BellOff, MessageCircle, CreditCard,
+  Bell, BellOff, MessageCircle, CreditCard, ShoppingBasket,
 } from "lucide-react"
 
 export default function ProfilePage() {
@@ -236,14 +236,17 @@ export default function ProfilePage() {
           </div>
         </div>
 
-        {/* Quick link */}
-        {selectedMethods.length > 0 && (
-          <div className="text-center pb-4">
+        {/* Quick links */}
+        <div className="flex flex-wrap justify-center gap-3 pb-4">
+          <Button variant="outline" asChild>
+            <Link href="/watchlist"><ShoppingBasket className="h-4 w-4" /> Armar mi lista habitual</Link>
+          </Button>
+          {selectedMethods.length > 0 && (
             <Button variant="outline" asChild>
               <Link href="/my-promotions">Ver mis promociones de hoy →</Link>
             </Button>
-          </div>
-        )}
+          )}
+        </div>
       </main>
     </div>
   )

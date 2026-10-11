@@ -389,6 +389,8 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "• /stats — estadísticas\n\n"
         "<b>Comandos personalizados</b> (requieren cuenta):\n"
         "• /alerta &lt;producto&gt; — aviso cuando baje el precio (ver /alertas)\n"
+        "• /lista — tus productos y supermercados habituales\n"
+        "• /seguir &lt;super&gt; — agregar un supermercado a tu lista\n"
         "• /mis — promos para tus medios de pago\n"
         "• /medios — ver tus medios\n"
         "• /notify on|off — toggle notificaciones diarias\n"
@@ -427,6 +429,9 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "<code>/alerta leche la serenisima 1l</code> — te aviso ante cualquier baja.\n"
         "<code>/alerta heladera samsung rt29k577j a $1000000</code> — te aviso al llegar a ese precio.\n"
         "<code>/alertas</code> — ver tus alertas. <code>/quitar 3</code> — borrar la #3.\n\n"
+        "<code>/lista</code> — ver tus productos y supermercados habituales.\n"
+        "<code>/seguir coto</code> — agregar un súper al digest.\n"
+        "<code>/dejar coto</code> — dejar de seguirlo.\n\n"
         "<code>/stats</code> — Total de promos, supers y bancos.\n\n"
         "<b>Comandos privados</b> (requieren cuenta linkeada)\n\n"
         "<code>/mis</code> — Promos que matchean tus medios de pago.\n"
@@ -850,7 +855,15 @@ def cmd_alerta(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dic
             "<code>/alertas</code> — ver las tuyas · <code>/quitar &lt;n&gt;</code> — borrar una",
             {},
         )
-    alert = create_alert(user_db, user["id"], query, target=target)
+    methods = user_db.get_user_payment_methods(user["id"])
+    alert = create_alert(
+        user_db,
+        user["id"],
+        query,
+        target=target,
+        promotions=user_db.get_promotions_for_user(user["id"], today_only=True),
+        methods=methods,
+    )
     if alert is None:
         return f"🔎 No encontré <b>{_esc(query)}</b> en las tiendas. Probá con marca y tamaño.", {}
     if alert.get("error") == "limit":
@@ -890,10 +903,97 @@ def cmd_quitar(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dic
     return f"No encontré la alerta #{_esc(raw)}.", {}
 
 
+def _supermarket_catalog() -> list[str]:
+    conn = _promos_conn()
+    category_clause = (
+        "AND LOWER(COALESCE(category, 'supermarket')) = 'supermarket'"
+        if _HAS_SUPERMARKET_CATEGORY else ""
+    )
+    try:
+        rows = conn.execute(
+            f"SELECT name FROM supermarkets WHERE enabled = 1 {category_clause} ORDER BY name"
+        ).fetchall()
+    finally:
+        conn.close()
+    return [row["name"] for row in rows]
+
+
+def _find_supermarket_name(value: str) -> tuple[Optional[str], list[str]]:
+    wanted = _strip_accents((value or "").strip()).casefold()
+    if len(wanted) < 2:
+        return None, []
+    matches = [
+        name for name in _supermarket_catalog()
+        if wanted in _strip_accents(name).casefold()
+    ]
+    exact = next(
+        (name for name in matches if _strip_accents(name).casefold() == wanted), None,
+    )
+    return exact or (matches[0] if len(matches) == 1 else None), matches
+
+
+def cmd_lista(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    user = user_db.get_user_by_telegram_chat_id(chat_id)
+    if not user:
+        return "🔒 Linkea tu cuenta primero. Usá /start.", {}
+    stores = user_db.get_user_favorite_stores(user["id"])
+    products = user_db.list_price_alerts(user["id"])
+    lines = ["🧺 <b>Tu lista habitual</b>"]
+    lines.append("\n<b>Supermercados</b>")
+    lines.extend(f"• {_esc(name)}" for name in stores)
+    if not stores:
+        lines.append("Todavía ninguno. Agregá uno con <code>/seguir coto</code>.")
+    lines.append("\n<b>Productos</b>")
+    for alert in products:
+        goal = f"≤ {_ars(alert['target_price'])}" if alert["target_price"] else "si baja"
+        lines.append(f"#{alert['id']} · {_esc(alert['product_name'])} — {goal}")
+    if not products:
+        lines.append("Todavía ninguno. Agregá uno con <code>/alerta leche 1l</code>.")
+    lines.append("\nEditar: <code>/seguir &lt;super&gt;</code> · <code>/dejar &lt;super&gt;</code> · <code>/quitar &lt;id&gt;</code>")
+    return "\n".join(lines), {}
+
+
+def cmd_seguir(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    user = user_db.get_user_by_telegram_chat_id(chat_id)
+    if not user:
+        return "🔒 Linkea tu cuenta primero. Usá /start.", {}
+    name, matches = _find_supermarket_name(args)
+    if not name:
+        if matches:
+            return "Encontré varios. Sé más específico: " + ", ".join(_esc(item) for item in matches[:6]), {}
+        return "Uso: <code>/seguir coto</code>. No encontré ese supermercado.", {}
+    stores = user_db.get_user_favorite_stores(user["id"])
+    if name not in stores:
+        if len(stores) >= user_db.MAX_FAVORITE_STORES_PER_USER:
+            return f"⚠️ Podés seguir hasta {user_db.MAX_FAVORITE_STORES_PER_USER} supermercados.", {}
+        stores.append(name)
+        user_db.set_user_favorite_stores(user["id"], stores)
+    return f"✅ <b>{_esc(name)}</b> quedó en tu lista. El digest diario mostrará sólo tus supermercados habituales.", {}
+
+
+def cmd_dejar(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    user = user_db.get_user_by_telegram_chat_id(chat_id)
+    if not user:
+        return "🔒 Linkea tu cuenta primero. Usá /start.", {}
+    name, _ = _find_supermarket_name(args)
+    stores = user_db.get_user_favorite_stores(user["id"])
+    chosen = next(
+        (store for store in stores if name and _strip_accents(store).casefold() == _strip_accents(name).casefold()),
+        None,
+    )
+    if not chosen:
+        return "Ese supermercado no está en tu lista. Mirala con /lista.", {}
+    user_db.set_user_favorite_stores(user["id"], [store for store in stores if store != chosen])
+    return f"🗑️ <b>{_esc(chosen)}</b> salió de tu lista.", {}
+
+
 COMMANDS = {
     "alerta": cmd_alerta,
     "alertas": cmd_alertas,
     "quitar": cmd_quitar,
+    "lista": cmd_lista,
+    "seguir": cmd_seguir,
+    "dejar": cmd_dejar,
     "start": cmd_start,
     "ayuda": cmd_ayuda,
     "help": cmd_ayuda,

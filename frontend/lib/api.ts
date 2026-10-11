@@ -2,6 +2,7 @@ import type {
   PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, PromotionDetails,
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
   PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated, PriceSuggestResponse,
+  Watchlist,
 } from "./types"
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
@@ -85,6 +86,10 @@ export const api = {
     fetchJSON<{ alerts: PriceAlert[]; telegram_linked: boolean }>("/api/prices/alerts", undefined, token),
   deletePriceAlert: (id: number, token: string) =>
     fetchMutation<{ ok: boolean }>("DELETE", `/api/prices/alerts/${id}`, undefined, token),
+  getWatchlist: (token: string) =>
+    fetchJSON<Watchlist>("/api/auth/me/watchlist", undefined, token),
+  updateWatchlistStores: (stores: string[], token: string) =>
+    fetchMutation<{ stores: string[] }>("PUT", "/api/auth/me/watchlist/stores", { stores }, token),
   getPaymentMethodsCatalog: () => fetchJSON<PaymentMethodsCatalog>("/api/catalog/payment-methods"),
 
   // ── Auth ────────────────────────────────────────────────────────────────────

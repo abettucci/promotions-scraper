@@ -305,11 +305,15 @@ class TelegramNotifier:
             if not methods:
                 continue  # sin métodos de pago configurados, no enviamos
 
-            promos = db.get_promotions_for_user(user["id"], today_only=True)
+            favorites = db.get_user_favorite_stores(user["id"])
+            promos = db.get_promotions_for_user(
+                user["id"], today_only=True, favorite_stores_only=True,
+            )
             if not promos:
+                scope = " en tus supermercados habituales" if favorites else ""
                 self.send_message_to(chat_id, (
                     f"👋 ¡Buen {today}!\n\n"
-                    "ℹ️ Hoy no hay promociones activas para tus tarjetas y billeteras."
+                    f"ℹ️ Hoy no hay promociones activas{scope} para tus tarjetas y billeteras."
                 ))
                 continue
 
@@ -326,7 +330,8 @@ class TelegramNotifier:
             header = (
                 f"👋 ¡Buen {today}!\n"
                 f"🎯 *Tus promos de hoy* ({method_names})\n"
-                f"{'─' * 32}\n"
+                + (f"🛒 *Tu lista:* {', '.join(favorites)}\n" if favorites else "")
+                + f"{'─' * 32}\n"
             )
             self.send_message_to(chat_id, header)
 

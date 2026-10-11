@@ -157,6 +157,57 @@ class AlertTests(unittest.TestCase):
         self.assertIn("a,b", text)
         self.assertIn("$1.235", text)
 
+    def test_personalized_promo_can_trigger_a_price_drop(self):
+        create_alert(self.db, self.user, "leche", search=self.search_for(100))
+        self.db.set_user_payment_methods(
+            self.user,
+            [{"name": "Banco Galicia", "type": "bank", "card_mode": "credit"}],
+        )
+
+        def personalized_search(query, **kwargs):
+            self.assertTrue(kwargs["promotions"])
+            self.assertEqual(kwargs["methods"][0]["name"], "Banco Galicia")
+            result = group("ean:1", 100)
+            result["offers"][0].update({
+                "final_price": 80,
+                "promo": {"discount": "20%", "entity": "Banco Galicia"},
+            })
+            return {"groups": [result]}
+
+        stats = check_alerts(
+            self.db,
+            self.send,
+            search=personalized_search,
+            promotions=[{"id": 1}],
+        )
+        self.assertEqual(stats["notified"], 1)
+        self.assertIn("precio final estimado", self.sent[0][1].lower())
+        self.assertIn("Banco Galicia", self.sent[0][1])
+
+
+class WatchlistTests(unittest.TestCase):
+    def setUp(self):
+        self.tmp = tempfile.TemporaryDirectory()
+        self.db = UserDatabase(Path(self.tmp.name) / "users.db")
+        self.user = self.db.create_user("lista@promo.ar", "hash")
+
+    def tearDown(self):
+        self.tmp.cleanup()
+
+    def test_favorite_stores_are_normalized_deduplicated_and_replaceable(self):
+        saved = self.db.set_user_favorite_stores(
+            self.user, [" Coto Digital ", "coto digital", "Carrefour"],
+        )
+        self.assertEqual(saved, ["Coto Digital", "Carrefour"])
+        self.assertEqual(self.db.get_user_favorite_stores(self.user), ["Carrefour", "Coto Digital"])
+        self.db.set_user_favorite_stores(self.user, ["Jumbo (Cencosud)"])
+        self.assertEqual(self.db.get_user_favorite_stores(self.user), ["Jumbo (Cencosud)"])
+
+    def test_favorite_store_limit_is_enforced_in_database_layer(self):
+        stores = [f"Super {index}" for index in range(20)]
+        saved = self.db.set_user_favorite_stores(self.user, stores)
+        self.assertEqual(len(saved), self.db.MAX_FAVORITE_STORES_PER_USER)
+
 
 class BotAlertCommandTests(unittest.TestCase):
     def setUp(self):
@@ -184,6 +235,14 @@ class BotAlertCommandTests(unittest.TestCase):
         self.assertIn("Leche 1L", cmd_alertas("555", "", self.db)[0])
         self.assertIn("borrada", cmd_quitar("555", "1", self.db)[0])
         self.assertIn("No tenés alertas", cmd_alertas("555", "", self.db)[0])
+
+    def test_supermarkets_can_be_managed_from_the_bot(self):
+        from bot_handlers import cmd_dejar, cmd_lista, cmd_seguir
+
+        with patch("bot_handlers._find_supermarket_name", return_value=("Coto Digital", ["Coto Digital"])):
+            self.assertIn("quedó en tu lista", cmd_seguir("555", "coto", self.db)[0])
+            self.assertIn("Coto Digital", cmd_lista("555", "", self.db)[0])
+            self.assertIn("salió de tu lista", cmd_dejar("555", "coto", self.db)[0])
 
 
 if __name__ == "__main__":

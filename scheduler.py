@@ -60,7 +60,7 @@ PRICE_ALERTS_EVERY_HOURS = float(os.getenv("PRICE_ALERTS_EVERY_HOURS", "6"))
 def _prices_tick(history, user_db, notifier):
     """Una pasada: corre la canasta y/o revisa alertas si les toca."""
     from datetime import datetime, timedelta
-    from prices.alerts import check_alerts
+    from prices.alerts import check_alerts, load_active_promotions
     from prices.basket import due, run_basket
 
     if due(history, PRICES_BASKET_EVERY_HOURS):
@@ -68,7 +68,12 @@ def _prices_tick(history, user_db, notifier):
         run_basket(history, log=lambda line: print(f"[prices]{line}"))
     last = history.get_meta("alerts_last_check")
     if not last or datetime.now() - datetime.fromisoformat(last) >= timedelta(hours=PRICE_ALERTS_EVERY_HOURS):
-        stats = check_alerts(user_db, lambda chat_id, text: notifier.send_message_to(chat_id, text, parse_mode="HTML"))
+        promotions = load_active_promotions()
+        stats = check_alerts(
+            user_db,
+            lambda chat_id, text: notifier.send_message_to(chat_id, text, parse_mode="HTML"),
+            promotions=promotions,
+        )
         history.set_meta("alerts_last_check", datetime.now().isoformat(timespec="seconds"))
         print(f"[prices] Alertas: {stats}")
 

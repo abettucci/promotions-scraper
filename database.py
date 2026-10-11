@@ -883,6 +883,13 @@ class UserDatabase:
                 card_mode TEXT NOT NULL DEFAULT 'both',
                 UNIQUE(user_id, entity_name)
             );
+            CREATE TABLE IF NOT EXISTS user_favorite_stores (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
+                store_name TEXT NOT NULL COLLATE NOCASE,
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP,
+                UNIQUE(user_id, store_name)
+            );
             CREATE TABLE IF NOT EXISTS password_resets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -1004,6 +1011,45 @@ class UserDatabase:
         ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
+
+    MAX_FAVORITE_STORES_PER_USER = 12
+
+    def set_user_favorite_stores(self, user_id: int, stores: List[str]) -> List[str]:
+        """Reemplaza los supermercados habituales del usuario.
+
+        La API valida además que pertenezcan al catálogo vigente; esta capa
+        mantiene límites y normalización aunque se la invoque desde otro flujo.
+        """
+        clean: list[str] = []
+        seen: set[str] = set()
+        for value in stores:
+            name = " ".join(str(value or "").strip().split())
+            key = _strip_accents(name).casefold()
+            if not name or len(name) > 80 or any(ord(char) < 32 for char in name) or key in seen:
+                continue
+            clean.append(name)
+            seen.add(key)
+            if len(clean) >= self.MAX_FAVORITE_STORES_PER_USER:
+                break
+
+        conn = self._conn()
+        conn.execute("DELETE FROM user_favorite_stores WHERE user_id = ?", (user_id,))
+        conn.executemany(
+            "INSERT INTO user_favorite_stores (user_id, store_name) VALUES (?, ?)",
+            [(user_id, name) for name in clean],
+        )
+        conn.commit()
+        conn.close()
+        return clean
+
+    def get_user_favorite_stores(self, user_id: int) -> List[str]:
+        conn = self._conn()
+        rows = conn.execute(
+            "SELECT store_name FROM user_favorite_stores WHERE user_id = ? ORDER BY store_name COLLATE NOCASE",
+            (user_id,),
+        ).fetchall()
+        conn.close()
+        return [row["store_name"] for row in rows]
 
     def get_users_for_notification(self) -> List[Dict]:
         conn = self._conn()
@@ -1215,7 +1261,9 @@ class UserDatabase:
         finally:
             conn.close()
 
-    def get_promotions_for_user(self, user_id: int, today_only: bool = True) -> List[Dict]:
+    def get_promotions_for_user(
+        self, user_id: int, today_only: bool = True, favorite_stores_only: bool = False,
+    ) -> List[Dict]:
         """Promociones activas que coinciden con los métodos de pago del usuario.
         Lee desde promotions.db (separada)."""
         methods = self.get_user_payment_methods(user_id)
@@ -1270,7 +1318,17 @@ class UserDatabase:
             query, entity_params + day_params + [today_iso, today_iso]
         ).fetchall()
         promo_conn.close()
-        return [promo for promo in (dict(r) for r in rows) if promotion_matches_payment_methods(promo, methods)]
+        promos = [promo for promo in (dict(r) for r in rows) if promotion_matches_payment_methods(promo, methods)]
+        if favorite_stores_only:
+            favorites = {
+                _strip_accents(name).casefold() for name in self.get_user_favorite_stores(user_id)
+            }
+            if favorites:
+                promos = [
+                    promo for promo in promos
+                    if _strip_accents(promo.get("supermarket_name") or "").casefold() in favorites
+                ]
+        return promos
 
 
 # Inicializar base de datos al importar

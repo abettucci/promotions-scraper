@@ -25,7 +25,7 @@ export function PriceAlertButton({ query, productKey }: { query: string; product
     return (
       <p className="inline-flex flex-wrap items-center gap-1.5 text-xs text-[#3d6626]">
         <Check className="h-3.5 w-3.5" />
-        Alerta creada: hoy el más barato es {ars(created.price)} en {created.store_name}.
+        Guardado: hoy el mejor precio final es {ars(created.price)} en {created.store_name}.
         {created.target ? ` Te aviso al llegar a ${ars(created.target)}.` : " Te aviso ante cualquier baja."}
         {!created.telegram_linked && <> <Link href="/profile" className="font-bold underline">Vinculá Telegram</Link> para recibir el aviso.</>}
       </p>
@@ -48,7 +48,7 @@ export function PriceAlertButton({ query, productKey }: { query: string; product
   }
 
   if (!open) {
-    return <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2758d8] hover:text-[#102a4c]"><Bell className="h-3.5 w-3.5" /> Avisarme si baja</button>
+    return <button type="button" onClick={() => setOpen(true)} className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2758d8] hover:text-[#102a4c]"><Bell className="h-3.5 w-3.5" /> Guardar y avisarme</button>
   }
   return (
     <div className="flex flex-wrap items-center gap-2">
@@ -59,7 +59,7 @@ export function PriceAlertButton({ query, productKey }: { query: string; product
         className="h-8 w-48 rounded-lg border border-[#cbd8e6] bg-white px-2.5 text-xs text-[#102a4c] focus:outline-none focus:ring-2 focus:ring-[#b8f36b]"
       />
       <button type="button" onClick={submit} disabled={state.loading} className="inline-flex h-8 items-center gap-1.5 rounded-lg bg-[#102a4c] px-3 text-xs font-semibold text-white hover:bg-[#183b67] disabled:opacity-60">
-        {state.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />} Crear alerta
+        {state.loading ? <Loader2 className="h-3.5 w-3.5 animate-spin" /> : <Bell className="h-3.5 w-3.5" />} Guardar producto
       </button>
       {state.error && <span className="text-xs text-[#9c4138]">{state.error}</span>}
     </div>
