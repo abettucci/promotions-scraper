@@ -23,11 +23,14 @@ _API = "https://www.santander.com.ar/bff-benefits"
 # Santander protege su SPA contra clientes que se anuncian como Chrome sin la
 # misma huella TLS. La BFF pública, en cambio, admite clientes HTTP honestos;
 # no requiere sesión, cookies ni ninguna credencial de usuario.
-_HEADERS = {
-    "Accept": "application/json",
-    "Accept-Language": "es-AR,es;q=0.9",
-    "User-Agent": "GuzzleHttp/7",
-}
+_HTTP_IDENTITIES = (
+    # La BFF no necesita headers de navegador. Probamos primero una sesión sin
+    # User-Agent (como la llamada pública más simple) y luego dos clientes
+    # HTTP honestos. No se usan cookies, tokens ni datos de una persona.
+    {},
+    {"User-Agent": "GuzzleHttp/7"},
+    {"User-Agent": "curl/8.5.0"},
+)
 # Nombre publicado por Santander -> comercio y categoría internos. No son
 # promociones: la lista de beneficios y sus condiciones siempre viene de API.
 _MERCHANTS: Tuple[Tuple[str, str, str], ...] = (
@@ -108,12 +111,21 @@ class SantanderScraper(BaseScraper):
     def _get(path: str, params: Optional[Dict[str, Any]] = None) -> Dict:
         import requests
 
-        response = requests.get(f"{_API}{path}", params=params or {}, headers=_HEADERS, timeout=(10, 35))
-        response.raise_for_status()
-        payload = response.json()
-        if not isinstance(payload, dict):
+        last_status = None
+        for headers in _HTTP_IDENTITIES:
+            # requests agrega un UA propio por defecto. Limpiarlo es distinto
+            # de enviar uno vacío y permite probar la variante sin identidad.
+            session = requests.Session()
+            session.headers.clear()
+            response = session.get(f"{_API}{path}", params=params or {}, headers=headers, timeout=(10, 35))
+            last_status = response.status_code
+            if not response.ok:
+                continue
+            payload = response.json()
+            if isinstance(payload, dict):
+                return payload
             raise ValueError(f"respuesta inválida para {path}")
-        return payload
+        raise RuntimeError(f"Santander rechazó {path} (HTTP {last_status})")
 
     def _brands(self) -> List[Dict]:
         # El catálogo es paginado; limitar alto evita una dependencia de una
