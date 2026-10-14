@@ -147,6 +147,14 @@ SUPERMARKETS = {
         # Rutea cada promo al comercio (merchant_brands/merchant_category).
         'aggregator': True,
     },
+    'santander': {
+        'name': 'Santander',
+        'url': 'https://www.santander.com.ar/personas/beneficios',
+        'enabled': True,
+        'category': 'benefits',
+        # Las promos se rutean al comercio (por ejemplo Carrefour o Cabify).
+        'aggregator': True,
+    },
     # ── Movilidad ───────────────────────────────────────────────────────────
     # Beneficios públicos de bancos/billeteras para apps de viaje y transporte.
     # Las promos se rutean a Uber/Cabify/DiDi o Transporte público.

@@ -45,6 +45,7 @@ from scrapers.clublanacion_scraper import ClubLaNacionScraper
 from scrapers.buepp_scraper import BueppScraper
 from scrapers.cuentadni_scraper import CuentaDniScraper
 from scrapers.mobility_scraper import MobilityScraper
+from scrapers.santander_scraper import SantanderScraper
 
 # AI Extractor (opcional)
 try:
@@ -166,6 +167,7 @@ class PromoScraper:
             'buepp': BueppScraper,
             'cuentadni': CuentaDniScraper,
             'mobility': MobilityScraper,
+            'santander': SantanderScraper,
         }
         
         if supermarket_key in standalone_scrapers:
