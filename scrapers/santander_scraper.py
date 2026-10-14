@@ -18,6 +18,10 @@ from .base_scraper import BaseScraper
 
 
 _PAGE_URL = "https://www.santander.com.ar/personas/beneficios"
+_RESULTS_URL = (
+    "https://www.santander.com.ar/personas/beneficios"
+    "#/results?category-code=SUP%2CTRA"
+)
 _API = "https://www.santander.com.ar/bff-benefits"
 # Nombre publicado por Santander -> comercio y categoría internos. No son
 # promociones: la lista de beneficios y sus condiciones siempre viene de API.
@@ -88,7 +92,13 @@ class SantanderScraper(BaseScraper):
             async with async_playwright() as playwright:
                 browser = await playwright.chromium.launch(
                     headless=True,
-                    args=["--disable-blink-features=AutomationControlled", "--no-sandbox"],
+                    # Santander's edge has intermittently closed the HTTP/2
+                    # stream from GitHub-hosted Chromium. Its SPA and BFF both
+                    # support HTTP/1.1, which avoids that transport failure.
+                    args=[
+                        "--disable-blink-features=AutomationControlled", "--disable-http2",
+                        "--no-sandbox",
+                    ],
                 )
                 context = await browser.new_context(
                     locale="es-AR",
@@ -116,7 +126,7 @@ class SantanderScraper(BaseScraper):
 
                 page.on("request", capture_request)
                 try:
-                    await page.goto(_PAGE_URL, wait_until="domcontentloaded", timeout=45_000)
+                    await page.goto(_RESULTS_URL, wait_until="domcontentloaded", timeout=45_000)
                 except Exception as exc:
                     # La SPA puede mantener una conexión analítica abierta; si la
                     # navegación parcial ya originó la BFF, todavía sirve.
