@@ -102,6 +102,64 @@ class BotHoyCategoriesTests(unittest.TestCase):
         self.assertEqual(markup["inline_keyboard"][0][0]["callback_data"], "miscat:supermarket")
         self.assertEqual(markup["inline_keyboard"][0][1]["callback_data"], "miscat:fuel")
 
+    def test_day_shortcut_queries_promotions_for_that_weekday(self):
+        notifier = DummyNotifier()
+        with patch.object(bot_handlers, "_query_promotions", return_value=[]) as query:
+            bot_handlers.handle_message(
+                {"message": {"chat": {"id": 123}, "text": "/miercoles"}},
+                user_db=object(), notifier=notifier,
+            )
+
+        self.assertEqual(query.call_args.kwargs, {"day": "miércoles"})
+        self.assertIn("Promos del miércoles", notifier.sent[0][1])
+
+    def test_personalized_day_shortcut_uses_linked_payment_methods(self):
+        notifier = DummyNotifier()
+        with patch.object(bot_handlers, "_query_promotions", return_value=[]) as query:
+            bot_handlers.handle_message(
+                {"message": {"chat": {"id": 123}, "text": "/mis_miercoles"}},
+                user_db=DummyUserDb(), notifier=notifier,
+            )
+
+        self.assertEqual(query.call_args.kwargs, {
+            "day": "miércoles",
+            "payment_methods": [{"name": "Banco Credicoop", "type": "bank"}],
+        })
+        self.assertIn("Tus promos del miércoles", notifier.sent[0][1])
+
+    def test_merchant_and_bank_shortcuts_can_be_combined_with_a_day(self):
+        notifier = DummyNotifier()
+        with patch.object(bot_handlers, "_resolve_quick_entity", return_value=(("supermarket", "Carrefour"), ["Carrefour"])), \
+             patch.object(bot_handlers, "_query_promotions", return_value=[]) as query:
+            bot_handlers.handle_message(
+                {"message": {"chat": {"id": 123}, "text": "/carrefour-miercoles"}},
+                user_db=object(), notifier=notifier,
+            )
+        self.assertEqual(query.call_args.kwargs, {"day": "miércoles", "supermarket_filter": "Carrefour"})
+
+        with patch.object(bot_handlers, "_resolve_quick_entity", return_value=(("bank", "Banco Galicia"), ["Banco Galicia"])), \
+             patch.object(bot_handlers, "_query_promotions", return_value=[]) as query:
+            bot_handlers.handle_message(
+                {"message": {"chat": {"id": 123}, "text": "/galicia-miercoles"}},
+                user_db=object(), notifier=notifier,
+            )
+        self.assertEqual(query.call_args.kwargs, {"day": "miércoles", "bank_filter": "Banco Galicia"})
+
+    def test_quick_shortcut_pagination_preserves_the_requested_day(self):
+        notifier = DummyNotifier()
+        update = {
+            "callback_query": {
+                "id": "quick-page", "data": "quick:2:carrefour-miercoles",
+                "message": {"chat": {"id": 123}, "message_id": 456},
+            }
+        }
+        with patch.object(bot_handlers, "_resolve_quick_entity", return_value=(("supermarket", "Carrefour"), ["Carrefour"])), \
+             patch.object(bot_handlers, "_query_promotions", return_value=[]) as query:
+            bot_handlers.handle_callback_query(update, user_db=object(), notifier=notifier)
+
+        self.assertEqual(query.call_args.kwargs, {"day": "miércoles", "supermarket_filter": "Carrefour"})
+        self.assertEqual(notifier.answered, [("quick-page", "")])
+
     def test_mis_filter_uses_linked_methods_and_selected_filter(self):
         notifier = DummyNotifier()
         update = {

@@ -8,9 +8,13 @@ paginación y selección.
 Usa parse_mode=HTML (más robusto que Markdown para texto scrapeado).
 
 Comandos:
-  P0: /start /ayuda /hoy /mis
+  P0: /start /ayuda /hoy /mis /lunes…/domingo
   P1: /buscar /banco /super /combustible /stats
   P2: /medios /notify /hora
+
+Atajos de consulta:
+  /miercoles, /mis-miercoles, /carrefour, /carrefour-miercoles,
+  /galicia-miercoles. También se acepta ``_`` en vez de ``-``.
 """
 from __future__ import annotations
 
@@ -27,6 +31,19 @@ from notifier import TelegramNotifier, _strip_accents, _today_name, DAY_NAMES_ES
 from payment_preferences import promotion_matches_payment_methods
 
 PAGE_SIZE = 8  # promos por página (Telegram tiene 4096 chars/msg)
+
+# Telegram no permite tildes al registrar comandos en BotFather; los atajos
+# usan la forma sin tilde, pero normalizamos ambas por si el usuario la escribe.
+_DAY_ALIASES = {
+    "lunes": "lunes",
+    "martes": "martes",
+    "miercoles": "miércoles",
+    "jueves": "jueves",
+    "viernes": "viernes",
+    "sabado": "sábado",
+    "domingo": "domingo",
+}
+_QUICK_COMMAND_RE = re.compile(r"^[a-z0-9_-]{1,48}$")
 
 
 # ── DB helpers ────────────────────────────────────────────────────────────────
@@ -52,6 +69,7 @@ _HAS_SUPERMARKET_CATEGORY = _has_supermarket_category()
 def _query_promotions(
     *,
     today_only: bool = False,
+    day: Optional[str] = None,
     category: Optional[str] = None,
     bank_filter: Optional[str] = None,
     supermarket_filter: Optional[str] = None,
@@ -98,22 +116,26 @@ def _query_promotions(
         where.append("(LOWER(p.title) LIKE ? OR LOWER(p.terms_raw) LIKE ?)")
         params.extend([f"%{search.lower()}%"] * 2)
 
-    if today_only:
-        today_es = _today_name()
-        today_norm = _strip_accents(today_es).lower()
-        if today_norm != today_es:
-            where.append(
-                "(p.valid_days IS NULL OR p.valid_days = '' "
-                "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ? "
-                "OR LOWER(p.valid_days) LIKE '%todos los d%')"
-            )
-            params.extend([f"%{today_es}%", f"%{today_norm}%"])
-        else:
-            where.append(
-                "(p.valid_days IS NULL OR p.valid_days = '' "
-                "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE '%todos los d%')"
-            )
-            params.append(f"%{today_es}%")
+    requested_day = day or (_today_name() if today_only else None)
+    if requested_day:
+        requested_day = _DAY_ALIASES.get(
+            _strip_accents(requested_day).casefold(), requested_day,
+        )
+        day_norm = _strip_accents(requested_day).casefold()
+        day_variants = [requested_day.casefold()]
+        if day_norm not in day_variants:
+            day_variants.append(day_norm)
+        day_clauses = ["LOWER(p.valid_days) LIKE ?" for _ in day_variants]
+        # Sin detalle de día se considera una promo utilizable todos los días,
+        # como hasta ahora. Algunos sitios publican “Diario” en vez de
+        # “Todos los días”.
+        where.append(
+            "(p.valid_days IS NULL OR p.valid_days = '' OR "
+            + " OR ".join(day_clauses)
+            + " OR LOWER(p.valid_days) LIKE '%todos los d%' "
+            "OR LOWER(p.valid_days) LIKE '%diario%')"
+        )
+        params.extend([f"%{variant}%" for variant in day_variants])
 
     if payment_methods:
         method_clauses = []
@@ -340,6 +362,27 @@ def _results_markup(promos: list[dict], callback_prefix: str, page: int,
     return {"inline_keyboard": rows}
 
 
+def _quick_results_markup(promos: list[dict], command_slug: str, page: int,
+                          total_pages: int) -> dict:
+    """Paginación y legales para los atajos de texto con día/comercio.
+
+    Los filtros guiados de /hoy guardan su estado en callbacks propios. Para
+    estos atajos preservamos en cambio el comando completo, incluido el día
+    solicitado, para que una página siguiente no vuelva accidentalmente a hoy.
+    """
+    markup = _pagination_markup("quick", page, total_pages, extra_args=command_slug)
+    rows = list(markup.get("inline_keyboard", []))
+    page_promos, _ = _paginate(promos, page)
+    for promo in page_promos:
+        promo_id = promo.get("id")
+        if isinstance(promo_id, int) and promo_id > 0:
+            rows.append([{
+                "text": _conditions_button_text(promo),
+                "callback_data": f"terms:{promo_id}",
+            }])
+    return {"inline_keyboard": rows} if rows else {}
+
+
 def _conditions_button_text(promo: dict) -> str:
     """Etiqueta cada legal con el mismo contexto visible en su tarjeta."""
     supermarket = str(promo.get("supermarket_name") or "Promo").strip()
@@ -381,6 +424,8 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "de Argentina.\n\n"
         "<b>Comandos públicos:</b>\n"
         "• /hoy — elegí promos de supermercados o combustible\n"
+        "• /miercoles — promos que aplican ese día (también lunes…domingo)\n"
+        "• /carrefour-miercoles — combiná comercio/banco y día\n"
         "• /buscar &lt;texto&gt; — buscar promos\n"
         "• /banco &lt;nombre&gt; — filtrar por banco/wallet\n"
         "• /super &lt;nombre&gt; — filtrar por super o marca\n"
@@ -392,6 +437,7 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "• /lista — tus productos y supermercados habituales\n"
         "• /seguir &lt;super&gt; — agregar un supermercado a tu lista\n"
         "• /mis — promos para tus medios de pago\n"
+        "• /mis-miercoles — tus promos para un día específico\n"
         "• /medios — ver tus medios\n"
         "• /notify on|off — toggle notificaciones diarias\n"
         "• /hora &lt;0-23&gt; — hora del digest diario\n\n"
@@ -407,6 +453,12 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "📖 <b>Ayuda — PromoAR Bot</b>\n\n"
         "<b>Comandos públicos</b>\n\n"
         "<code>/hoy</code> — Elegí supermercados o combustible y recibí solo esa categoría.\n\n"
+        "<code>/miercoles</code> — Promos vigentes que aplican el miércoles. También "
+        "<code>/lunes</code> a <code>/domingo</code>.\n"
+        "<code>/mis-miercoles</code> — Lo mismo, filtrado por tus medios de pago.\n"
+        "<code>/carrefour</code> o <code>/galicia</code> — Atajo por supermercado, "
+        "banco o billetera. Combiná: <code>/carrefour-miercoles</code>.\n"
+        "Podés usar guión bajo si preferís: <code>/mis_miercoles</code>.\n\n"
         "<code>/buscar nafta</code> — Busca \"nafta\" en título y T&amp;C.\n\n"
         "<code>/banco galicia</code> — Promos del Banco Galicia.\n"
         "<code>/banco modo</code> — Promos pagando con MODO.\n\n"
@@ -587,6 +639,170 @@ def cmd_combustible(chat_id: str, args: str, user_db: UserDatabase, page: int = 
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
     return text, _pagination_markup("combustible", page, total_pages)
+
+
+def _command_key(value: str) -> str:
+    """Clave corta, sin acentos ni separadores, para un comando de Telegram."""
+    return re.sub(r"[^a-z0-9]", "", _strip_accents(value or "").casefold())
+
+
+def _entity_keys(name: str) -> set[str]:
+    """Alias previsibles de comercios y entidades para atajos como /galicia."""
+    raw = _command_key(name)
+    keys = {raw}
+    for prefix in ("banco", "supermercado", "supermercados", "estaciondeservicio"):
+        if raw.startswith(prefix) and len(raw) > len(prefix):
+            keys.add(raw[len(prefix):])
+    return keys
+
+
+def _quick_entity_candidates() -> list[tuple[str, str]]:
+    """Catálogo vivo de comercios, bancos y billeteras con promos activas."""
+    conn = _promos_conn()
+    today_iso = date.today().isoformat()
+    try:
+        active = (
+            "p.is_active = 1 "
+            "AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?) "
+            "AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)"
+        )
+        stores = conn.execute(
+            f"SELECT DISTINCT s.name FROM supermarkets s JOIN promotions p ON p.supermarket_id = s.id "
+            f"WHERE {active}",
+            (today_iso, today_iso),
+        ).fetchall()
+        entities = conn.execute(
+            f"SELECT DISTINCT p.bank AS name, 'bank' AS kind FROM promotions p WHERE {active} "
+            "AND p.bank IS NOT NULL AND TRIM(p.bank) != '' "
+            "UNION "
+            f"SELECT DISTINCT p.wallet AS name, 'wallet' AS kind FROM promotions p WHERE {active} "
+            "AND p.wallet IS NOT NULL AND TRIM(p.wallet) != ''",
+            (today_iso, today_iso, today_iso, today_iso),
+        ).fetchall()
+    finally:
+        conn.close()
+    return [("supermarket", row["name"]) for row in stores] + [
+        (row["kind"], row["name"]) for row in entities
+    ]
+
+
+def _resolve_quick_entity(command_part: str) -> tuple[Optional[tuple[str, str]], list[str]]:
+    """Resuelve /carrefour o /galicia al comercio o entidad publicado.
+
+    Se elige una coincidencia exacta (incluyendo alias sin "Banco") antes que
+    una parcial. Ante un empate real se pide usar un nombre más específico.
+    """
+    wanted = _command_key(command_part.replace("-", " ").replace("_", " "))
+    if len(wanted) < 2:
+        return None, []
+
+    ranked: list[tuple[int, str, str]] = []
+    for kind, name in _quick_entity_candidates():
+        keys = _entity_keys(name)
+        if wanted in keys:
+            score = 0
+        elif any(key.startswith(wanted) or key.endswith(wanted) for key in keys):
+            score = 1
+        elif any(wanted in key for key in keys):
+            score = 2
+        else:
+            continue
+        ranked.append((score, kind, name))
+    if not ranked:
+        return None, []
+
+    best_score = min(score for score, _, _ in ranked)
+    best = [(kind, name) for score, kind, name in ranked if score == best_score]
+    # Un banco y una wallet con el mismo nombre se consultan igual; no es una
+    # ambigüedad para el usuario. Comercios sí se diferencian explícitamente.
+    unique = {(kind, name) for kind, name in best}
+    names = sorted({name for _, name in unique})
+    if len(names) != 1:
+        return None, names
+    return next(iter(unique)), names
+
+
+def _parse_quick_command(command: str) -> Optional[tuple[bool, Optional[str], Optional[str]]]:
+    """Parsea /mis-carrefour-miercoles sin depender de comandos hardcodeados."""
+    normalized = _strip_accents(command or "").casefold().replace("_", "-")
+    normalized = re.sub(r"-+", "-", normalized).strip("-")
+    if not _QUICK_COMMAND_RE.fullmatch(normalized):
+        return None
+    parts = normalized.split("-")
+    personalized = parts[:1] == ["mis"]
+    if personalized:
+        parts = parts[1:]
+    day_parts = [part for part in parts if part in _DAY_ALIASES]
+    if len(day_parts) > 1:
+        return None
+    day = _DAY_ALIASES[day_parts[0]] if day_parts else None
+    if day_parts:
+        parts.remove(day_parts[0])
+    entity = "-".join(parts) or None
+    if not day and not entity:
+        return None
+    return personalized, day, entity
+
+
+def _quick_command_reply(chat_id: str, command: str, user_db: UserDatabase,
+                         page: int = 1) -> Optional[tuple[str, dict]]:
+    """Ejecuta atajos públicos y personalizados de día, comercio o banco."""
+    parsed = _parse_quick_command(command)
+    if not parsed:
+        return None
+    personalized, day, entity_part = parsed
+    entity: Optional[tuple[str, str]] = None
+    if entity_part:
+        entity, alternatives = _resolve_quick_entity(entity_part)
+        if not entity:
+            if alternatives:
+                suggestions = ", ".join(f"<code>/{_esc(_strip_accents(name).casefold().replace(' ', '-'))}</code>" for name in alternatives[:4])
+                return f"❓ Encontré varias opciones. Probá con: {suggestions}", {}
+            return (
+                f"❓ No encontré un supermercado, banco o billetera para "
+                f"<code>{_esc(entity_part)}</code>.",
+                {},
+            )
+
+    methods: list[dict] = []
+    if personalized:
+        error, methods = _linked_payment_methods(chat_id, user_db)
+        if error:
+            return error, {}
+
+    query_kwargs: dict = {}
+    if day:
+        query_kwargs["day"] = day
+    if methods:
+        query_kwargs["payment_methods"] = methods
+    if entity:
+        kind, name = entity
+        query_kwargs["supermarket_filter" if kind == "supermarket" else "bank_filter"] = name
+    promos = _query_promotions(**query_kwargs)
+
+    day_label = f" del {_esc(day)}" if day else ""
+    if entity:
+        kind, name = entity
+        icon = "🏪" if kind == "supermarket" else "🏦"
+        subject = f"Promos {'en' if kind == 'supermarket' else 'de'} {_esc(name)}"
+        if personalized:
+            subject = f"Tus promociones {'en' if kind == 'supermarket' else 'con'} {_esc(name)}"
+        header = f"{icon} <b>{subject}{day_label}</b>"
+    else:
+        header = f"{'💳' if personalized else '📅'} <b>{'Tus promos' if personalized else 'Promos'}{day_label}</b>"
+    if personalized:
+        header += f"\n<i>Medios: {_esc(', '.join(method['name'] for method in methods))}</i>"
+
+    text, _ = _render_promos(promos, header, page)
+    _, total_pages = _paginate(promos, page)
+    callback_slug = _strip_accents(command).casefold().replace("_", "-")
+    return text, _quick_results_markup(promos, callback_slug, page, total_pages)
+
+
+def cmd_quick(chat_id: str, args: str, user_db: UserDatabase,
+              page: int = 1) -> tuple[str, dict]:
+    """Handler interno para paginar los atajos de texto."""
+    return _quick_command_reply(chat_id, args, user_db, page) or ("❓ Comando inválido.", {})
 
 
 def cmd_stats(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
@@ -1013,6 +1229,7 @@ COMMANDS = {
 # la categoría elegida desde /hoy.
 CALLBACK_COMMANDS = {
     **COMMANDS,
+    "quick": cmd_quick,
     "hoysuper": cmd_hoy_supermarkets,
     "hoyfuel": cmd_hoy_fuel,
     "missuper": cmd_mis_supermarkets,
@@ -1057,6 +1274,15 @@ def handle_message(update: dict, user_db: UserDatabase, notifier: TelegramNotifi
 
     handler = COMMANDS.get(cmd)
     if not handler:
+        quick_reply = _quick_command_reply(chat_id, cmd, user_db)
+        if quick_reply:
+            reply_text, reply_markup = quick_reply
+            notifier.send_message_to(
+                chat_id, reply_text,
+                reply_markup=reply_markup or None,
+                parse_mode="HTML",
+            )
+            return
         notifier.send_message_to(
             chat_id,
             f"❓ Comando desconocido: <code>{_esc(cmd)}</code>\n\nUsá /ayuda",
