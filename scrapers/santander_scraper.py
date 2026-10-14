@@ -10,6 +10,7 @@ respuesta oficial de cada marca.
 """
 from __future__ import annotations
 
+import asyncio
 import html
 import re
 from typing import Any, Dict, List, Optional, Tuple
@@ -18,11 +19,15 @@ from .base_scraper import BaseScraper
 
 
 _PAGE_URL = "https://www.santander.com.ar/personas/beneficios"
-_RESULTS_URL = (
-    "https://www.santander.com.ar/personas/beneficios"
-    "#/results?category-code=SUP%2CTRA"
-)
 _API = "https://www.santander.com.ar/bff-benefits"
+# Santander protege su SPA contra clientes que se anuncian como Chrome sin la
+# misma huella TLS. La BFF pública, en cambio, admite clientes HTTP honestos;
+# no requiere sesión, cookies ni ninguna credencial de usuario.
+_HEADERS = {
+    "Accept": "application/json",
+    "Accept-Language": "es-AR,es;q=0.9",
+    "User-Agent": "GuzzleHttp/7",
+}
 # Nombre publicado por Santander -> comercio y categoría internos. No son
 # promociones: la lista de beneficios y sus condiciones siempre viene de API.
 _MERCHANTS: Tuple[Tuple[str, str, str], ...] = (
@@ -78,100 +83,45 @@ class SantanderScraper(BaseScraper):
         super().__init__(name="Santander", url=_PAGE_URL)
 
     async def scrape(self, page=None) -> List[Dict]:
-        """Consulta la API con la misma sesión que crea la SPA oficial.
-
-        La BFF rechaza HTTP directo (403). El sitio primero crea cookies y
-        encabezados de navegador; interceptamos ese request real y reutilizamos
-        el ``APIRequestContext`` de Playwright, sin emular ni inventar tokens.
-        """
-        from playwright.async_api import async_playwright
-
-        bff_headers: Dict[str, str] = {}
-        browser = None
+        """Consulta el catálogo público de Santander sin simular un navegador."""
+        loop = asyncio.get_event_loop()
         try:
-            async with async_playwright() as playwright:
-                browser = await playwright.chromium.launch(
-                    headless=True,
-                    # Santander's edge has intermittently closed the HTTP/2
-                    # stream from GitHub-hosted Chromium. Its SPA and BFF both
-                    # support HTTP/1.1, which avoids that transport failure.
-                    args=[
-                        "--disable-blink-features=AutomationControlled", "--disable-http2",
-                        "--no-sandbox",
-                    ],
-                )
-                context = await browser.new_context(
-                    locale="es-AR",
-                    user_agent=(
-                        "Mozilla/5.0 (X11; Linux x86_64) AppleWebKit/537.36 "
-                        "(KHTML, like Gecko) Chrome/131.0.0.0 Safari/537.36"
-                    ),
-                )
-                page = await context.new_page()
-
-                def capture_request(request) -> None:
-                    if "/bff-benefits/brands" not in request.url or request.method != "GET":
-                        return
-                    # No copiar headers de transporte ni cookies: Playwright los
-                    # administra en la sesión. Estos son los headers de aplicación
-                    # que Santander validó para la consulta de su propia SPA.
-                    allowed = {
-                        "accept", "accept-language", "origin", "referer", "user-agent",
-                        "sec-ch-ua", "sec-ch-ua-mobile", "sec-ch-ua-platform",
-                    }
-                    bff_headers.update({
-                        key: value for key, value in request.headers.items()
-                        if key.lower() in allowed
-                    })
-
-                page.on("request", capture_request)
-                try:
-                    await page.goto(_RESULTS_URL, wait_until="domcontentloaded", timeout=45_000)
-                except Exception as exc:
-                    # La SPA puede mantener una conexión analítica abierta; si la
-                    # navegación parcial ya originó la BFF, todavía sirve.
-                    print(f"   ⚠️ Santander: navegación parcial: {exc}")
-                await page.wait_for_timeout(4_000)
-                if not bff_headers:
-                    print("   ⚠️ Santander: la SPA no inició la BFF; no se publica un resultado vacío")
-                    return []
-
-                async def api_get(path: str, params: Optional[Dict[str, Any]] = None) -> Dict:
-                    response = await context.request.get(
-                        f"{_API}{path}", params=params or {}, headers=bff_headers, timeout=35_000,
-                    )
-                    if not response.ok:
-                        raise RuntimeError(f"HTTP {response.status} para {path}")
-                    payload = await response.json()
-                    if not isinstance(payload, dict):
-                        raise ValueError(f"respuesta inválida para {path}")
-                    return payload
-
-                brands = await self._brands(api_get)
-                targets = [brand for brand in brands if _merchant(str(brand.get("name") or ""))]
-                promotions: List[Dict] = []
-                for brand in targets:
-                    try:
-                        detail = await api_get(f"/brands/{brand['id']}")
-                    except Exception as exc:
-                        print(f"   ⚠️ Santander: sin detalle para {brand.get('name')}: {exc}")
-                        continue
-                    for item in detail.get("items") or []:
-                        promotions.extend(self.parse_item(item, brand))
-                print(f"✅ {self.name}: {len(promotions)} promociones de supermercado/movilidad")
-                await context.close()
-                return promotions
+            brands = await loop.run_in_executor(None, self._brands)
         except Exception as exc:
             print(f"   ⚠️ Santander: no se pudo consultar beneficios: {exc}")
             return []
 
-    async def _brands(self, api_get) -> List[Dict]:
+        targets = [brand for brand in brands if _merchant(str(brand.get("name") or ""))]
+        promotions: List[Dict] = []
+        for brand in targets:
+            try:
+                detail = await loop.run_in_executor(None, self._get, f"/brands/{brand['id']}")
+            except Exception as exc:
+                print(f"   ⚠️ Santander: sin detalle para {brand.get('name')}: {exc}")
+                continue
+            for item in detail.get("items") or []:
+                promotions.extend(self.parse_item(item, brand))
+        print(f"✅ {self.name}: {len(promotions)} promociones de supermercado/movilidad")
+        return promotions
+
+    @staticmethod
+    def _get(path: str, params: Optional[Dict[str, Any]] = None) -> Dict:
+        import requests
+
+        response = requests.get(f"{_API}{path}", params=params or {}, headers=_HEADERS, timeout=(10, 35))
+        response.raise_for_status()
+        payload = response.json()
+        if not isinstance(payload, dict):
+            raise ValueError(f"respuesta inválida para {path}")
+        return payload
+
+    def _brands(self) -> List[Dict]:
         # El catálogo es paginado; limitar alto evita una dependencia de una
         # cantidad fija de páginas y sólo se piden detalles de marcas conocidas.
         brands: List[Dict] = []
         page = 1
         while page <= 20:
-            payload = await api_get("/brands", {"page": page, "limit": 100})
+            payload = self._get("/brands", {"page": page, "limit": 100})
             items = payload.get("items") or []
             if not isinstance(items, list):
                 break
