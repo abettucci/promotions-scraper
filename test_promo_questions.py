@@ -66,6 +66,17 @@ class PromoQuestionsTests(unittest.TestCase):
         self.assertIn("Shell", answer)
         self.assertIn("Banco Galicia", answer)
 
+    def test_accepts_mobility_questions(self):
+        promotions = [{
+            "supermarket_name": "Transporte público", "category": "mobility",
+            "title": "MODO 50% en Transporte", "discount": "50% reintegro", "wallet": "MODO",
+            "payment_method": "MODO sin contacto (NFC)", "valid_days": "Todos los días",
+            "coverage": "AMBA: colectivos y subte", "tope": "$15.000",
+        }]
+        answer = answer_promo_question("¿Qué descuento hay para subte con MODO hoy?", promotions)
+        self.assertIn("Transporte público", answer)
+        self.assertTrue(is_allowed_promo_question("¿Qué descuento hay para subte con MODO hoy?"))
+
     def test_assistant_allowlist_rejects_unrelated_or_oversized_questions(self):
         self.assertTrue(is_allowed_promo_question("¿En qué súper me conviene comprar vino hoy?"))
         self.assertTrue(is_allowed_promo_question("¿Alaris está excluido en Coto?"))

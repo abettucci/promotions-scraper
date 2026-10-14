@@ -72,8 +72,9 @@ export function FilterBar({
   loading,
 }: Props) {
   const isFuel = category === "fuel"
-  const merchantLabel = isFuel ? "Empresa o marca" : "Supermercado"
-  const merchantAllLabel = isFuel ? "Todas las empresas" : "Todos los super"
+  const isMobility = category === "mobility"
+  const merchantLabel = isMobility ? "Servicio o red" : isFuel ? "Empresa o marca" : "Supermercado"
+  const merchantAllLabel = isMobility ? "Todos los servicios" : isFuel ? "Todas las empresas" : "Todos los super"
 
   const hasActiveFilters =
     filters.supermarket ||
@@ -185,6 +186,19 @@ export function FilterBar({
           })}
         </div>
       </section>
+
+      {isMobility && (
+        <section className="space-y-2">
+          <h4 className="eyebrow">Tipo de movilidad</h4>
+          <div className="flex flex-wrap gap-2">
+            {[{ value: "", label: "Todo" }, { value: "ride_hailing", label: "Apps de viaje" }, { value: "public_transit", label: "Transporte público" }].map((item) => (
+              <button key={item.value || "all"} onClick={() => onChange({ mobility_kind: item.value as FilterState["mobility_kind"], page: 1 })} aria-pressed={filters.mobility_kind === item.value} className={`min-h-9 rounded-full border px-3 text-xs font-semibold transition-colors ${filters.mobility_kind === item.value ? "border-[#102a4c] bg-[#102a4c] text-[#b8f36b]" : "border-[#cbd8e6] bg-[#f8fafd] text-[#52657d] hover:border-[#9cb5d0] hover:text-[#102a4c]"}`}>
+                {item.label}
+              </button>
+            ))}
+          </div>
+        </section>
+      )}
 
       {/* Modalidad de uso */}
       <section className="space-y-2">

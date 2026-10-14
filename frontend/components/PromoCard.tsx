@@ -78,6 +78,7 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
     requirements.length > 0 ||
     !!meaningfulTope ||
     !!promo.min_purchase ||
+    !!promo.coverage ||
     !!formatDate(promo.valid_from) ||
     !!formatDate(promo.valid_until)
 
@@ -135,7 +136,7 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
         )}
 
         {/* Tags: sucursales + tope + min compra + exclusiones */}
-        {(promo.store_types || meaningfulTope || promo.min_purchase || requirements.length > 0 || exclusions.length > 0) && (
+        {(promo.store_types || meaningfulTope || promo.min_purchase || promo.coverage || requirements.length > 0 || exclusions.length > 0) && (
           <div className="flex flex-wrap gap-1">
             {promo.store_types && promo.store_types.split(',').map(s => s.trim()).filter(Boolean).map((store, i) => (
               <Badge key={i} variant="outline" className="text-[10px] px-1.5 py-0 h-5">
@@ -155,6 +156,11 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
             {promo.min_purchase && (
               <Badge variant="outline" className="h-5 border-[#cbd8e6] px-1.5 py-0 text-[10px] text-[#52657d]">
                 Mín. compra: {promo.min_purchase}
+              </Badge>
+            )}
+            {promo.coverage && (
+              <Badge variant="outline" className="h-5 border-[#b9c9fb] bg-[#eef3ff] px-1.5 py-0 text-[10px] text-[#1f4ab8]" title={promo.coverage}>
+                Cobertura: {promo.coverage.length > 48 ? `${promo.coverage.slice(0, 48)}…` : promo.coverage}
               </Badge>
             )}
             {requirements.length > 0 && (
@@ -232,6 +238,7 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
                 {promo.min_purchase && (
                   <p><span className="font-semibold">Compra mínima:</span> {promo.min_purchase}</p>
                 )}
+                {promo.coverage && <p><span className="font-semibold">Cobertura:</span> {promo.coverage}</p>}
                 {(() => {
                   const from = formatDate(promo.valid_from)
                   const until = formatDate(promo.valid_until)

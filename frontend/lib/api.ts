@@ -61,7 +61,7 @@ export const api = {
   getPromotions: (params: {
     supermarket?: string; bank?: string; day?: string; search?: string
     discount_type?: string; active_today?: boolean; category?: string
-    state?: string; modality?: string
+    state?: string; modality?: string; mobility_kind?: string
     page?: number; page_size?: number
   }) => fetchJSON<PromotionsResponse>("/api/promotions", params as Record<string, string | number | boolean | undefined>),
 
@@ -69,7 +69,7 @@ export const api = {
   getTodayPromotions: () => fetchJSON<TodayResponse>("/api/promotions/today"),
   getBanks: (filters?: {
     supermarket?: string; day?: string; category?: string
-    discount_type?: string; state?: string; modality?: string
+    discount_type?: string; state?: string; modality?: string; mobility_kind?: string
   }) => fetchJSON<Bank[]>("/api/banks", filters as Record<string, string | undefined>),
   getSupermarkets: (category?: string) =>
     fetchJSON<Supermarket[]>("/api/supermarkets", category ? { category } : undefined),
@@ -113,8 +113,8 @@ export const api = {
   updatePaymentMethods: (token: string, methods: PaymentMethod[]) =>
     fetchMutation<User>("PUT", "/api/auth/me/payment-methods", { methods }, token),
 
-  getMyPromotions: (token: string, today_only = true) =>
-    fetchJSON<MyPromotionsResponse>("/api/auth/me/promotions", { today_only }, token),
+  getMyPromotions: (token: string, today_only = true, category?: string) =>
+    fetchJSON<MyPromotionsResponse>("/api/auth/me/promotions", { today_only, category }, token),
 
   askAssistant: (token: string, question: string) =>
     fetchMutation<AssistantResponse>("POST", "/api/assistant/query", { question }, token),

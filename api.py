@@ -600,9 +600,10 @@ def update_watchlist_stores(body: UpdateFavoriteStoresBody, current_user=Depends
 @app.get("/api/auth/me/promotions")
 def get_my_promotions(
     today_only: bool = Query(True),
+    category: Optional[str] = Query(None),
     current_user=Depends(get_current_user),
 ):
-    promos = _db.get_promotions_for_user(current_user["id"], today_only=today_only)
+    promos = _db.get_promotions_for_user(current_user["id"], today_only=today_only, category=category)
 
     # Group by supermarket
     by_super: dict = {}
@@ -628,7 +629,7 @@ def _assistant_promotions() -> list[dict]:
         """
         SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type, p.payment_method,
                p.store_types, p.valid_days, p.valid_from, p.valid_until, p.tope,
-               p.min_purchase, p.terms_raw, p.acumulable,
+               p.min_purchase, p.terms_raw, p.acumulable, p.mobility_kind, p.coverage,
                COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
                COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
                s.name AS supermarket_name,
@@ -892,6 +893,7 @@ def get_promotions(
     category: Optional[str] = Query(None, description="Categorías separadas por coma (ej: supermarket,fuel)"),
     state: Optional[str] = Query("activa", description="activa | proxima | finalizada"),
     modality: Optional[str] = Query(None, description="Modalidades separadas por coma: presencial,online"),
+    mobility_kind: Optional[str] = Query(None, description="ride_hailing | public_transit"),
     page: int = Query(1, ge=1),
     page_size: int = Query(20, ge=1, le=100),
 ):
@@ -967,6 +969,10 @@ def get_promotions(
         if mod_clauses:
             conditions.append("(" + " OR ".join(mod_clauses) + ")")
 
+    if mobility_kind in {"ride_hailing", "public_transit"}:
+        conditions.append("p.mobility_kind = ?")
+        params.append(mobility_kind)
+
     if search:
         conditions.append("(LOWER(p.title) LIKE ? OR LOWER(p.terms_raw) LIKE ?)")
         params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
@@ -1013,7 +1019,7 @@ def get_promotions(
             p.id, p.title, p.discount, p.bank, p.wallet, p.card_type,
             p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.image_url, p.tope, p.acumulable,
-            p.is_active, p.scraped_at,
+            p.is_active, p.scraped_at, p.mobility_kind, p.coverage,
             s.name AS supermarket_name,
             COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
             COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
@@ -1088,7 +1094,7 @@ def get_promotion(promotion_id: int):
             p.id, p.supermarket_id, p.title, p.discount, p.bank, p.wallet,
             p.card_type, p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.url, p.image_url, p.terms_raw,
-            p.tope, p.acumulable, p.is_active, p.scraped_at, p.min_purchase,
+            p.tope, p.acumulable, p.is_active, p.scraped_at, p.min_purchase, p.mobility_kind, p.coverage,
             s.name AS supermarket_name,
             -- Algunas promos históricas tienen una fila de términos incompleta.
             -- NULLIF evita que esa fila vacía oculte los datos ya guardados en
@@ -1135,6 +1141,7 @@ def get_banks(
     discount_type: Optional[str] = Query(None),
     state: Optional[str] = Query("activa"),
     modality: Optional[str] = Query(None),
+    mobility_kind: Optional[str] = Query(None),
 ):
     today_iso = date.today().isoformat()
 
@@ -1194,6 +1201,10 @@ def get_banks(
                 )
         if mod_clauses:
             conditions.append("(" + " OR ".join(mod_clauses) + ")")
+
+    if mobility_kind in {"ride_hailing", "public_transit"}:
+        conditions.append("p.mobility_kind = ?")
+        params.append(mobility_kind)
 
     if discount_type:
         if discount_type == "percent":

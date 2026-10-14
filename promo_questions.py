@@ -72,9 +72,13 @@ _MERCHANT_ALIASES = {
     "jumbo": "Jumbo (Cencosud)", "cencosud": "Jumbo (Cencosud)",
     "coto": "Coto Digital", "carrefour": "Carrefour", "ypf": "YPF",
     "shell": "Shell", "axion": "Axion", "puma": "Puma Energy",
+    "uber": "Uber", "cabify": "Cabify", "didi": "DiDi",
+    "sube": "Transporte público", "colectivo": "Transporte público",
+    "subte": "Transporte público", "tren": "Transporte público",
 }
 _FUEL_WORDS = r"\b(nafta|naftas|combustible|combustibles|estacion(?:es)?(?: de servicio)?|cargar|gasoil|diesel|infinia|v-?power|surtidor)\b"
 _SUPER_WORDS = r"\b(super|supers|supermercado|supermercados|mercado|almacen)\b"
+_MOBILITY_WORDS = r"\b(uber|cabify|didi|transporte|sube|colectivo|colectivos|subte|subtes|tren|trenes|movilidad|viaje(?:s)?|qr transporte)\b"
 _BEST_WORDS = r"\b(mejor(?:es)?|mas descuento|mayor descuento|maximo|conviene|mas me conviene|cual rinde|el mas alto)\b"
 
 
@@ -86,7 +90,7 @@ class PromoQuery:
     days: Optional[set] = None          # índices 0=lunes … 6=domingo
     day_label: str = ""
     target_date: Optional[date] = None  # sólo para "hoy" / "mañana"
-    category: Optional[str] = None      # supermarket | fuel
+    category: Optional[str] = None      # supermarket | fuel | mobility
     method: Optional[str] = None        # qr | nfc | debito | credito | cuotas
     channel: Optional[str] = None       # online | tiendas
     best: bool = False
@@ -148,6 +152,8 @@ def parse_promo_query(question: str, promotions: list[dict], today: Optional[dat
     query.days, query.day_label, query.target_date = _parse_days(normalized, today)
     if re.search(_FUEL_WORDS, normalized):
         query.category = "fuel"
+    elif re.search(_MOBILITY_WORDS, normalized):
+        query.category = "mobility"
     elif re.search(_SUPER_WORDS, normalized):
         query.category = "supermarket"
     if re.search(r"\bqr\b", normalized):
@@ -228,7 +234,7 @@ def is_allowed_promo_question(question: object) -> bool:
         normalized,
     ))
     promo_data = bool(re.search(
-        r"\b(promo|promocion|descuento|beneficio|reintegro|cuota|combustible|nafta|gasoil|diesel)\w*",
+        r"\b(promo|promocion|descuento|beneficio|reintegro|cuota|combustible|nafta|gasoil|diesel|uber|cabify|didi|sube|colectivo|subte|tren|transporte|movilidad)\w*",
         normalized,
     ))
     price_comparison = bool(_PRICE_INTENT_RE.search(normalized))

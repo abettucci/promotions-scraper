@@ -134,6 +134,7 @@ function ConditionsDialog({ promo, onClose }: { promo: Promotion; onClose: () =>
             <Detail label="Tope" value={display.tope || display.max_discount || "No informado"} />
             <Detail label="Método" value={paymentMethods(display).join(" · ") || "No informado"} />
             <Detail label="Compra mínima" value={display.min_purchase || "Sin mínimo informado"} />
+            {display.coverage && <Detail label="Cobertura" value={display.coverage} />}
           </div>
 
           {requirements.length > 0 && (

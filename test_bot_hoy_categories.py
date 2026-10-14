@@ -49,6 +49,20 @@ class BotHoyCategoriesTests(unittest.TestCase):
         buttons = markup["inline_keyboard"][0]
         self.assertEqual(buttons[0]["callback_data"], "hoycat:supermarket")
         self.assertEqual(buttons[1]["callback_data"], "hoycat:fuel")
+        self.assertEqual(markup["inline_keyboard"][1][0]["callback_data"], "hoycat:mobility")
+
+    def test_mobility_category_queries_only_mobility(self):
+        notifier = DummyNotifier()
+        update = {
+            "callback_query": {
+                "id": "callback-mobility", "data": "hoycat:mobility",
+                "message": {"chat": {"id": 123}, "message_id": 456},
+            }
+        }
+        with patch.object(bot_handlers, "_query_promotions", return_value=[]) as query:
+            bot_handlers.handle_callback_query(update, user_db=object(), notifier=notifier)
+        self.assertEqual(query.call_args.kwargs, {"today_only": True, "category": "mobility"})
+        self.assertIn("movilidad", notifier.edited[0][2].lower())
 
     def test_category_callback_queries_only_the_selected_category(self):
         notifier = DummyNotifier()

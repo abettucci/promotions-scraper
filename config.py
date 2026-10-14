@@ -147,6 +147,16 @@ SUPERMARKETS = {
         # Rutea cada promo al comercio (merchant_brands/merchant_category).
         'aggregator': True,
     },
+    # ── Movilidad ───────────────────────────────────────────────────────────
+    # Beneficios públicos de bancos/billeteras para apps de viaje y transporte.
+    # Las promos se rutean a Uber/Cabify/DiDi o Transporte público.
+    'mobility': {
+        'name': 'Movilidad',
+        'url': 'https://www.modo.com.ar/promos',
+        'enabled': True,
+        'category': 'mobility',
+        'aggregator': True,
+    },
     # ── Estaciones de servicio ──────────────────────────────────────────────
     'shell': {
         'name': 'Shell',

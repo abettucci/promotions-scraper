@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag } from "lucide-react"
+import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag, TrainFront } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
 import type { FilterState, Category, DayCode } from "@/lib/types"
@@ -17,7 +17,7 @@ import { PromoAssistant } from "@/components/PromoAssistant"
 
 const DEFAULT_FILTERS: FilterState = {
   supermarket: "", bank: "", days: [], search: "", discount_type: "",
-  state: "activa", modality: [], page: 1,
+  state: "activa", modality: [], mobility_kind: "", page: 1,
 }
 
 const DAY_CODES: DayCode[] = ["domingo", "lunes", "martes", "miércoles", "jueves", "viernes", "sábado"]
@@ -49,12 +49,13 @@ export default function Home() {
 
   const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ["stats"], queryFn: api.getStats })
   const { data: banks = [] } = useQuery({
-    queryKey: ["banks", category, filters.supermarket, filters.days, filters.discount_type, filters.state, filters.modality],
+    queryKey: ["banks", category, filters.supermarket, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind],
     queryFn: () => api.getBanks({
       category, supermarket: filters.supermarket || undefined,
       day: filters.days.length ? filters.days.join(",") : undefined,
       discount_type: filters.discount_type || undefined, state: filters.state || undefined,
       modality: filters.modality.length ? filters.modality.join(",") : undefined,
+      mobility_kind: filters.mobility_kind || undefined,
     }),
   })
   const { data: supermarkets = [] } = useQuery({ queryKey: ["supermarkets", category], queryFn: () => api.getSupermarkets(category) })
@@ -62,14 +63,14 @@ export default function Home() {
     queryKey: ["promotions", filters, myPromosMode, category],
     queryFn: () => {
       if (myPromosMode && token) {
-        return api.getMyPromotions(token, true).then((r) => ({ total: r.total, page: 1, page_size: r.total, pages: 1, data: r.by_supermarket.flatMap((s) => s.promotions) }))
+        return api.getMyPromotions(token, true, category).then((r) => ({ total: r.total, page: 1, page_size: r.total, pages: 1, data: r.by_supermarket.flatMap((s) => s.promotions) }))
       }
       return api.getPromotions({
         supermarket: filters.supermarket || undefined, bank: filters.bank || undefined,
         day: filters.days.length ? filters.days.join(",") : undefined, search: filters.search || undefined,
         discount_type: filters.discount_type || undefined, state: filters.state || undefined,
         modality: filters.modality.length ? filters.modality.join(",") : undefined,
-        category, page: filters.page, page_size: 24,
+        category, mobility_kind: filters.mobility_kind || undefined, page: filters.page, page_size: 24,
       })
     },
   })
@@ -100,6 +101,9 @@ export default function Home() {
               <button onClick={() => chooseCategory("fuel")} aria-pressed={category === "fuel"} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "fuel" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
                 <Fuel className="h-3.5 w-3.5" aria-hidden="true" /><span>Combustible</span>
               </button>
+              <button onClick={() => chooseCategory("mobility")} aria-pressed={category === "mobility"} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "mobility" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
+                <TrainFront className="h-3.5 w-3.5" aria-hidden="true" /><span>Movilidad</span>
+              </button>
               <Link href="/precios" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
                 <Tag className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only sm:not-sr-only">Precios</span>
               </Link>
@@ -122,11 +126,11 @@ export default function Home() {
             <div className="max-w-2xl">
               <p className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-[#b8f36b]"><span className="h-1.5 w-1.5 rounded-full bg-[#b8f36b]" /> Datos actualizados · {todayDate}</p>
               <h1 className="display max-w-xl text-4xl font-semibold leading-[1.06] tracking-[-0.06em] sm:text-6xl">Pagá mejor en cada compra.</h1>
-              <p className="mt-5 max-w-lg text-base leading-relaxed text-[#d9e3ef]">Promociones bancarias de supermercados y combustible, con condiciones, topes y días para decidir antes de llegar a la caja.</p>
+              <p className="mt-5 max-w-lg text-base leading-relaxed text-[#d9e3ef]">{category === "mobility" ? "Beneficios públicos para viajar, con medio de pago, cobertura y condiciones antes de subir." : "Promociones bancarias de supermercados y combustible, con condiciones, topes y días para decidir antes de llegar a la caja."}</p>
               <button onClick={toggleTodayOnly} className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#b8f36b] px-4 text-sm font-semibold text-[#102a4c] transition-colors hover:bg-[#d4ff9e]">Ver las de hoy <ArrowUpRight className="h-4 w-4" /></button>
             </div>
             <aside className="grid gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-1" aria-label="Resumen de PromoAR">
-              <div className="p-4"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Categoría</p><p className="mt-1 text-lg font-semibold">{category === "fuel" ? "Combustible" : "Supermercados"}</p></div>
+              <div className="p-4"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Categoría</p><p className="mt-1 text-lg font-semibold">{category === "fuel" ? "Combustible" : category === "mobility" ? "Movilidad" : "Supermercados"}</p></div>
               <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Promos activas</p><p className="mt-1 text-lg font-semibold">{statsLoading ? "…" : (stats?.by_category?.[category] ?? stats?.total_promotions ?? 0).toLocaleString("es-AR")}</p></div>
               <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Buscá por</p><p className="mt-1 text-sm font-medium">Banco, día o comercio</p></div>
             </aside>

@@ -199,7 +199,7 @@ def _query_promotions(
         SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type,
                p.payment_method, p.store_types, p.valid_days,
                p.valid_from, p.valid_until, p.tope, p.min_purchase,
-               p.terms_raw, p.exclusions, p.requirements, p.url, p.acumulable,
+               p.terms_raw, p.exclusions, p.requirements, p.url, p.acumulable, p.mobility_kind, p.coverage,
                s.name AS supermarket_name,
                {"COALESCE(s.category, 'supermarket')" if _HAS_SUPERMARKET_CATEGORY else "'supermarket'"} AS category
         FROM promotions p
@@ -237,6 +237,8 @@ def _format_promo_html(p: dict) -> str:
         details.append(f"📅 {_esc(p['valid_days'])}")
     if p.get("store_types"):
         details.append(f"🏪 {_esc(p['store_types'])}")
+    if p.get("coverage"):
+        details.append(f"📍 {_esc(p['coverage'])}")
     if p.get("tope"):
         details.append(f"⚠️ Tope {_esc(p['tope'])}")
     if p.get("min_purchase"):
@@ -331,12 +333,12 @@ def _pagination_markup(callback_prefix: str, page: int, total_pages: int,
 
 
 def _category_markup(scope: str) -> dict:
-    """Selector inicial para no mezclar supermercados y combustible."""
+    """Selector inicial para no mezclar rubros con reglas distintas."""
     return {
         "inline_keyboard": [[
             {"text": "🛒 Supermercados", "callback_data": f"{scope}cat:supermarket"},
             {"text": "⛽ Combustible", "callback_data": f"{scope}cat:fuel"},
-        ]]
+        ], [{"text": "🚇 Movilidad", "callback_data": f"{scope}cat:mobility"}]]
     }
 
 
@@ -510,7 +512,7 @@ def _cmd_hoy_category(category: str, header: str, callback_prefix: str,
     promos = _query_promotions(today_only=True, category=category)
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
-    category_code = "s" if category == "supermarket" else "f"
+    category_code = {"supermarket": "s", "fuel": "f", "mobility": "v"}[category]
     return text, _results_markup(promos, callback_prefix, page, total_pages, "h", category_code)
 
 
@@ -525,6 +527,13 @@ def cmd_hoy_fuel(chat_id: str, args: str, user_db: UserDatabase,
                  page: int = 1) -> tuple[str, dict]:
     return _cmd_hoy_category(
         "fuel", "⛽ <b>Promos de combustible — hoy</b>", "hoyfuel", page,
+    )
+
+
+def cmd_hoy_mobility(chat_id: str, args: str, user_db: UserDatabase,
+                     page: int = 1) -> tuple[str, dict]:
+    return _cmd_hoy_category(
+        "mobility", "🚇 <b>Promos de movilidad — hoy</b>", "hoymobility", page,
     )
 
 
@@ -569,7 +578,7 @@ def _cmd_mis_category(chat_id: str, user_db: UserDatabase, category: str,
     methods_str = _esc(", ".join(method["name"] for method in methods))
     text, _ = _render_promos(promos, f"{header}\n<i>Medios: {methods_str}</i>", page)
     _, total_pages = _paginate(promos, page)
-    category_code = "s" if category == "supermarket" else "f"
+    category_code = {"supermarket": "s", "fuel": "f", "mobility": "v"}[category]
     return text, _results_markup(promos, callback_prefix, page, total_pages, "m", category_code)
 
 
@@ -587,6 +596,19 @@ def cmd_mis_fuel(chat_id: str, args: str, user_db: UserDatabase,
         chat_id, user_db, "fuel", "⛽ <b>Tus promos de combustible — hoy</b>",
         "misfuel", page,
     )
+
+
+def cmd_mis_mobility(chat_id: str, args: str, user_db: UserDatabase,
+                     page: int = 1) -> tuple[str, dict]:
+    return _cmd_mis_category(
+        chat_id, user_db, "mobility", "🚇 <b>Tus promos de movilidad — hoy</b>",
+        "mismobility", page,
+    )
+
+
+def cmd_movilidad(chat_id: str, args: str, user_db: UserDatabase,
+                  page: int = 1) -> tuple[str, dict]:
+    return cmd_hoy_mobility(chat_id, args, user_db, page)
 
 
 def cmd_mis(chat_id: str, args: str, user_db: UserDatabase, page: int = 1) -> tuple[str, dict]:
@@ -940,7 +962,7 @@ _FILTER_VALUES = {
     ("p", "u"): ("payment_filter", "sin_info", "Medio no informado"),
 }
 _SCOPE_LABELS = {"h": "Promos de hoy", "m": "Tus promos de hoy"}
-_CATEGORY_VALUES = {"s": "supermarket", "f": "fuel"}
+_CATEGORY_VALUES = {"s": "supermarket", "f": "fuel", "v": "mobility"}
 
 
 def _filter_menu(scope: str, category_code: str) -> tuple[str, dict]:
@@ -991,11 +1013,11 @@ def _filtered_results(chat_id: str, user_db: UserDatabase, scope: str,
         query_kwargs["payment_methods"] = methods
 
     promos = _query_promotions(**query_kwargs)
-    category_label = "supermercados" if category == "supermarket" else "combustible"
+    category_label = {"supermarket": "supermercados", "fuel": "combustible", "mobility": "movilidad"}[category]
     header = f"{header_prefix} <b>{_SCOPE_LABELS[scope]} · {category_label}</b>\n<i>Filtro: {_esc(filter_label)}</i>"
     text, _ = _render_promos(promos, header, page)
     _, total_pages = _paginate(promos, page)
-    callback_prefix = {("h", "s"): "hoysuper", ("h", "f"): "hoyfuel", ("m", "s"): "missuper", ("m", "f"): "misfuel"}[(scope, category_code)]
+    callback_prefix = {("h", "s"): "hoysuper", ("h", "f"): "hoyfuel", ("h", "v"): "hoymobility", ("m", "s"): "missuper", ("m", "f"): "misfuel", ("m", "v"): "mismobility"}[(scope, category_code)]
     return text, _results_markup(
         promos, callback_prefix, page, total_pages, scope, category_code, (kind, value),
     )
@@ -1010,7 +1032,7 @@ def _promotion_conditions(promotion_id: int) -> Optional[dict]:
         SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type,
                p.payment_method, p.store_types, p.valid_days, p.valid_from,
                p.valid_until, p.tope, p.min_purchase, p.terms_raw, p.exclusions,
-               p.requirements, p.acumulable, p.url, s.name AS supermarket_name,
+               p.requirements, p.acumulable, p.url, p.coverage, s.name AS supermarket_name,
                COALESCE(NULLIF((SELECT t.raw_text FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), ''), p.terms_raw) AS raw_text,
                COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS terms_exclusions,
                COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS terms_requirements
@@ -1032,6 +1054,8 @@ def _format_conditions_html(promo: dict) -> str:
     ]
     if promo.get("store_types"):
         lines.append(f"🏪 <b>Modalidad:</b> {_esc(promo['store_types'])}")
+    if promo.get("coverage"):
+        lines.append(f"📍 <b>Cobertura:</b> {_esc(promo['coverage'])}")
     if promo.get("payment_method"):
         lines.append(f"💳 <b>Medio:</b> {_esc(promo['payment_method'])}")
     if promo.get("tope"):
@@ -1219,6 +1243,8 @@ COMMANDS = {
     "banco": cmd_banco,
     "super": cmd_super,
     "combustible": cmd_combustible,
+    "movilidad": cmd_movilidad,
+    "transporte": cmd_movilidad,
     "stats": cmd_stats,
     "medios": cmd_medios,
     "notify": cmd_notify,
@@ -1232,15 +1258,19 @@ CALLBACK_COMMANDS = {
     "quick": cmd_quick,
     "hoysuper": cmd_hoy_supermarkets,
     "hoyfuel": cmd_hoy_fuel,
+    "hoymobility": cmd_hoy_mobility,
     "missuper": cmd_mis_supermarkets,
     "misfuel": cmd_mis_fuel,
+    "mismobility": cmd_mis_mobility,
 }
 
 _CATEGORY_CALLBACKS = {
     "hoycat:supermarket": cmd_hoy_supermarkets,
     "hoycat:fuel": cmd_hoy_fuel,
+    "hoycat:mobility": cmd_hoy_mobility,
     "miscat:supermarket": cmd_mis_supermarkets,
     "miscat:fuel": cmd_mis_fuel,
+    "miscat:mobility": cmd_mis_mobility,
 }
 
 
@@ -1338,8 +1368,8 @@ def handle_callback_query(update: dict, user_db: UserDatabase, notifier: Telegra
 
     if len(filter_parts) == 3 and filter_parts[0] == "r":
         callback_handler = {
-            ("h", "s"): cmd_hoy_supermarkets, ("h", "f"): cmd_hoy_fuel,
-            ("m", "s"): cmd_mis_supermarkets, ("m", "f"): cmd_mis_fuel,
+            ("h", "s"): cmd_hoy_supermarkets, ("h", "f"): cmd_hoy_fuel, ("h", "v"): cmd_hoy_mobility,
+            ("m", "s"): cmd_mis_supermarkets, ("m", "f"): cmd_mis_fuel, ("m", "v"): cmd_mis_mobility,
         }.get((filter_parts[1], filter_parts[2]))
         if callback_handler:
             reply_text, reply_markup = callback_handler(chat_id, "", user_db, page=1)

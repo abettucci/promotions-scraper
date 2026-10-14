@@ -44,6 +44,7 @@ from scrapers.mercadopago_scraper import MercadoPagoScraper
 from scrapers.clublanacion_scraper import ClubLaNacionScraper
 from scrapers.buepp_scraper import BueppScraper
 from scrapers.cuentadni_scraper import CuentaDniScraper
+from scrapers.mobility_scraper import MobilityScraper
 
 # AI Extractor (opcional)
 try:
@@ -164,6 +165,7 @@ class PromoScraper:
             'clublanacion': ClubLaNacionScraper,
             'buepp': BueppScraper,
             'cuentadni': CuentaDniScraper,
+            'mobility': MobilityScraper,
         }
         
         if supermarket_key in standalone_scrapers:
@@ -275,7 +277,7 @@ class PromoScraper:
                     # Los aggregators de combustible rutean a estaciones; los de
                     # beneficios (Cuenta DNI, Buepp...) indican el rubro por promo.
                     category = promo.get('merchant_category') or supermarket_data.get('category', 'fuel')
-                    if category not in ('supermarket', 'fuel'):
+                    if category not in ('supermarket', 'fuel', 'mobility'):
                         continue
                     for brand in brands:
                         brand_id = self.db.insert_supermarket(

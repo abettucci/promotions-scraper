@@ -21,6 +21,8 @@ export interface Promotion {
   requirements: string[]
   max_discount: string | null
   min_purchase: string | null
+  mobility_kind: "ride_hailing" | "public_transit" | null
+  coverage: string | null
 }
 
 export interface PromotionDetails extends Promotion {
@@ -50,7 +52,7 @@ export interface Bank {
   count: number
 }
 
-export type Category = "supermarket" | "fuel"
+export type Category = "supermarket" | "fuel" | "mobility"
 
 export interface Supermarket {
   id: number
@@ -84,6 +86,7 @@ export interface FilterState {
   discount_type: string
   state: PromotionState
   modality: Modality[]
+  mobility_kind: "" | "ride_hailing" | "public_transit"
   page: number
 }
 

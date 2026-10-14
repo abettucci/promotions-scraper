@@ -88,7 +88,7 @@ class Database:
         cursor = conn.cursor()
         
         # Tabla de supermercados / merchants
-        # category: 'supermarket' | 'fuel' | 'benefits'
+        # category: 'supermarket' | 'fuel' | 'mobility' | 'benefits'
         cursor.execute("""
             CREATE TABLE IF NOT EXISTS supermarkets (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
@@ -191,6 +191,16 @@ class Database:
             conn.commit()
         except Exception:
             pass  # Column already exists
+
+        # Datos de movilidad publicados por la fuente: separan apps de viaje
+        # de transporte público y evitan presentar una promo regional como si
+        # aplicara en todo el país.
+        for column in ("mobility_kind TEXT", "coverage TEXT"):
+            try:
+                cursor.execute(f"ALTER TABLE promotions ADD COLUMN {column}")
+                conn.commit()
+            except Exception:
+                pass
 
         # "Combustible (genérico)" lo creaba el ruteo de aggregators cuando la
         # IA no identificaba la marca; sus filas eran basura y ya nadie las
@@ -396,7 +406,8 @@ class Database:
         conn.close()
         return [dict(r) for r in rows]
 
-    def get_promotions_for_user(self, user_id: int, today_only: bool = True) -> List[Dict]:
+    def get_promotions_for_user(self, user_id: int, today_only: bool = True,
+                                category: Optional[str] = None) -> List[Dict]:
         """Promociones activas que coinciden con los métodos de pago del usuario."""
         methods = self.get_user_payment_methods(user_id)
         if not methods:
@@ -431,20 +442,28 @@ class Database:
                               "OR LOWER(p.valid_days) LIKE ? OR LOWER(p.valid_days) LIKE ?)")
                 day_params = [f"%{today_es}%", "%todos los d%"]
 
+        category_clause = ""
+        category_params: list = []
+        if category:
+            category_clause = "AND LOWER(COALESCE(s.category, 'supermarket')) = ?"
+            category_params.append(category.lower())
+
         query = f"""
             SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type, p.payment_method, p.terms_raw,
                    p.valid_days, p.store_types, p.tope, p.min_purchase,
-                   p.acumulable, s.name AS supermarket_name
+                   p.acumulable, p.mobility_kind, p.coverage, s.name AS supermarket_name,
+                   COALESCE(s.category, 'supermarket') AS category
             FROM promotions p
             JOIN supermarkets s ON p.supermarket_id = s.id
             WHERE p.is_active = 1 AND ({entity_conditions}) {day_clause}
+              {category_clause}
               AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
               AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
             ORDER BY s.name, p.discount DESC
         """
         today_iso = datetime.now().date().isoformat()
         conn = self.get_connection()
-        rows = conn.execute(query, entity_params + day_params + [today_iso, today_iso]).fetchall()
+        rows = conn.execute(query, entity_params + day_params + category_params + [today_iso, today_iso]).fetchall()
         conn.close()
         return [promo for promo in (dict(r) for r in rows) if promotion_matches_payment_methods(promo, methods)]
 
@@ -527,8 +546,8 @@ class Database:
                 (supermarket_id, title, discount, bank, wallet, card_type,
                  payment_method, store_types, valid_days, valid_from, valid_until,
                  url, image_url, terms_raw, exclusions, requirements, tope, acumulable, min_purchase,
-                 source)
-                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
+                 source, mobility_kind, coverage)
+                VALUES (?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?, ?)
                 ON CONFLICT(supermarket_id, title, bank) DO UPDATE SET
                     discount = excluded.discount,
                     payment_method = excluded.payment_method,
@@ -546,6 +565,8 @@ class Database:
                     card_type = excluded.card_type,
                     url = excluded.url,
                     source = COALESCE(excluded.source, promotions.source),
+                    mobility_kind = excluded.mobility_kind,
+                    coverage = excluded.coverage,
                     is_active = 1,
                     scraped_at = CURRENT_TIMESTAMP
             """, (
@@ -570,6 +591,8 @@ class Database:
                 promo_data.get('acumulable'),
                 min_purchase,
                 promo_data.get('source'),
+                promo_data.get('mobility_kind'),
+                promo_data.get('coverage'),
             ))
             
             promotion_id = cursor.lastrowid
@@ -1263,6 +1286,7 @@ class UserDatabase:
 
     def get_promotions_for_user(
         self, user_id: int, today_only: bool = True, favorite_stores_only: bool = False,
+        category: Optional[str] = None,
     ) -> List[Dict]:
         """Promociones activas que coinciden con los métodos de pago del usuario.
         Lee desde promotions.db (separada)."""
@@ -1300,13 +1324,21 @@ class UserDatabase:
                 day_params = [f"%{today_es}%", "%todos los d%"]
 
         today_iso = datetime.now().date().isoformat()
+        category_clause = ""
+        category_params: list = []
+        if category:
+            category_clause = "AND LOWER(COALESCE(s.category, 'supermarket')) = ?"
+            category_params.append(category.lower())
+
         query = f"""
             SELECT p.id, p.title, p.discount, p.bank, p.wallet, p.card_type, p.payment_method, p.terms_raw,
                    p.valid_days, p.store_types, p.tope, p.min_purchase,
-                   p.acumulable, s.name AS supermarket_name
+                   p.acumulable, p.mobility_kind, p.coverage, s.name AS supermarket_name,
+                   COALESCE(s.category, 'supermarket') AS category
             FROM promotions p
             JOIN supermarkets s ON p.supermarket_id = s.id
             WHERE p.is_active = 1 AND ({entity_conditions}) {day_clause}
+              {category_clause}
               AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
               AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
             ORDER BY s.name, p.discount DESC
@@ -1315,7 +1347,7 @@ class UserDatabase:
         promo_conn = sqlite3.connect(str(config.DATABASE_PATH))
         promo_conn.row_factory = sqlite3.Row
         rows = promo_conn.execute(
-            query, entity_params + day_params + [today_iso, today_iso]
+            query, entity_params + day_params + category_params + [today_iso, today_iso]
         ).fetchall()
         promo_conn.close()
         promos = [promo for promo in (dict(r) for r in rows) if promotion_matches_payment_methods(promo, methods)]
