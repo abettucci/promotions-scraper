@@ -77,6 +77,8 @@
   --ring: #b8f36b;
 }
 
+html.dark { color-scheme: dark; }
+
 @layer base {
   * { @apply border-border; }
   html { scroll-behavior: smooth; }
@@ -131,6 +133,70 @@
   border-top: 1px solid #b9c8d7;
   background: #10233d;
 }
+
+/* The app predates semantic Tailwind tokens and many cards use the original
+   PromoAR palette as arbitrary values. These mappings keep that existing
+   visual language readable at night without changing each component's API. */
+.dark body {
+  background-image: radial-gradient(circle at 85% -10%, rgb(184 243 107 / 0.12), transparent 28rem);
+}
+.dark .surface {
+  border-color: #29425f;
+  background: #10233d;
+  box-shadow: 0 18px 45px rgb(0 0 0 / .22);
+}
+.dark [class~="bg-[#f5f7fb]"],
+.dark [class~="bg-[#f5f7fb]/90"] { background-color: #08182c !important; }
+.dark [class~="bg-white"],
+.dark [class~="bg-[#f8fafd]"],
+.dark [class~="bg-[#f9fbfd]"],
+.dark [class~="bg-[#fbfcfe]"] { background-color: #10233d !important; }
+.dark [class~="bg-[#edf2f7]"],
+.dark [class~="bg-[#f5f8fc]"],
+.dark [class~="bg-[#f1f6fd]"] { background-color: #152d49 !important; }
+.dark [class~="bg-[#efffdc]"],
+.dark [class~="bg-[#f4ffec]"] { background-color: #173a2c !important; }
+.dark [class~="bg-[#eef3ff]"],
+.dark [class~="bg-[#f5f8ff]"] { background-color: #172f55 !important; }
+.dark [class~="bg-[#fff3f2]"],
+.dark [class~="bg-[#fff5f4]"],
+.dark [class~="bg-[#fff1ef]"] { background-color: #45232c !important; }
+
+.dark [class~="border-[#dbe4ee]"],
+.dark [class~="border-[#dbe4ee]/80"],
+.dark [class~="border-[#e5ebf2]"],
+.dark [class~="border-[#cbd8e6]"],
+.dark [class~="border-[#d6e0eb]"] { border-color: #29425f !important; }
+.dark [class~="border-[#b8f36b]"] { border-color: #8fcf52 !important; }
+.dark [class~="border-slate-200"] { border-color: #29425f !important; }
+
+.dark [class~="text-[#102a4c]"],
+.dark [class~="text-[#10233d]"],
+.dark [class~="text-slate-900"] { color: #f3f7fc !important; }
+.dark [class~="text-[#40536b]"] { color: #d5e0ec !important; }
+.dark [class~="text-[#52657d]"] { color: #b9c8d9 !important; }
+.dark [class~="text-[#71839a]"],
+.dark [class~="text-[#8a9ab0]"],
+.dark [class~="text-slate-400"] { color: #9eafc3 !important; }
+.dark [class~="text-[#2758d8]"],
+.dark [class~="text-blue-600"] { color: #9fc0ff !important; }
+.dark [class~="text-[#3d6626]"] { color: #bce68d !important; }
+.dark [class~="text-[#8f2d28]"],
+.dark [class~="text-[#9c4138]"],
+.dark [class~="text-[#a9362a]"] { color: #ffaaa1 !important; }
+
+/* Lime remains the action color in both themes; its foreground must stay ink. */
+.dark [class~="bg-[#b8f36b]"][class~="text-[#102a4c]"],
+.dark [class~="bg-[#b8f36b]"] [class~="text-[#102a4c]"] { color: #102a4c !important; }
+.dark .theme-toggle {
+  border-color: #385572;
+  background: #102a4c !important;
+  color: #b8f36b !important;
+  box-shadow: 0 14px 30px rgb(0 0 0 / .32);
+}
+.dark .theme-toggle-sun { display: block; }
+.dark .theme-toggle-moon { display: none; }
+.dark .assistant-greeting::after { border-color: #29425f; background: #10233d; }
 
 @media (prefers-reduced-motion: reduce) {
   *, *::before, *::after { animation-duration: 0.01ms !important; animation-iteration-count: 1 !important; scroll-behavior: auto !important; transition-duration: 0.01ms !important; }
