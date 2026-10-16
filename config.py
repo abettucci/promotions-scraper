@@ -39,6 +39,22 @@ USERS_DB_PATH = _USERS_DB_DIR / "users.db"
 # usuarios: persiste entre deploys y no engorda la base de promos del repo.
 PRICES_DB_PATH = _USERS_DB_DIR / "prices.db"
 
+# Snapshot de fuentes que corren dentro de Railway. ``data/promotions.db`` se
+# regenera al desplegar desde GitHub; este archivo vive en el Volume y permite
+# rehidratar únicamente las fuentes externas que sí lograron publicar datos.
+EXTERNAL_SOURCES_SNAPSHOT_PATH = Path(os.getenv(
+    "EXTERNAL_SOURCES_SNAPSHOT_PATH",
+    str(_USERS_DB_DIR / "external-promotions.json"),
+))
+EXTERNAL_SOURCES_STATUS_PATH = Path(os.getenv(
+    "EXTERNAL_SOURCES_STATUS_PATH",
+    str(_USERS_DB_DIR / "external-sources-status.json"),
+))
+EXTERNAL_SOURCES_LOCK_PATH = Path(os.getenv(
+    "EXTERNAL_SOURCES_LOCK_PATH",
+    str(_USERS_DB_DIR / "external-sources.lock"),
+))
+
 # Configuración de scraping
 MIN_DELAY = 2  # segundos entre requests
 MAX_DELAY = 5  # segundos entre requests

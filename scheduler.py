@@ -50,6 +50,30 @@ def start():
     print(f"[scheduler] Scraper programado cada {SCRAPE_INTERVAL_HOURS}h (primer run en {SCRAPE_DELAY_SECONDS}s)")
 
 
+EXTERNAL_SOURCES_INTERVAL_HOURS = int(os.getenv("EXTERNAL_SOURCES_INTERVAL_HOURS", "12"))
+EXTERNAL_SOURCES_DELAY_SECONDS = int(os.getenv("EXTERNAL_SOURCES_DELAY_SECONDS", "90"))
+
+
+def _run_external_sources():
+    from external_sources import ExternalSourcesRunner
+    result = ExternalSourcesRunner().run()
+    print(f"[external-sources] Resultado: {result}")
+    return result
+
+
+def start_external_sources():
+    def loop():
+        time.sleep(EXTERNAL_SOURCES_DELAY_SECONDS)
+        while True:
+            try:
+                _run_external_sources()
+            except Exception as error:
+                print(f"[external-sources] Error: {type(error).__name__}: {error}")
+            time.sleep(EXTERNAL_SOURCES_INTERVAL_HOURS * 3600)
+    threading.Thread(target=loop, daemon=True, name="external-sources-scheduler").start()
+    print(f"[external-sources] Programado cada {EXTERNAL_SOURCES_INTERVAL_HOURS}h")
+
+
 # ── Canasta diaria de precios + alertas ──────────────────────────────────────
 # Opt-in (ENABLE_PRICES_JOB): consulta ~90 productos en ~13 tiendas por día.
 PRICES_TICK_SECONDS = int(os.getenv("PRICES_TICK_SECONDS", "1800"))

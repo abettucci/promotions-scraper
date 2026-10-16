@@ -3,7 +3,7 @@ FastAPI REST API for promo-scraper
 Exposes the SQLite database with promotions, banks, supermarkets
 Includes user auth (JWT) and personalized promotion endpoints
 """
-from fastapi import FastAPI, Query, HTTPException, Depends, Request
+from fastapi import FastAPI, Query, HTTPException, Depends, Request, Header
 from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List, Literal
@@ -47,6 +47,10 @@ def _verify_password(password: str, hashed: str) -> bool:
 if os.getenv("ENABLE_SCRAPER", "").lower() in ("1", "true", "yes"):
     import scheduler
     scheduler.start()
+
+if os.getenv("ENABLE_EXTERNAL_SOURCES_JOB", "").lower() in ("1", "true", "yes"):
+    import scheduler as _external_sources_scheduler
+    _external_sources_scheduler.start_external_sources()
 
 if os.getenv("ENABLE_PRICES_JOB", "").lower() in ("1", "true", "yes"):
     import scheduler as _prices_scheduler
@@ -144,6 +148,16 @@ def row_to_dict(row: sqlite3.Row) -> dict:
 # columnas nuevas directamente en SQL.
 _HAS_SUPERMARKET_CATEGORY = _ensure_promotions_db_schema()
 _db = UserDatabase()
+
+# Las promociones externas exitosas viven en el Railway Volume, no en el DB
+# que se reemplaza al desplegar desde GitHub.
+try:
+    from external_sources import ExternalSourcesRunner
+    _external_sources_hydration = ExternalSourcesRunner().hydrate()
+    if _external_sources_hydration:
+        print(f"[external-sources] Snapshot restaurado: {_external_sources_hydration}")
+except Exception as _external_sources_error:
+    print(f"⚠️ No se pudo restaurar snapshot externo: {_external_sources_error}")
 
 # ── JWT helpers ───────────────────────────────────────────────────────────────
 security = HTTPBearer(auto_error=False)
@@ -327,6 +341,35 @@ async def telegram_webhook(payload: dict, request: Request):
     return {"ok": True}
 
 # ── Admin: trigger manual scrape ──────────────────────────────────────────────
+def _require_external_sources_admin(x_admin_token: Optional[str] = Header(default=None)):
+    """Acciones operativas: el secreto no se expone en URL ni logs."""
+    expected = os.getenv("EXTERNAL_SOURCES_ADMIN_TOKEN", "")
+    if not expected or not x_admin_token or not hmac.compare_digest(x_admin_token, expected):
+        raise HTTPException(403, "Token administrativo inválido")
+
+
+@app.post("/api/admin/external-sources/run", status_code=202)
+def trigger_external_sources(
+    sources: Optional[List[Literal["santander", "visa"]]] = None,
+    _: None = Depends(_require_external_sources_admin),
+):
+    """Lanza las fuentes externas en background."""
+    import threading
+    from external_sources import ExternalSourcesRunner
+
+    runner = ExternalSourcesRunner()
+    if runner.status().get("running"):
+        raise HTTPException(409, "Ya hay una ejecución externa en curso")
+    threading.Thread(target=runner.run, args=(sources,), daemon=True, name="external-sources-manual").start()
+    return {"status": "started", "sources": sources or ["santander", "visa"]}
+
+
+@app.get("/api/admin/external-sources/status")
+def get_external_sources_status(_: None = Depends(_require_external_sources_admin)):
+    from external_sources import ExternalSourcesRunner
+    return ExternalSourcesRunner().status()
+
+
 @app.post("/api/admin/scrape")
 def trigger_scrape(token: str = Query(...)):
     """Lanza el scraper en background. Requiere ?token=<ADMIN_TOKEN>."""
