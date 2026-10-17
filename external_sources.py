@@ -5,6 +5,7 @@ import asyncio
 import fcntl
 import json
 import os
+import re
 import tempfile
 import threading
 from datetime import date, datetime, timezone
@@ -45,6 +46,19 @@ def _atomic_json_write(path: Path, payload: Dict) -> None:
     finally:
         if os.path.exists(temporary):
             os.unlink(temporary)
+
+
+def _minimum_purchase_from_text(text: str) -> str:
+    """Recupera un mínimo de compra de condiciones guardadas anteriormente."""
+    match = re.search(
+        r"m[ií]nimo\s+(?:de\s+)?compra\s*(?:de\s*)?\$?\s*([\d.]+(?:,[\d]{1,2})?)",
+        text or "",
+        re.I,
+    )
+    if not match:
+        return ""
+    digits = re.sub(r"\D", "", match.group(1).split(",", 1)[0])
+    return f"${int(digits):,}".replace(",", ".") if digits else ""
 
 
 class ExternalSourcesRunner:
@@ -131,6 +145,17 @@ class ExternalSourcesRunner:
         """Reemplaza sólo filas de ``source``; nunca toca otros scrapers."""
         grouped: Dict[tuple, List[Dict]] = {}
         for promo in promotions:
+            # Los snapshots previos a este campo pueden tener el mínimo sólo
+            # dentro de los requisitos. Normalizarlo aquí actualiza Railway al
+            # arrancar, sin esperar a que vuelva a correr el scraper.
+            if not promo.get("min_purchase"):
+                terms = "\n".join([
+                    str(promo.get("terms_raw") or ""),
+                    *(str(value) for value in promo.get("requirements") or []),
+                ])
+                minimum = _minimum_purchase_from_text(terms)
+                if minimum:
+                    promo = {**promo, "min_purchase": minimum}
             for merchant in promo.get("merchant_brands") or []:
                 grouped.setdefault((merchant, promo.get("merchant_category") or "supermarket"), []).append(promo)
         inserted = 0

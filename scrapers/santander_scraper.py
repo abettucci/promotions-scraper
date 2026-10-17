@@ -67,6 +67,27 @@ def _money(value: Any) -> Optional[str]:
         return None
 
 
+def _minimum_purchase(text: str) -> Optional[str]:
+    """Obtiene el mínimo publicado, conservando el formato monetario AR.
+
+    La BFF de Santander no expone un campo numérico para este dato: suele
+    incluirlo dentro de ``additionalText`` (por ejemplo, ``Mínimo de compra
+    $100.000``).  No conviene pasar ese importe por ``float`` porque el punto
+    es un separador de miles, no decimal.
+    """
+    match = re.search(
+        r"m[ií]nimo\s+(?:de\s+)?compra\s*(?:de\s*)?\$?\s*([\d.]+(?:,[\d]{1,2})?)",
+        text or "",
+        re.I,
+    )
+    if not match:
+        return None
+    digits = re.sub(r"\D", "", match.group(1).split(",", 1)[0])
+    if not digits:
+        return None
+    return f"${int(digits):,}".replace(",", ".")
+
+
 def _days(item: Dict[str, Any]) -> str:
     if item.get("fullWeek"):
         return "Todos los días"
@@ -195,6 +216,7 @@ class SantanderScraper(BaseScraper):
             "image_url": brand.get("desktopMinImage") or brand.get("desktopImage"),
             "terms_raw": terms,
             "tope": _money(item.get("topAmount")),
+            "min_purchase": _minimum_purchase(terms),
             "exclusions": [legal] if re.search(r"no aplica|no v[aá]lido|no incluye|exclu", legal, re.I) else [],
             "requirements": requirements,
             "merchant_brands": [merchant],

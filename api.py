@@ -1067,7 +1067,7 @@ def get_promotions(
             COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
             COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
             (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
-            p.min_purchase
+            COALESCE(NULLIF((SELECT t.min_purchase FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), ''), p.min_purchase) AS min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE {where_clause}
@@ -1104,7 +1104,7 @@ def get_promotions_today():
             COALESCE(NULLIF(NULLIF((SELECT t.exclusions FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.exclusions) AS exclusions,
             COALESCE(NULLIF(NULLIF((SELECT t.requirements FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), '[]'), ''), p.requirements) AS requirements,
             (SELECT t.max_discount FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1) AS max_discount,
-            p.min_purchase
+            COALESCE(NULLIF((SELECT t.min_purchase FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), ''), p.min_purchase) AS min_purchase
         FROM promotions p
         JOIN supermarkets s ON p.supermarket_id = s.id
         WHERE p.is_active = 1
@@ -1137,7 +1137,9 @@ def get_promotion(promotion_id: int):
             p.id, p.supermarket_id, p.title, p.discount, p.bank, p.wallet,
             p.card_type, p.payment_method, p.store_types, p.valid_days,
             p.valid_from, p.valid_until, p.url, p.image_url, p.terms_raw,
-            p.tope, p.acumulable, p.is_active, p.scraped_at, p.min_purchase, p.mobility_kind, p.coverage,
+            p.tope, p.acumulable, p.is_active, p.scraped_at,
+            COALESCE(NULLIF((SELECT t.min_purchase FROM terms_conditions t WHERE t.promotion_id = p.id LIMIT 1), ''), p.min_purchase) AS min_purchase,
+            p.mobility_kind, p.coverage,
             s.name AS supermarket_name,
             -- Algunas promos históricas tienen una fila de términos incompleta.
             -- NULLIF evita que esa fila vacía oculte los datos ya guardados en

@@ -47,6 +47,17 @@ class SantanderScraperTests(unittest.TestCase):
         self.assertIn("20% de descuento", promos[0]["title"])
         self.assertIn("3 cuotas sin interés", promos[1]["title"])
 
+    def test_extracts_minimum_purchase_from_official_requirements(self):
+        promos = self.scraper.parse_item({
+            "idPromotion": 3721, "friday": True, "saturday": True,
+            "customerDiscount": 20, "benefitType": {"code": "A"},
+            "texts": {"discount": 20}, "paymentType": {"code": "M"},
+            "additionalText": "Pagando con QR a través de la App Santander. Mínimo de compra $100.000.",
+            "legal": "Válido en Disco.",
+        }, {"id": 3721, "name": "Disco"})
+        self.assertEqual(len(promos), 1)
+        self.assertEqual(promos[0]["min_purchase"], "$100.000")
+
 
 if __name__ == "__main__":
     unittest.main()
