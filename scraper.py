@@ -241,14 +241,20 @@ class PromoScraper:
             if raw_count != len(promotions):
                 self.log(f"   🧹 Dedup: {raw_count} → {len(promotions)} promociones únicas")
 
-            if self.result_cache.unchanged(self._cache_key(supermarket_key), promotions):
+            # El cache no puede reemplazar a la persistencia: en Actions la DB
+            # llega desde git y puede haber perdido las filas de una fuente
+            # aunque su respuesta HTTP sea idéntica. Este fue el caso de
+            # Carrefour: se extrajeron 35 promos pero la base tenía cero.
+            cached_rows = self.db.active_promotions_for_source_count(supermarket_id, supermarket_key)
+            cache_covers_database = not is_aggregator and cached_rows >= len(promotions)
+            if self.result_cache.unchanged(self._cache_key(supermarket_key), promotions) and cache_covers_database:
                 self._mark_verified_cache_targets(
                     supermarket_id, promotions, is_aggregator, supermarket_data.get('default_brand'),
                 )
                 self.stats['total_promotions'] += len(promotions)
                 self.stats['successful_scrapes'] += 1
                 self.log(
-                    f"🗃️  {supermarket_data['name']}: sin cambios — se conserva la base y se omite escritura"
+                    f"🗃️  {supermarket_data['name']}: sin cambios — la base ya tiene {cached_rows} filas; se omite escritura"
                 )
                 return
 

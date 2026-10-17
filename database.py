@@ -819,6 +819,24 @@ class Database:
         conn.close()
         return deactivated
 
+    def active_promotions_for_source_count(self, supermarket_id: int, source: str) -> int:
+        """Cantidad activa que una fuente realmente dejó en la base.
+
+        El fingerprint del cache sólo dice que la respuesta remota no cambió;
+        no garantiza que la DB publicada siga teniendo esas filas (por ejemplo
+        luego de un merge de ``promotions.db``). Se usa antes de omitir una
+        reescritura.
+        """
+        conn = self.get_connection()
+        try:
+            row = conn.execute(
+                "SELECT COUNT(*) FROM promotions WHERE supermarket_id = ? AND is_active = 1 AND source = ?",
+                (supermarket_id, source),
+            ).fetchone()
+            return int(row[0] if row else 0)
+        finally:
+            conn.close()
+
     def deactivate_old_promotions(self, supermarket_id: int, current_titles: List[str]):
         """Desactiva promociones que ya no están en el sitio"""
         conn = self.get_connection()
