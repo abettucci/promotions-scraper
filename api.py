@@ -195,15 +195,46 @@ def get_current_user(credentials: Optional[HTTPAuthorizationCredentials] = Depen
 
 def _user_response(user: dict) -> dict:
     methods = _db.get_user_payment_methods(user["id"])
+    whatsapp_phone = _decrypt_profile_value(user.get("whatsapp_phone_ciphertext"))
     return {
         "id": user["id"],
         "email": user["email"],
         "telegram_chat_id": user.get("telegram_chat_id"),
         "notify_daily": bool(user.get("notify_daily", True)),
         "notify_hour": user.get("notify_hour", 9),
+        "whatsapp_phone": whatsapp_phone,
+        "whatsapp_opt_in": bool(user.get("whatsapp_opt_in")),
+        "notify_whatsapp_daily": bool(user.get("notify_whatsapp_daily")),
+        "whatsapp_available": _whatsapp_is_ready(),
         "payment_methods": methods,
         "created_at": user.get("created_at"),
     }
+
+
+def _profile_fernet():
+    """La ausencia o invalidez de clave deja WhatsApp deshabilitado."""
+    try:
+        from cryptography.fernet import Fernet
+        return Fernet(config.PROFILE_ENCRYPTION_KEY.encode("ascii"))
+    except Exception:
+        return None
+
+
+def _encrypt_profile_value(value: str) -> str:
+    from whatsapp_notifier import encrypt_phone
+    if not _profile_fernet():
+        raise HTTPException(503, "WhatsApp no está configurado de forma segura")
+    return encrypt_phone(value)
+
+
+def _decrypt_profile_value(value: str | None) -> str | None:
+    from whatsapp_notifier import decrypt_phone
+    return decrypt_phone(value)
+
+
+def _whatsapp_is_ready() -> bool:
+    from whatsapp_notifier import WhatsAppNotifier
+    return bool(_profile_fernet() and WhatsAppNotifier().ready())
 
 # ── Pydantic models ───────────────────────────────────────────────────────────
 class RegisterBody(BaseModel):
@@ -264,6 +295,13 @@ class UpdateProfileBody(BaseModel):
     telegram_chat_id: Optional[str] = None
     notify_daily: Optional[bool] = None
     notify_hour: Optional[int] = None
+
+
+class UpdateWhatsAppBody(BaseModel):
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    phone: str
+    opt_in: bool
+    notify_daily: bool = False
 
 class ForgotPasswordBody(BaseModel):
     email: str
@@ -602,6 +640,37 @@ def update_me(body: UpdateProfileBody, current_user=Depends(get_current_user)):
     )
     updated = _db.get_user_by_id(user["id"])
     return _user_response(updated)
+
+
+@app.put("/api/auth/me/whatsapp")
+def update_my_whatsapp(body: UpdateWhatsAppBody, current_user=Depends(get_current_user)):
+    if not _whatsapp_is_ready():
+        raise HTTPException(503, "WhatsApp no está disponible temporalmente")
+    from whatsapp_notifier import normalize_phone
+    try:
+        normalized = normalize_phone(body.phone)
+    except ValueError as error:
+        raise HTTPException(422, str(error))
+    if not body.opt_in:
+        _db.update_user_whatsapp(current_user["id"], "", False, False)
+    else:
+        _db.update_user_whatsapp(
+            current_user["id"], _encrypt_profile_value("+" + normalized), True, body.notify_daily,
+        )
+    return _user_response(_db.get_user_by_id(current_user["id"]))
+
+
+@app.post("/api/auth/me/whatsapp/test")
+def test_my_whatsapp(current_user=Depends(get_current_user)):
+    if not _whatsapp_is_ready():
+        raise HTTPException(503, "WhatsApp no está disponible temporalmente")
+    phone = _decrypt_profile_value(current_user.get("whatsapp_phone_ciphertext"))
+    if not phone or not current_user.get("whatsapp_opt_in"):
+        raise HTTPException(400, "Primero guardá tu teléfono y aceptá recibir alertas por WhatsApp")
+    from whatsapp_notifier import WhatsAppNotifier
+    if not WhatsAppNotifier().send_message(phone, "✅ PromoAR conectado. Recibirás sólo las alertas que actives en tu perfil."):
+        raise HTTPException(502, "No se pudo enviar el mensaje de prueba")
+    return {"ok": True}
 
 
 @app.put("/api/auth/me/payment-methods")

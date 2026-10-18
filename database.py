@@ -304,6 +304,9 @@ class Database:
                 telegram_chat_id TEXT,
                 notify_daily BOOLEAN DEFAULT 1,
                 notify_hour INTEGER DEFAULT 9,
+                whatsapp_phone_ciphertext TEXT,
+                whatsapp_opt_in BOOLEAN DEFAULT 0,
+                notify_whatsapp_daily BOOLEAN DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             )
@@ -914,6 +917,9 @@ class UserDatabase:
                 telegram_chat_id TEXT,
                 notify_daily BOOLEAN DEFAULT 1,
                 notify_hour INTEGER DEFAULT 9,
+                whatsapp_phone_ciphertext TEXT,
+                whatsapp_opt_in BOOLEAN DEFAULT 0,
+                notify_whatsapp_daily BOOLEAN DEFAULT 0,
                 created_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP,
                 updated_at TIMESTAMP DEFAULT CURRENT_TIMESTAMP
             );
@@ -974,6 +980,15 @@ class UserDatabase:
             conn.execute("ALTER TABLE user_payment_methods ADD COLUMN tiers_json TEXT NOT NULL DEFAULT '[]'")
         except sqlite3.OperationalError:
             pass
+        for column, definition in (
+            ("whatsapp_phone_ciphertext", "TEXT"),
+            ("whatsapp_opt_in", "BOOLEAN DEFAULT 0"),
+            ("notify_whatsapp_daily", "BOOLEAN DEFAULT 0"),
+        ):
+            try:
+                conn.execute(f"ALTER TABLE users ADD COLUMN {column} {definition}")
+            except sqlite3.OperationalError:
+                pass
         conn.commit()
         conn.close()
         print(f"✅ Users DB inicializada: {self.db_path}")
@@ -1033,6 +1048,16 @@ class UserDatabase:
                    updated_at = CURRENT_TIMESTAMP
                WHERE id = ?""",
             (telegram_chat_id or None, int(notify_daily), int(notify_hour), user_id),
+        )
+        conn.commit()
+        conn.close()
+
+    def update_user_whatsapp(self, user_id: int, phone_ciphertext: str, opt_in: bool, notify_daily: bool):
+        conn = self._conn()
+        conn.execute(
+            """UPDATE users SET whatsapp_phone_ciphertext = ?, whatsapp_opt_in = ?,
+               notify_whatsapp_daily = ?, updated_at = CURRENT_TIMESTAMP WHERE id = ?""",
+            (phone_ciphertext or None, int(opt_in), int(notify_daily and opt_in), user_id),
         )
         conn.commit()
         conn.close()
@@ -1113,7 +1138,8 @@ class UserDatabase:
     def get_users_for_notification(self) -> List[Dict]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT * FROM users WHERE telegram_chat_id IS NOT NULL AND notify_daily = 1"
+            """SELECT * FROM users WHERE (telegram_chat_id IS NOT NULL AND notify_daily = 1)
+               OR (whatsapp_phone_ciphertext IS NOT NULL AND whatsapp_opt_in = 1 AND notify_whatsapp_daily = 1)"""
         ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
@@ -1166,11 +1192,14 @@ class UserDatabase:
         return bool(deleted)
 
     def alerts_to_check(self) -> List[Dict]:
-        """Alertas de usuarios con Telegram vinculado (único canal de aviso)."""
+        """Alertas con al menos un canal de aviso configurado y consentido."""
         conn = self._conn()
         rows = conn.execute(
-            "SELECT a.*, u.telegram_chat_id FROM price_alerts a JOIN users u ON u.id = a.user_id "
-            "WHERE u.telegram_chat_id IS NOT NULL AND u.telegram_chat_id != ''").fetchall()
+            """SELECT a.*, u.telegram_chat_id, u.whatsapp_phone_ciphertext, u.whatsapp_opt_in
+               FROM price_alerts a JOIN users u ON u.id = a.user_id
+               WHERE (u.telegram_chat_id IS NOT NULL AND u.telegram_chat_id != '')
+                  OR (u.whatsapp_phone_ciphertext IS NOT NULL AND u.whatsapp_opt_in = 1)"""
+        ).fetchall()
         conn.close()
         return [dict(r) for r in rows]
 

@@ -12,7 +12,7 @@ import { Input } from "@/components/ui/input"
 import type { PaymentMethod } from "@/lib/types"
 import {
   ArrowLeft, Save, Loader2, CheckCircle2, AlertCircle,
-  Bell, BellOff, MessageCircle, CreditCard, ShoppingBasket,
+  Bell, BellOff, MessageCircle, CreditCard, ShoppingBasket, Smartphone,
 } from "lucide-react"
 
 export default function ProfilePage() {
@@ -35,6 +35,9 @@ export default function ProfilePage() {
   const [telegramChatId, setTelegramChatId] = useState(user?.telegram_chat_id ?? "")
   const [notifyDaily, setNotifyDaily] = useState(user?.notify_daily ?? true)
   const [notifyHour, setNotifyHour] = useState(user?.notify_hour ?? 9)
+  const [whatsAppPhone, setWhatsAppPhone] = useState(user?.whatsapp_phone ?? "")
+  const [whatsAppOptIn, setWhatsAppOptIn] = useState(user?.whatsapp_opt_in ?? false)
+  const [whatsAppDaily, setWhatsAppDaily] = useState(user?.notify_whatsapp_daily ?? false)
   const [successMsg, setSuccessMsg] = useState("")
   const [errorMsg, setErrorMsg] = useState("")
 
@@ -51,6 +54,17 @@ export default function ProfilePage() {
       notify_hour: notifyHour,
     }),
     onSuccess: (updated) => { setUser(updated); flash("✅ Configuración de Telegram guardada") },
+    onError: (e: Error) => setErrorMsg(e.message),
+  })
+
+  const saveWhatsApp = useMutation({
+    mutationFn: () => api.updateWhatsApp(token!, { phone: whatsAppPhone.trim(), opt_in: whatsAppOptIn, notify_daily: whatsAppDaily }),
+    onSuccess: (updated) => { setUser(updated); flash("✅ Configuración de WhatsApp guardada") },
+    onError: (e: Error) => setErrorMsg(e.message),
+  })
+  const testWhatsApp = useMutation({
+    mutationFn: () => api.testWhatsApp(token!),
+    onSuccess: () => flash("✅ Mensaje de prueba enviado por WhatsApp"),
     onError: (e: Error) => setErrorMsg(e.message),
   })
 
@@ -102,6 +116,34 @@ export default function ProfilePage() {
           <p className="text-xs text-slate-400 mt-1">
             Miembro desde {new Date(user.created_at).toLocaleDateString("es-AR", { year: "numeric", month: "long" })}
           </p>
+        </div>
+
+        {/* WhatsApp config */}
+        <div className="bg-white rounded-2xl border border-slate-200 p-6">
+          <div className="flex items-center gap-2 mb-2">
+            <Smartphone className="w-5 h-5 text-emerald-600" />
+            <h2 className="text-base font-semibold text-slate-800">Alertas por WhatsApp</h2>
+          </div>
+          <p className="mb-5 text-sm text-slate-500">Recibí tus promos y alertas de precio por mensaje directo. Tu número se guarda cifrado.</p>
+          {!user.whatsapp_available ? <div className="rounded-xl border border-amber-200 bg-amber-50 px-4 py-3 text-sm text-amber-800">El canal WhatsApp está siendo configurado. Probá nuevamente más tarde.</div> : <div className="space-y-4">
+            <div>
+              <label className="mb-1.5 block text-sm font-medium text-slate-700">Tu número de WhatsApp</label>
+              <Input type="tel" placeholder="+5491123456789" value={whatsAppPhone} onChange={(e) => setWhatsAppPhone(e.target.value)} />
+              <p className="mt-1 text-xs text-slate-400">Formato internacional con +. Usaremos este número sólo para tus alertas.</p>
+            </div>
+            <label className="flex cursor-pointer items-start gap-3 rounded-xl border border-slate-200 bg-slate-50 p-3">
+              <input type="checkbox" checked={whatsAppOptIn} onChange={(e) => setWhatsAppOptIn(e.target.checked)} className="mt-0.5 h-4 w-4 accent-emerald-600" />
+              <span className="text-sm text-slate-700"><strong>Quiero recibir alertas por WhatsApp.</strong><br /><span className="text-xs text-slate-500">Acepto que PromoAR envíe mensajes al número indicado. Podés desactivarlo cuando quieras.</span></span>
+            </label>
+            <label className="flex items-center justify-between rounded-xl border border-slate-200 px-3 py-3">
+              <span className="text-sm font-medium text-slate-700">Digest diario por WhatsApp</span>
+              <input type="checkbox" disabled={!whatsAppOptIn} checked={whatsAppDaily} onChange={(e) => setWhatsAppDaily(e.target.checked)} className="h-4 w-4 accent-emerald-600 disabled:opacity-40" />
+            </label>
+            <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-5">
+              <Button variant="outline" onClick={() => testWhatsApp.mutate()} disabled={!whatsAppOptIn || testWhatsApp.isPending}>{testWhatsApp.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar prueba"}</Button>
+              <Button onClick={() => saveWhatsApp.mutate()} disabled={saveWhatsApp.isPending}>{saveWhatsApp.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</> : <><Save className="w-4 h-4" /> Guardar WhatsApp</>}</Button>
+            </div>
+          </div>}
         </div>
 
         {/* Payment methods */}

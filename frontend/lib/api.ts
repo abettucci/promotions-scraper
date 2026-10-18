@@ -110,6 +110,12 @@ export const api = {
   updateProfile: (token: string, data: { telegram_chat_id?: string; notify_daily?: boolean; notify_hour?: number }) =>
     fetchMutation<User>("PUT", "/api/auth/me", data, token),
 
+  updateWhatsApp: (token: string, data: { phone: string; opt_in: boolean; notify_daily: boolean }) =>
+    fetchMutation<User>("PUT", "/api/auth/me/whatsapp", data, token),
+
+  testWhatsApp: (token: string) =>
+    fetchMutation<{ ok: boolean }>("POST", "/api/auth/me/whatsapp/test", {}, token),
+
   updatePaymentMethods: (token: string, methods: PaymentMethod[]) =>
     fetchMutation<User>("PUT", "/api/auth/me/payment-methods", { methods }, token),
 

@@ -103,6 +103,10 @@ export interface User {
   telegram_chat_id: string | null
   notify_daily: boolean
   notify_hour: number
+  whatsapp_phone: string | null
+  whatsapp_opt_in: boolean
+  notify_whatsapp_daily: boolean
+  whatsapp_available: boolean
   payment_methods: PaymentMethod[]
   created_at: string
 }

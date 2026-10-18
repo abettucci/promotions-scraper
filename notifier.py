@@ -286,8 +286,10 @@ class TelegramNotifier:
         que aplican para su stack de tarjetas/billeteras en el día de hoy.
         """
         from database import UserDatabase
+        from whatsapp_notifier import WhatsAppNotifier, decrypt_phone
         db = UserDatabase()
         users = db.get_users_for_notification()
+        whatsapp = WhatsAppNotifier()
 
         if not users:
             print("ℹ️  No hay usuarios con Telegram configurado y notify_daily=True")
@@ -297,8 +299,9 @@ class TelegramNotifier:
         print(f"📤 Enviando digest personalizado a {len(users)} usuario(s) — {today}...")
 
         for user in users:
-            chat_id = user.get("telegram_chat_id")
-            if not chat_id:
+            chat_id = user.get("telegram_chat_id") if user.get("notify_daily") else None
+            whatsapp_phone = decrypt_phone(user.get("whatsapp_phone_ciphertext")) if user.get("whatsapp_opt_in") and user.get("notify_whatsapp_daily") else None
+            if not chat_id and not whatsapp_phone:
                 continue
 
             methods = db.get_user_payment_methods(user["id"])
@@ -311,10 +314,14 @@ class TelegramNotifier:
             )
             if not promos:
                 scope = " en tus supermercados habituales" if favorites else ""
-                self.send_message_to(chat_id, (
+                message = (
                     f"👋 ¡Buen {today}!\n\n"
                     f"ℹ️ Hoy no hay promociones activas{scope} para tus tarjetas y billeteras."
-                ))
+                )
+                if chat_id:
+                    self.send_message_to(chat_id, message)
+                if whatsapp_phone:
+                    whatsapp.send_message(whatsapp_phone, message)
                 continue
 
             # Agrupar por supermercado
@@ -333,7 +340,10 @@ class TelegramNotifier:
                 + (f"🛒 *Tu lista:* {', '.join(favorites)}\n" if favorites else "")
                 + f"{'─' * 32}\n"
             )
-            self.send_message_to(chat_id, header)
+            if chat_id:
+                self.send_message_to(chat_id, header)
+            if whatsapp_phone:
+                whatsapp.send_message(whatsapp_phone, header)
 
             for super_name, super_promos in by_super.items():
                 sm_emoji = SUPERMARKET_EMOJI.get(super_name.lower(), '🛒')
@@ -342,7 +352,11 @@ class TelegramNotifier:
                     lines.append(_format_promo(p))
                     lines.append("")
                 lines.append(f"_Total: {len(super_promos)} promoci{'ó' if len(super_promos)==1 else 'o'}nes_")
-                self.send_message_to(chat_id, "\n".join(lines))
+                message = "\n".join(lines)
+                if chat_id:
+                    self.send_message_to(chat_id, message)
+                if whatsapp_phone:
+                    whatsapp.send_message(whatsapp_phone, message)
 
             print(f"   ✅ Enviado a {user['email']} ({len(promos)} promos)")
 

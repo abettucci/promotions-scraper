@@ -339,6 +339,12 @@ PASSWORD_RESET_EXPIRY = int(os.getenv("PASSWORD_RESET_EXPIRY", "3600"))
 # Rate limit: máx pedidos de reset por user en 1 hora
 PASSWORD_RESET_MAX_PER_HOUR = int(os.getenv("PASSWORD_RESET_MAX_PER_HOUR", "3"))
 
+# WhatsApp Web sidecar. Se configura exclusivamente en Railway; nunca llega al
+# navegador ni se registra en logs.
+WHATSAPP_SIDECAR_URL = os.getenv("WHATSAPP_SIDECAR_URL", "").rstrip("/")
+WHATSAPP_SIDECAR_SECRET = os.getenv("WHATSAPP_SIDECAR_SECRET", "")
+PROFILE_ENCRYPTION_KEY = os.getenv("PROFILE_ENCRYPTION_KEY", "")
+
 # ============================================
 # AUTENTICACIÓN JWT
 # ============================================

@@ -81,7 +81,7 @@ PRICES_BASKET_EVERY_HOURS = float(os.getenv("PRICES_BASKET_EVERY_HOURS", "20"))
 PRICE_ALERTS_EVERY_HOURS = float(os.getenv("PRICE_ALERTS_EVERY_HOURS", "6"))
 
 
-def _prices_tick(history, user_db, notifier):
+def _prices_tick(history, user_db, notifier, whatsapp=None):
     """Una pasada: corre la canasta y/o revisa alertas si les toca."""
     from datetime import datetime, timedelta
     from prices.alerts import check_alerts, load_active_promotions
@@ -96,6 +96,7 @@ def _prices_tick(history, user_db, notifier):
         stats = check_alerts(
             user_db,
             lambda chat_id, text: notifier.send_message_to(chat_id, text, parse_mode="HTML"),
+            send_whatsapp=(lambda phone, text: whatsapp.send_message(phone, text)) if whatsapp else None,
             promotions=promotions,
         )
         history.set_meta("alerts_last_check", datetime.now().isoformat(timespec="seconds"))
@@ -106,14 +107,15 @@ def start_prices():
     """Hilo en background para la canasta de precios y las alertas."""
     from database import UserDatabase
     from notifier import TelegramNotifier
+    from whatsapp_notifier import WhatsAppNotifier
     from prices.history import PriceHistory
 
     def loop():
         time.sleep(120)  # que la API termine de arrancar
-        history, user_db, notifier = PriceHistory(), UserDatabase(), TelegramNotifier()
+        history, user_db, notifier, whatsapp = PriceHistory(), UserDatabase(), TelegramNotifier(), WhatsAppNotifier()
         while True:
             try:
-                _prices_tick(history, user_db, notifier)
+                _prices_tick(history, user_db, notifier, whatsapp)
             except Exception as error:  # el hilo no puede morir por una pasada fallida
                 print(f"[prices] Error: {type(error).__name__}: {error}")
             time.sleep(PRICES_TICK_SECONDS)

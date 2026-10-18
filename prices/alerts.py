@@ -133,7 +133,7 @@ def _message(alert: dict, best: dict, previous: float, reached_target: bool) -> 
     return "\n".join(lines)
 
 
-def check_alerts(user_db, send: Callable[[str, str], bool], *,
+def check_alerts(user_db, send: Callable[[str, str], bool], *, send_whatsapp: Optional[Callable[[str, str], bool]] = None,
                  search: Callable[..., dict] = search_prices,
                  promotions: Optional[list[dict]] = None) -> dict:
     """Revisa todas las alertas con consulta en vivo y avisa por Telegram.
@@ -178,6 +178,12 @@ def check_alerts(user_db, send: Callable[[str, str], bool], *,
         elif current < baseline * (1 - _MIN_DROP):
             message = _message(alert, best, baseline, False)
         user_db.update_price_alert_state(alert["id"], current, notified)
-        if message and send(alert["telegram_chat_id"], message):
-            stats["notified"] += 1
+        if message:
+            delivered = bool(alert.get("telegram_chat_id") and send(alert["telegram_chat_id"], message))
+            if send_whatsapp and alert.get("whatsapp_opt_in"):
+                from whatsapp_notifier import decrypt_phone
+                phone = decrypt_phone(alert.get("whatsapp_phone_ciphertext"))
+                delivered = bool(phone and send_whatsapp(phone, message)) or delivered
+            if delivered:
+                stats["notified"] += 1
     return stats
