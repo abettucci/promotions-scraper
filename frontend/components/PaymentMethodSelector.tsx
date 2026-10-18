@@ -29,12 +29,21 @@ export function PaymentMethodSelector({ catalog, selected, onChange }: Props) {
     if (isSelected(name)) {
       onChange(selected.filter((m) => m.name !== name))
     } else {
-      onChange([...selected, { name, type, card_mode: "both" }])
+      onChange([...selected, { name, type, card_mode: "both", tiers: [] }])
     }
   }
 
   const setCardMode = (name: string, cardMode: PaymentMethod["card_mode"]) => {
     onChange(selected.map((method) => method.name === name ? { ...method, card_mode: cardMode } : method))
+  }
+
+  const setTier = (name: string, tier: string) => {
+    onChange(selected.map((method) => method.name !== name ? method : {
+      ...method,
+      tiers: (method.tiers ?? []).includes(tier)
+        ? (method.tiers ?? []).filter((value) => value !== tier)
+        : [...(method.tiers ?? []), tier],
+    }))
   }
 
   const configurableMethods = selected.filter((method) => method.type === "bank" || method.type === "wallet")
@@ -89,27 +98,31 @@ export function PaymentMethodSelector({ catalog, selected, onChange }: Props) {
           <div className="space-y-2">
             {configurableMethods.map((method) => {
               const currentMode = method.card_mode ?? "both"
+              const tiers = catalog.tiers?.[method.name] ?? []
               return (
-                <div key={method.name} className="flex flex-col gap-2 rounded-lg border border-slate-200 bg-white px-3 py-2.5 sm:flex-row sm:items-center sm:justify-between">
-                  <span className="text-sm font-medium text-slate-700">{method.name}</span>
-                  <div className="grid grid-cols-3 rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
-                    {([
-                      ["credit", "Crédito"], ["debit", "Débito"], ["both", "Ambas"],
-                    ] as const).map(([mode, label]) => (
-                      <button
-                        key={mode}
-                        type="button"
-                        onClick={() => setCardMode(method.name, mode)}
-                        aria-pressed={currentMode === mode}
-                        className={cn(
-                          "rounded-md px-2.5 py-1.5 transition-colors",
-                          currentMode === mode ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:text-slate-900",
-                        )}
-                      >
-                        {label}
-                      </button>
-                    ))}
+                <div key={method.name} className="rounded-lg border border-slate-200 bg-white px-3 py-2.5">
+                  <div className="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+                    <span className="text-sm font-medium text-slate-700">{method.name}</span>
+                    <div className="grid grid-cols-3 rounded-lg border border-slate-200 bg-slate-100 p-0.5 text-xs font-medium">
+                      {([
+                        ["credit", "Crédito"], ["debit", "Débito"], ["both", "Ambas"],
+                      ] as const).map(([mode, label]) => (
+                        <button key={mode} type="button" onClick={() => setCardMode(method.name, mode)} aria-pressed={currentMode === mode}
+                          className={cn("rounded-md px-2.5 py-1.5 transition-colors", currentMode === mode ? "bg-slate-900 text-white shadow-sm" : "text-slate-600 hover:text-slate-900")}>{label}</button>
+                      ))}
+                    </div>
                   </div>
+                  {tiers.length > 0 && <div className="mt-3 border-t border-slate-100 pt-2.5">
+                    <p className="mb-1.5 text-[11px] font-semibold uppercase tracking-wide text-slate-400">Nivel, plan o paquete</p>
+                    <div className="flex flex-wrap gap-1.5">
+                      {tiers.map((tier) => {
+                        const active = (method.tiers ?? []).includes(tier.id)
+                        return <button key={tier.id} type="button" onClick={() => setTier(method.name, tier.id)} aria-pressed={active}
+                          className={cn("rounded-full border px-2.5 py-1 text-xs font-medium transition-colors", active ? "border-amber-500 bg-amber-50 text-amber-800" : "border-slate-200 bg-white text-slate-600 hover:border-slate-300")}>{tier.label}</button>
+                      })}
+                    </div>
+                    <p className="mt-1.5 text-xs text-slate-400">Si no elegís uno, se ocultarán beneficios que exijan expresamente un nivel especial.</p>
+                  </div>}
                 </div>
               )
             })}

@@ -218,6 +218,21 @@ class PaymentMethod(BaseModel):
     name: str
     type: Literal["bank", "wallet", "club"]
     card_mode: Literal["credit", "debit", "both"] = "both"
+    tiers: List[str] = []
+
+    @field_validator("tiers")
+    @classmethod
+    def validate_tiers(cls, values: List[str]) -> List[str]:
+        if len(values) > 8:
+            raise ValueError("Demasiados niveles para una entidad")
+        clean: list[str] = []
+        for value in values:
+            value = str(value or "").strip().lower()
+            if not re.fullmatch(r"[a-z0-9_]{1,40}", value):
+                raise ValueError("Nivel de cuenta inválido")
+            if value not in clean:
+                clean.append(value)
+        return clean
 
 class UpdatePaymentMethodsBody(BaseModel):
     methods: List[PaymentMethod]
@@ -591,7 +606,12 @@ def update_me(body: UpdateProfileBody, current_user=Depends(get_current_user)):
 
 @app.put("/api/auth/me/payment-methods")
 def update_payment_methods(body: UpdatePaymentMethodsBody, current_user=Depends(get_current_user)):
-    methods = [{"name": m.name, "type": m.type, "card_mode": m.card_mode} for m in body.methods]
+    methods = []
+    for method in body.methods:
+        allowed = {tier["id"] for tier in config.PAYMENT_METHODS_TIERS.get(method.name, [])}
+        if any(tier not in allowed for tier in method.tiers):
+            raise HTTPException(422, f"Nivel inválido para {method.name}")
+        methods.append({"name": method.name, "type": method.type, "card_mode": method.card_mode, "tiers": method.tiers})
     _db.set_user_payment_methods(current_user["id"], methods)
     updated = _db.get_user_by_id(current_user["id"])
     return _user_response(updated)
@@ -920,7 +940,7 @@ def delete_price_alert(alert_id: int, current_user=Depends(get_current_user)):
 # ── Catálogo de medios de pago ────────────────────────────────────────────────
 @app.get("/api/catalog/payment-methods")
 def get_payment_methods_catalog():
-    return config.PAYMENT_METHODS_CATALOG
+    return {**config.PAYMENT_METHODS_CATALOG, "tiers": config.PAYMENT_METHODS_TIERS}
 
 # ---------------------------------------------------------------------------
 # GET /api/promotions

@@ -413,6 +413,35 @@ PAYMENT_METHODS_CATALOG = {
     ],
 }
 
+# Niveles que una persona puede declarar para cada entidad. Son productos y
+# segmentos publicados por las entidades, no una lista de promociones: las
+# condiciones de cada beneficio siguen siendo la fuente de verdad.
+PAYMENT_METHODS_TIERS = {
+    "Brubank": [
+        {"id": "plus", "label": "Plan Plus"},
+        {"id": "ultra", "label": "Plan Ultra"},
+    ],
+    "Banco Galicia": [
+        {"id": "eminent", "label": "Éminent"},
+        {"id": "eminent_black", "label": "Éminent Black"},
+        {"id": "haberes", "label": "Plan Sueldo / Haberes"},
+    ],
+    "Santander": [
+        {"id": "select_platinum", "label": "Select Platinum"},
+        {"id": "select_black", "label": "Select Black"},
+        {"id": "plan_sueldo", "label": "Plan Sueldo"},
+    ],
+    "Macro": [{"id": "selecta", "label": "Macro Selecta"}],
+    "Banco Patagonia": [
+        {"id": "plan_sueldo_plus", "label": "Plan Sueldo Plus"},
+        {"id": "plan_sueldo_singular", "label": "Plan Sueldo Singular"},
+    ],
+    "Comafi": [
+        {"id": "premium", "label": "Premium / Platinum"},
+        {"id": "unico_black", "label": "Único Black / Signature"},
+    ],
+}
+
 CLUBS_KEYWORDS = [
     'anses', 'jubilados', 'pami', 'soy tigre', 'cencosud', 'naranja',
     'club la nacion', 'club personal', 'clarin 365', 'club cencosud',

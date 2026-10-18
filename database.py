@@ -317,6 +317,7 @@ class Database:
                 entity_name TEXT NOT NULL,
                 entity_type TEXT NOT NULL,
                 card_mode TEXT NOT NULL DEFAULT 'both',
+                tiers_json TEXT NOT NULL DEFAULT '[]',
                 UNIQUE(user_id, entity_name)
             )
         """)
@@ -922,6 +923,7 @@ class UserDatabase:
                 entity_name TEXT NOT NULL,
                 entity_type TEXT NOT NULL,
                 card_mode TEXT NOT NULL DEFAULT 'both',
+                tiers_json TEXT NOT NULL DEFAULT '[]',
                 UNIQUE(user_id, entity_name)
             );
             CREATE TABLE IF NOT EXISTS user_favorite_stores (
@@ -966,6 +968,10 @@ class UserDatabase:
         """)
         try:
             conn.execute("ALTER TABLE user_payment_methods ADD COLUMN card_mode TEXT NOT NULL DEFAULT 'both'")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("ALTER TABLE user_payment_methods ADD COLUMN tiers_json TEXT NOT NULL DEFAULT '[]'")
         except sqlite3.OperationalError:
             pass
         conn.commit()
@@ -1035,9 +1041,13 @@ class UserDatabase:
         conn = self._conn()
         conn.execute("DELETE FROM user_payment_methods WHERE user_id = ?", (user_id,))
         conn.executemany(
-            "INSERT OR IGNORE INTO user_payment_methods (user_id, entity_name, entity_type, card_mode) VALUES (?, ?, ?, ?)",
+            "INSERT OR IGNORE INTO user_payment_methods (user_id, entity_name, entity_type, card_mode, tiers_json) VALUES (?, ?, ?, ?, ?)",
             [
-                (user_id, m["name"], m["type"], m.get("card_mode") if m.get("card_mode") in {"credit", "debit", "both"} else "both")
+                (
+                    user_id, m["name"], m["type"],
+                    m.get("card_mode") if m.get("card_mode") in {"credit", "debit", "both"} else "both",
+                    json.dumps(m.get("tiers") if isinstance(m.get("tiers"), list) else [], ensure_ascii=False),
+                )
                 for m in methods if m.get("name") and m.get("type")
             ],
         )
@@ -1047,11 +1057,19 @@ class UserDatabase:
     def get_user_payment_methods(self, user_id: int) -> List[Dict]:
         conn = self._conn()
         rows = conn.execute(
-            "SELECT entity_name AS name, entity_type AS type, card_mode FROM user_payment_methods WHERE user_id = ?",
+            "SELECT entity_name AS name, entity_type AS type, card_mode, tiers_json FROM user_payment_methods WHERE user_id = ?",
             (user_id,),
         ).fetchall()
         conn.close()
-        return [dict(r) for r in rows]
+        methods = []
+        for row in rows:
+            method = dict(row)
+            try:
+                method["tiers"] = json.loads(method.pop("tiers_json") or "[]")
+            except (TypeError, json.JSONDecodeError):
+                method["tiers"] = []
+            methods.append(method)
+        return methods
 
     MAX_FAVORITE_STORES_PER_USER = 12
 

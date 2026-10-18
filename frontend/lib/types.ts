@@ -94,6 +94,7 @@ export interface PaymentMethod {
   name: string
   type: "bank" | "wallet" | "club"
   card_mode: "credit" | "debit" | "both"
+  tiers: string[]
 }
 
 export interface User {
@@ -115,6 +116,7 @@ export interface PaymentMethodsCatalog {
   bank: string[]
   wallet: string[]
   club: string[]
+  tiers: Record<string, { id: string; label: string }[]>
 }
 
 export interface MyPromotionsResponse {
