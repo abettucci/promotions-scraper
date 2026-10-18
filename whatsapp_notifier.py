@@ -64,19 +64,24 @@ class WhatsAppNotifier:
             return False
         # WhatsApp Web no interpreta HTML de Telegram; entregamos texto plano.
         plain = re.sub(r"<[^>]+>", "", str(text or "")).strip()
-        if not plain or len(plain) > 3900:
+        if not plain:
             return False
-        try:
-            response = requests.post(
-                f"{self.url}/send",
-                json={"chat_id": chat_id, "chat_type": "private", "text": plain},
-                headers={"Authorization": f"Bearer {self.secret}", "Content-Type": "application/json"},
-                timeout=(5, 15),
-            )
-            if not response.ok:
-                print(f"⚠️ WhatsApp sidecar respondió {response.status_code}")
+        for chunk in _chunks(plain):
+            try:
+                response = requests.post(
+                    f"{self.url}/send",
+                    json={"chat_id": chat_id, "chat_type": "private", "text": chunk},
+                    headers={"Authorization": f"Bearer {self.secret}", "Content-Type": "application/json"},
+                    timeout=(5, 15),
+                )
+                if not response.ok:
+                    print(f"⚠️ WhatsApp sidecar respondió {response.status_code}")
+                    return False
+            except requests.RequestException as error:
+                print(f"⚠️ WhatsApp sidecar no disponible: {type(error).__name__}")
                 return False
-            return True
-        except requests.RequestException as error:
-            print(f"⚠️ WhatsApp sidecar no disponible: {type(error).__name__}")
-            return False
+        return True
+
+
+def _chunks(text: str, size: int = 3900) -> list[str]:
+    return [text[index:index + size] for index in range(0, len(text), size)]
