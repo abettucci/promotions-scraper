@@ -69,10 +69,14 @@ export const api = {
   getTodayPromotions: () => fetchJSON<TodayResponse>("/api/promotions/today"),
   getBanks: (filters?: {
     supermarket?: string; day?: string; category?: string
-    discount_type?: string; state?: string; modality?: string; mobility_kind?: string
+    discount_type?: string; state?: string; modality?: string; mobility_kind?: string; search?: string
   }) => fetchJSON<Bank[]>("/api/banks", filters as Record<string, string | undefined>),
-  getSupermarkets: (category?: string) =>
-    fetchJSON<Supermarket[]>("/api/supermarkets", category ? { category } : undefined),
+  getSupermarkets: (category?: string, filters?: {
+    bank?: string; day?: string; search?: string; discount_type?: string
+    state?: string; modality?: string; mobility_kind?: string
+  }) => fetchJSON<Supermarket[]>("/api/supermarkets", {
+    ...(category ? { category } : {}), ...filters,
+  }),
   getStats: () => fetchJSON<Stats>("/api/stats"),
   searchPrices: (params: { q: string; category?: string; mine?: boolean; qty?: number; limit?: number }, token?: string | null) =>
     fetchJSON<PriceSearchResponse>("/api/prices/search", params, token),
@@ -114,7 +118,7 @@ export const api = {
     fetchMutation<User>("PUT", "/api/auth/me/whatsapp", data, token),
 
   testWhatsApp: (token: string) =>
-    fetchMutation<{ ok: boolean }>("POST", "/api/auth/me/whatsapp/test", {}, token),
+    fetchMutation<{ ok: boolean; promos: number }>("POST", "/api/auth/me/whatsapp/test", {}, token),
 
   updatePaymentMethods: (token: string, methods: PaymentMethod[]) =>
     fetchMutation<User>("PUT", "/api/auth/me/payment-methods", { methods }, token),

@@ -73,8 +73,10 @@ class MobilityScraper(BaseScraper):
             try:
                 response = await loop.run_in_executor(None, lambda q=term: requests.get(
                     _SEARCH_URL,
-                    params={"search_text": q, "fcalcstatus": "RUNNING", "limit": 50,
-                            "source": "web_modo", "origin": "WEB_MODO"},
+                    # MODO's current v2 search API expects ``query`` and
+                    # ``status``. The old search_text/fcalcstatus/source keys
+                    # now return HTTP 400, silently dropping all transit offers.
+                    params={"query": q, "status": "RUNNING", "limit": 50, "page": 1},
                     headers=_HEADERS, timeout=25,
                 ))
                 response.raise_for_status()
@@ -127,7 +129,9 @@ class MobilityScraper(BaseScraper):
             return None
 
         provider = next((label for label, pattern in _PROVIDERS if re.search(pattern, haystack, re.I)), None)
-        transit = bool(re.search(r"\b(transporte|sube|colectivo|subte|tren|viaje con qr)\b", haystack, re.I))
+        transit = bool(re.search(
+            r"\b(transporte|sube|colectivos?|subtes?|trenes?|viaje con qr)\b", haystack, re.I
+        ))
         if not provider and not transit:
             return None
 

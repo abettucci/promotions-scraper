@@ -662,15 +662,54 @@ def update_my_whatsapp(body: UpdateWhatsAppBody, current_user=Depends(get_curren
 
 @app.post("/api/auth/me/whatsapp/test")
 def test_my_whatsapp(current_user=Depends(get_current_user)):
+    """Envía el digest de hoy sólo al WhatsApp guardado por este usuario."""
     if not _whatsapp_is_ready():
         raise HTTPException(503, "WhatsApp no está disponible temporalmente")
     phone = _decrypt_profile_value(current_user.get("whatsapp_phone_ciphertext"))
     if not phone or not current_user.get("whatsapp_opt_in"):
         raise HTTPException(400, "Primero guardá tu teléfono y aceptá recibir alertas por WhatsApp")
+    methods = _db.get_user_payment_methods(current_user["id"])
+    if not methods:
+        raise HTTPException(400, "Configurá al menos una tarjeta o billetera para generar tu digest personalizado")
+
+    from notifier import _today_name, _format_promo, SUPERMARKET_EMOJI
     from whatsapp_notifier import WhatsAppNotifier
-    if not WhatsAppNotifier().send_message(phone, "✅ PromoAR conectado. Recibirás sólo las alertas que actives en tu perfil."):
-        raise HTTPException(502, "No se pudo enviar el mensaje de prueba")
-    return {"ok": True}
+    promos = _db.get_promotions_for_user(
+        current_user["id"], today_only=True, favorite_stores_only=True,
+    )
+    today = _today_name()
+    if not promos:
+        favorites = _db.get_user_favorite_stores(current_user["id"])
+        scope = " en tus supermercados habituales" if favorites else ""
+        message = (
+            f"👋 ¡Buen {today}!\n\n"
+            f"ℹ️ Hoy no hay promociones activas{scope} para tus tarjetas y billeteras."
+        )
+    else:
+        method_names = ", ".join(method["name"] for method in methods[:4])
+        if len(methods) > 4:
+            method_names += f" +{len(methods) - 4} más"
+        favorites = _db.get_user_favorite_stores(current_user["id"])
+        grouped: dict[str, list] = {}
+        for promo in promos:
+            grouped.setdefault(promo["supermarket_name"], []).append(promo)
+
+        sections = [
+            f"👋 ¡Buen {today}!\n🎯 *Tus promos de hoy* ({method_names})"
+            + (f"\n🛒 *Tu lista:* {', '.join(favorites)}" if favorites else "")
+        ]
+        for supermarket, supermarket_promos in grouped.items():
+            emoji = SUPERMARKET_EMOJI.get(supermarket.lower(), "🛒")
+            lines = [f"{emoji} *{supermarket}*"]
+            for promo in supermarket_promos:
+                lines.extend([_format_promo(promo), ""])
+            lines.append(f"_Total: {len(supermarket_promos)} promoción{'es' if len(supermarket_promos) != 1 else ''}_")
+            sections.append("\n".join(lines))
+        message = "\n\n".join(sections)
+
+    if not WhatsAppNotifier().send_message(phone, message):
+        raise HTTPException(502, "No se pudo enviar el digest de prueba por WhatsApp")
+    return {"ok": True, "promos": len(promos)}
 
 
 @app.put("/api/auth/me/payment-methods")
@@ -1276,6 +1315,7 @@ def get_banks(
     state: Optional[str] = Query("activa"),
     modality: Optional[str] = Query(None),
     mobility_kind: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=120),
 ):
     today_iso = date.today().isoformat()
 
@@ -1348,6 +1388,10 @@ def get_banks(
         elif discount_type == "cashback":
             conditions.append("(LOWER(p.discount) LIKE '%cashback%' OR LOWER(p.discount) LIKE '%reintegro%')")
 
+    if search:
+        conditions.append("(LOWER(p.title) LIKE ? OR LOWER(p.terms_raw) LIKE ?)")
+        params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
+
     where = " AND ".join(conditions)
 
     # Redes de pago (no son bancos emisores) — se excluyen del dropdown de bancos
@@ -1382,16 +1426,96 @@ def get_banks(
 # GET /api/supermarkets
 # ---------------------------------------------------------------------------
 @app.get("/api/supermarkets")
-def get_supermarkets(category: Optional[str] = Query(None)):
+def get_supermarkets(
+    category: Optional[str] = Query(None),
+    bank: Optional[str] = Query(None),
+    day: Optional[str] = Query(None),
+    search: Optional[str] = Query(None, max_length=120),
+    discount_type: Optional[str] = Query(None),
+    state: Optional[str] = Query("activa"),
+    modality: Optional[str] = Query(None),
+    mobility_kind: Optional[str] = Query(None),
+):
     conn = get_conn()
     today_iso = date.today().isoformat()
     category_expr = "COALESCE(s.category, 'supermarket')" if _HAS_SUPERMARKET_CATEGORY else "'supermarket'"
+    promo_conditions = ["p.is_active = 1"]
+    promo_params: list = []
+    state_norm = (state or "activa").lower().strip()
+    if state_norm == "proxima":
+        promo_conditions.append("p.valid_from IS NOT NULL AND p.valid_from != '' AND p.valid_from > ?")
+        promo_params.append(today_iso)
+    elif state_norm == "finalizada":
+        promo_conditions.append("p.valid_until IS NOT NULL AND p.valid_until != '' AND p.valid_until < ?")
+        promo_params.append(today_iso)
+    else:
+        promo_conditions.extend([
+            "(p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)",
+            "(p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)",
+        ])
+        promo_params.extend([today_iso, today_iso])
+
+    _append_category_filter(promo_conditions, promo_params, category)
+
+    if bank:
+        promo_conditions.append(
+            "(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? OR LOWER(COALESCE(p.payment_method,'')) LIKE ?)"
+        )
+        promo_params.extend([f"%{bank.lower()}%"] * 3)
+
+    if day:
+        days = [value.strip().lower() for value in day.split(",") if value.strip()]
+        if days:
+            variants: list[str] = []
+            for value in days:
+                variants.append(value)
+                accent_free = _strip_accents(value)
+                if accent_free != value:
+                    variants.append(accent_free)
+            day_clauses = ["LOWER(p.valid_days) LIKE ?" for _ in variants]
+            day_clauses.extend(["LOWER(p.valid_days) LIKE ?", "p.valid_days IS NULL", "p.valid_days = ''"])
+            promo_conditions.append("(" + " OR ".join(day_clauses) + ")")
+            promo_params.extend([f"%{value}%" for value in variants])
+            promo_params.append("%todos los d%")
+
+    if modality:
+        modalities = [value.strip().lower() for value in modality.split(",") if value.strip()]
+        modality_clauses = []
+        for value in modalities:
+            if value == "online":
+                modality_clauses.append(
+                    "(LOWER(p.store_types) LIKE '%online%' OR LOWER(p.store_types) LIKE '%.com%' "
+                    "OR LOWER(p.store_types) LIKE '%web%' OR LOWER(p.store_types) LIKE '%app%')"
+                )
+            elif value == "presencial":
+                modality_clauses.append(
+                    "(p.store_types IS NULL OR p.store_types = '' OR (LOWER(p.store_types) NOT LIKE '%online%' "
+                    "AND LOWER(p.store_types) NOT LIKE '%.com%' AND LOWER(p.store_types) NOT LIKE '%web%'))"
+                )
+        if modality_clauses:
+            promo_conditions.append("(" + " OR ".join(modality_clauses) + ")")
+
+    if mobility_kind in {"ride_hailing", "public_transit"}:
+        promo_conditions.append("p.mobility_kind = ?")
+        promo_params.append(mobility_kind)
+
+    if discount_type == "percent":
+        promo_conditions.append("p.discount LIKE '%\\%%' ESCAPE '\\'")
+    elif discount_type == "cuotas":
+        promo_conditions.append("LOWER(p.discount) LIKE '%cuota%'")
+    elif discount_type == "cashback":
+        promo_conditions.append("(LOWER(p.discount) LIKE '%cashback%' OR LOWER(p.discount) LIKE '%reintegro%')")
+
+    if search:
+        promo_conditions.append("(LOWER(p.title) LIKE ? OR LOWER(p.terms_raw) LIKE ?)")
+        promo_params.extend([f"%{search.lower()}%", f"%{search.lower()}%"])
+
     where = ""
-    params: list = []
+    category_params: list = []
     if category:
         if _HAS_SUPERMARKET_CATEGORY:
             where = "WHERE LOWER(COALESCE(s.category, 'supermarket')) = ?"
-            params.append(category.lower())
+            category_params.append(category.lower())
         elif category.lower() != "supermarket":
             where = "WHERE 1 = 0"
     rows = conn.execute(f"""
@@ -1400,14 +1524,12 @@ def get_supermarkets(category: Optional[str] = Query(None)):
                COUNT(p.id) AS active_promotions
         FROM supermarkets s
         LEFT JOIN promotions p ON s.id = p.supermarket_id
-            AND p.is_active = 1
-            AND (p.valid_until IS NULL OR p.valid_until = '' OR p.valid_until >= ?)
-            AND (p.valid_from IS NULL OR p.valid_from = '' OR p.valid_from <= ?)
+            AND {' AND '.join(promo_conditions)}
         {where}
         GROUP BY s.id
         HAVING active_promotions > 0
         ORDER BY active_promotions DESC
-    """, [today_iso, today_iso] + params).fetchall()
+    """, promo_params + category_params).fetchall()
     conn.close()
     return [dict(r) for r in rows]
 

@@ -64,7 +64,9 @@ export default function ProfilePage() {
   })
   const testWhatsApp = useMutation({
     mutationFn: () => api.testWhatsApp(token!),
-    onSuccess: () => flash("✅ Mensaje de prueba enviado por WhatsApp"),
+    onSuccess: ({ promos }) => flash(promos > 0
+      ? `✅ Digest de hoy enviado por WhatsApp (${promos} promos)`
+      : "✅ Digest enviado: hoy no hay promos para tus medios de pago"),
     onError: (e: Error) => setErrorMsg(e.message),
   })
 
@@ -139,8 +141,9 @@ export default function ProfilePage() {
               <span className="text-sm font-medium text-slate-700">Digest diario por WhatsApp</span>
               <input type="checkbox" disabled={!whatsAppOptIn} checked={whatsAppDaily} onChange={(e) => setWhatsAppDaily(e.target.checked)} className="h-4 w-4 accent-emerald-600 disabled:opacity-40" />
             </label>
+            <p className="text-xs text-slate-500">La prueba envía sólo a tu número guardado las promos de hoy que coinciden con tus tarjetas y supermercados habituales.</p>
             <div className="flex flex-wrap justify-end gap-2 border-t border-slate-100 pt-5">
-              <Button variant="outline" onClick={() => testWhatsApp.mutate()} disabled={!whatsAppOptIn || testWhatsApp.isPending}>{testWhatsApp.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Enviar prueba"}</Button>
+              <Button variant="outline" onClick={() => testWhatsApp.mutate()} disabled={!whatsAppOptIn || testWhatsApp.isPending}>{testWhatsApp.isPending ? <Loader2 className="w-4 h-4 animate-spin" /> : "Probar digest de hoy"}</Button>
               <Button onClick={() => saveWhatsApp.mutate()} disabled={saveWhatsApp.isPending}>{saveWhatsApp.isPending ? <><Loader2 className="w-4 h-4 animate-spin" /> Guardando...</> : <><Save className="w-4 h-4" /> Guardar WhatsApp</>}</Button>
             </div>
           </div>}

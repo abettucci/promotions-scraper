@@ -2,14 +2,15 @@
 
 import { Skeleton } from "@/components/ui/skeleton"
 import { Tag, Building2, Landmark, Clock } from "lucide-react"
-import type { Stats } from "@/lib/types"
+import type { Category, Stats } from "@/lib/types"
 
 interface Props {
   stats: Stats | null
   loading: boolean
+  category: Category
 }
 
-export function StatsBar({ stats, loading }: Props) {
+export function StatsBar({ stats, loading, category }: Props) {
   if (loading) {
     return (
       <div className="grid grid-cols-2 sm:grid-cols-4 gap-3">
@@ -34,7 +35,7 @@ export function StatsBar({ stats, loading }: Props) {
     : "–"
 
   const items = [
-    { icon: Tag, label: "Promociones activas", value: stats.total_promotions.toLocaleString("es-AR") },
+    { icon: Tag, label: "Promociones activas", value: (stats.by_category?.[category] ?? 0).toLocaleString("es-AR") },
     { icon: Building2, label: "Comercios", value: stats.total_supermarkets },
     { icon: Landmark, label: "Bancos / Wallets", value: stats.total_banks },
     { icon: Clock, label: "Actualizado", value: lastUpdated },

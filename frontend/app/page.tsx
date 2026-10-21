@@ -49,16 +49,28 @@ export default function Home() {
 
   const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ["stats"], queryFn: api.getStats })
   const { data: banks = [] } = useQuery({
-    queryKey: ["banks", category, filters.supermarket, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind],
+    queryKey: ["banks", category, filters.supermarket, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
     queryFn: () => api.getBanks({
       category, supermarket: filters.supermarket || undefined,
       day: filters.days.length ? filters.days.join(",") : undefined,
       discount_type: filters.discount_type || undefined, state: filters.state || undefined,
       modality: filters.modality.length ? filters.modality.join(",") : undefined,
       mobility_kind: filters.mobility_kind || undefined,
+      search: filters.search || undefined,
     }),
   })
-  const { data: supermarkets = [] } = useQuery({ queryKey: ["supermarkets", category], queryFn: () => api.getSupermarkets(category) })
+  const { data: supermarkets = [] } = useQuery({
+    queryKey: ["supermarkets", category, filters.bank, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
+    queryFn: () => api.getSupermarkets(category, {
+      bank: filters.bank || undefined,
+      day: filters.days.length ? filters.days.join(",") : undefined,
+      discount_type: filters.discount_type || undefined,
+      state: filters.state || undefined,
+      modality: filters.modality.length ? filters.modality.join(",") : undefined,
+      mobility_kind: filters.mobility_kind || undefined,
+      search: filters.search || undefined,
+    }),
+  })
   const { data: promos, isLoading: promosLoading, isFetching, error } = useQuery({
     queryKey: ["promotions", filters, myPromosMode, category],
     queryFn: () => {
@@ -131,7 +143,7 @@ export default function Home() {
             </div>
             <aside className="grid gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-1" aria-label="Resumen de PromoAR">
               <div className="p-4"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Categoría</p><p className="mt-1 text-lg font-semibold">{category === "fuel" ? "Combustible" : category === "mobility" ? "Movilidad" : "Supermercados"}</p></div>
-              <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Promos activas</p><p className="mt-1 text-lg font-semibold">{statsLoading ? "…" : (stats?.by_category?.[category] ?? stats?.total_promotions ?? 0).toLocaleString("es-AR")}</p></div>
+              <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Promos activas</p><p className="mt-1 text-lg font-semibold">{statsLoading ? "…" : (stats?.by_category?.[category] ?? 0).toLocaleString("es-AR")}</p></div>
               <div className="border-white/10 p-4 sm:border-l lg:border-l-0 lg:border-t"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Buscá por</p><p className="mt-1 text-sm font-medium">Banco, día o comercio</p></div>
             </aside>
           </div>
@@ -141,7 +153,7 @@ export default function Home() {
           {["Vigencia y condiciones a la vista", "Topes y medios de pago claros", "Datos extraídos de sitios oficiales"].map((item) => <p key={item} className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-[#2758d8]" aria-hidden="true" />{item}</p>)}
         </div>
 
-        <StatsBar stats={stats ?? null} loading={statsLoading} />
+        <StatsBar stats={stats ?? null} loading={statsLoading} category={category} />
 
         {!myPromosMode && <section className="surface enter rounded-2xl p-4 sm:p-6" style={{ animationDelay: "70ms" }}><div className="mb-5 flex items-end justify-between gap-4"><div><p className="eyebrow">Explorá beneficios</p><h2 className="display mt-1 text-xl font-semibold tracking-[-0.045em] text-[#102a4c]">Encontrá cómo te conviene pagar</h2></div><button onClick={toggleTodayOnly} className="hidden text-sm font-semibold text-[#2758d8] hover:text-[#102a4c] sm:block">Solo hoy</button></div><FilterBar key={category} filters={filters} banks={banks} supermarkets={supermarkets} category={category} onChange={updateFilters} onReset={resetFilters} totalResults={promos?.total ?? 0} loading={isFetching} /></section>}
 
