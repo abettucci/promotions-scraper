@@ -32,6 +32,8 @@ _MERCHANTS = [
     (r'chango\s*mas',         'Más Online (ChangoMás)', 'ChangoMás'),
     (r'carrefour',            'Carrefour',              'Carrefour'),
     (r'\bjumbo\b',            'Jumbo (Cencosud)',       'Jumbo'),
+    (r'\bdisco\b',            'Disco',                  'Disco'),
+    (r'\bvea\b',              'Vea',                    'Vea'),
     (r'diarco barrio',        'Diarco',                 'Diarco Barrio'),
     (r'diarco mayorista',     'Diarco',                 'Diarco Mayorista'),
     (r'\bdiarco\b',           'Diarco',                 'Diarco'),

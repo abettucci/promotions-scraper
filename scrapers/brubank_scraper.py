@@ -33,6 +33,8 @@ _MERCHANTS = [
     (r'\bcoto\b',            'Coto Digital',           'supermarket', 'coto'),
     (r'carrefour',           'Carrefour',              'supermarket', 'carrefour'),
     (r'\bjumbo\b',           'Jumbo (Cencosud)',       'supermarket', 'jumbo'),
+    (r'\bdisco\b',           'Disco',                  'supermarket', 'disco'),
+    (r'\bvea\b',             'Vea',                    'supermarket', 'vea'),
     (r'chango\s*mas|masonline|mas online', 'Más Online (ChangoMás)', 'supermarket', 'changomas'),
     (r'\bdia\b',             'Supermercados Día',      'supermarket', None),
     (r'\baxion\b',           'Axion',                  'fuel',        'axion'),
@@ -172,7 +174,11 @@ class BrubankScraper(BaseScraper):
         for card in cards:
             if card.get('href'):
                 articles.setdefault(self._article_key(card['href']), {'url': card['href'], 'card': card})
-        for query in sorted({c['query'] for c in cards if c.get('query')} | {'axion', 'ypf', 'coto', 'shell'}):
+        for query in sorted(
+            {c['query'] for c in cards if c.get('query')}
+            | {'axion', 'ypf', 'shell', 'carrefour', 'coto', 'dia', 'disco',
+               'jumbo', 'vea', 'changomas'}
+        ):
             for href in await loop.run_in_executor(None, lambda q=query: self._search_help(q)):
                 articles.setdefault(self._article_key(href), {'url': href, 'card': None, 'query': query})
 

@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-Scraper de Cencosud (Jumbo) - Promociones Bancarias
+Scraper independiente de promociones bancarias de Jumbo, Disco y Vea (Cencosud)
 
 La página https://www.jumbo.com.ar/descuentos-del-dia se arma desde un único
 documento de VTEX Master Data (entidad JN, id "bankDiscount"). Su campo `value`
@@ -8,8 +8,9 @@ es un JSON string con ~200 promos compartidas entre Jumbo, Disco y Vea.
 
 Flujo:
   1. GET /api/dataentities/JN/documents/bankDiscount (requests, sin navegador).
-  2. Filtrar las promos del sitio Jumbo ('jumboargentinaio' en websites) vigentes
-     hoy (dateStart <= ahora <= dateEnd, epoch).
+  2. Filtrar por separado el identificador del sitio solicitado (Jumbo:
+     'jumboargentinaio', Disco: 'discoargentina', Vea: 'veaargentina') y por
+     vigencia (dateStart <= ahora <= dateEnd, epoch).
   3. Una promo por item: el item ya trae todos sus días (antes se scrapeaba el
      DOM día por día y el dedup cruzado dejaba un solo día por promo).
 
@@ -29,7 +30,12 @@ from typing import Any, Dict, List, Optional, Tuple
 
 
 _API_URL = 'https://www.jumbo.com.ar/api/dataentities/JN/documents/bankDiscount'
-_WEBSITE = 'jumboargentinaio'
+_STORES = {
+    'cencosud': ('jumboargentinaio', 'https://www.jumbo.com.ar/descuentos-del-dia'),
+    'jumbo': ('jumboargentinaio', 'https://www.jumbo.com.ar/descuentos-del-dia'),
+    'disco': ('discoargentina', 'https://www.disco.com.ar/descuentos-del-dia'),
+    'vea': ('veaargentina', 'https://www.vea.com.ar/descuentos-del-dia'),
+}
 _HTTP_HEADERS = {
     'User-Agent': (
         'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 '
@@ -97,9 +103,12 @@ def _fmt_amount(raw: str) -> Optional[str]:
 
 
 class CencosudScraper:
-    def __init__(self):
-        self.name = 'Jumbo (Cencosud)'
-        self.base_url = 'https://www.jumbo.com.ar/descuentos-del-dia'
+    def __init__(self, store_key: str = 'cencosud'):
+        if store_key not in _STORES:
+            raise ValueError(f'Tienda Cencosud no reconocida: {store_key}')
+        self.store_key = store_key
+        self.website, self.base_url = _STORES[store_key]
+        self.name = {'disco': 'Disco', 'vea': 'Vea'}.get(store_key, 'Jumbo (Cencosud)')
 
     async def scrape(self) -> List[Dict]:
         print(f"\n🔍 Scraping {self.name}...")
@@ -110,7 +119,7 @@ class CencosudScraper:
             print(f"   ⚠️ No se pudo consultar bankDiscount: {type(e).__name__}")
             return []
 
-        promotions = self.parse_items(items)
+        promotions = self.parse_items(items, website=self.website)
         print(f"✅ {self.name}: {len(promotions)} promociones encontradas")
         return promotions
 
@@ -137,8 +146,9 @@ class CencosudScraper:
     # ──────────────────────────────────────────────────────────
 
     def parse_items(self, items: List[Dict], now: Optional[float] = None,
-                    website: str = _WEBSITE) -> List[Dict]:
+                    website: Optional[str] = None) -> List[Dict]:
         now = time.time() if now is None else now
+        website = website or self.website
         promotions: List[Dict] = []
         for item in items:
             if not isinstance(item, dict) or website not in (item.get('websites') or []):
@@ -214,8 +224,9 @@ class CencosudScraper:
         # dateEnd suele ser 23:59 (inclusive) o 00:00 del día siguiente (exclusivo).
         valid_until = (datetime.fromtimestamp(end, _AR_TZ) - timedelta(seconds=1)).date().isoformat()
 
-        key = '|'.join([raw_entity, str(item.get('discount')), _clean(item.get('discountText')),
+        key = '|'.join([self.website, raw_entity, str(item.get('discount')), _clean(item.get('discountText')),
                         subtitle, str(item.get('dateStart')), ','.join(item.get('days') or [])])
+        source_prefix = 'jumbo-' if self.website == 'jumboargentinaio' else f'cencosud-{self.website}-'
         return {
             'title': title[:200],
             'discount': discount,
@@ -235,7 +246,7 @@ class CencosudScraper:
             'acumulable': self._acumulable(f"{info}. {legals}"),
             'exclusions': exclusions,
             'requirements': requirements,
-            'source_id': 'jumbo-' + hashlib.sha1(key.encode('utf-8')).hexdigest()[:12],
+            'source_id': source_prefix + hashlib.sha1(key.encode('utf-8')).hexdigest()[:12],
         }
 
     @staticmethod

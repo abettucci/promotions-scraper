@@ -39,6 +39,9 @@ _MERCHANTS = {
     'supermercados_martesymiercoles': ('Supermercados de cercanía', 'supermarket'),
     'laanonima':                      ('La Anónima', 'supermarket'),
     'carrefour':                      ('Carrefour', 'supermarket'),
+    'disco':                          ('Disco', 'supermarket'),
+    'jumbo':                          ('Jumbo (Cencosud)', 'supermarket'),
+    'vea':                            ('Vea', 'supermarket'),
     'josimar':                        ('Josimar', 'supermarket'),
     'changomas':                      ('Más Online (ChangoMás)', 'supermarket'),
     'supercoop':                      ('Supercoop', 'supermarket'),
@@ -51,6 +54,7 @@ _MERCHANTS = {
 _LEGAL_NAMES = {
     'mayorista nini': 'nini', 'la anonima': 'laanonima', 'supermercados josimar': 'josimar',
     'supercoop': 'supercoop', 'carrefour': 'carrefour', 'dia': 'dia',
+    'disco': 'disco', 'jumbo': 'jumbo', 'vea': 'vea',
 }
 
 _MONTHS = {

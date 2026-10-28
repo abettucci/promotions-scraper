@@ -36,6 +36,20 @@ class CencosudScraperTests(unittest.TestCase):
             self.assertTrue(promo["terms_raw"])
             self.assertNotIn(promo["discount"], ("", "0%", "00%", "99%"))
 
+    def test_same_official_feed_is_filtered_independently_for_disco_and_vea(self):
+        items = fixture_items()
+        for key, site, prefix, url in (
+            ('disco', 'discoargentina', 'cencosud-discoargentina-', 'disco.com.ar'),
+            ('vea', 'veaargentina', 'cencosud-veaargentina-', 'vea.com.ar'),
+        ):
+            with self.subTest(store=key):
+                scraper = CencosudScraper(key)
+                promos = scraper.parse_items(items, now=NOW)
+                self.assertGreater(len(promos), 0)
+                self.assertTrue(all(p['source_id'].startswith(prefix) for p in promos))
+                self.assertTrue(all(url in p['url'] for p in promos))
+                self.assertTrue(all(site in p['source_id'] for p in promos))
+
     def test_rounds_api_decimals(self):
         turbo = self.find("Naranja X 25% reintegro")
         self.assertEqual(turbo["discount"], "25% reintegro")

@@ -1,10 +1,10 @@
 """
-MODO — Promos en estaciones de servicio (aggregator de combustible)
+MODO — Promociones públicas en supermercados y estaciones de servicio
 URL pública: https://www.modo.com.ar/promos
 
-El hub de promos de MODO es una SPA que consume una API JSON pública (sin auth):
-  GET /promos/api/rewards/v2/filter?category_ids=5&fcalcstatus=RUNNING&...
-      -> cards vigentes de la categoría 5 (Estaciones de Servicios), paginadas.
+El hub de promos de MODO es una SPA que consume un buscador JSON público (sin auth):
+  GET /promos/api/rewards/v2/search?query=Disco&status=RUNNING&...
+      -> resultados vigentes por comercio, paginados.
   GET /promos/api/rewards/v2/benefit/{slug}
       -> detalle con términos y condiciones.
 
@@ -23,9 +23,10 @@ from typing import Dict, List, Optional
 
 
 _BASE = 'https://www.modo.com.ar/promos'
-_FILTER_URL = f'{_BASE}/api/rewards/v2/filter'
+_SEARCH_URL = f'{_BASE}/api/rewards/v2/search'
 _DETAIL_URL = f'{_BASE}/api/rewards/v2/benefit/{{slug}}'
 _CATEGORY_FUEL = '5'  # Estaciones de Servicios
+_CATEGORY_SUPERMARKET = '1'  # Supermercados
 
 _HEADERS = {
     'User-Agent': 'Mozilla/5.0 (Macintosh; Intel Mac OS X 10_15_7) AppleWebKit/537.36 (KHTML, like Gecko) Chrome/120.0.0.0 Safari/537.36',
@@ -34,6 +35,28 @@ _HEADERS = {
 }
 
 ALL_STATIONS = ['YPF', 'Shell', 'Axion', 'Puma Energy']
+
+# Consultas al buscador público, no una lista de promociones. Cada resultado se
+# valida de nuevo por comercio, vigencia y detalle antes de guardarse.
+_SEARCH_TERMS = (
+    'supermercado', 'Carrefour', 'Coto', 'Día', 'Disco', 'Jumbo', 'Vea',
+    'ChangoMás', 'La Anónima', 'Makro', 'Diarco', 'Nini',
+    'YPF', 'Shell', 'Axion', 'Puma', 'WICO',
+)
+_SUPERMARKET_PATTERNS = [
+    ('Carrefour', r'\bcarrefour\b'),
+    ('Coto Digital', r'\bcoto\b'),
+    ('Supermercados Día', r'\b(?:supermercados?\s+)?d[ií]a\b'),
+    ('Disco', r'\bdisco\b'),
+    ('Jumbo (Cencosud)', r'\bjumbo\b'),
+    ('Vea', r'\bvea\b'),
+    ('Más Online (ChangoMás)', r'chango\s*m[aá]s|m[aá]s\s*online|\bmasgo\b'),
+    ('La Anónima', r'la\s+an[oó]nima'),
+    ('Makro', r'\bmakro\b'),
+    ('Diarco', r'\bdiarco\b'),
+    ('Mayorista Nini', r'\bnini\b'),
+]
+_SUPERMARKET_NAMES = {name for name, _ in _SUPERMARKET_PATTERNS}
 
 # Marcas reconocibles en validity_place / descripciones (orden = orden de salida)
 _BRAND_PATTERNS = [
@@ -122,7 +145,7 @@ class ModoScraper:
         self.url = _BASE
 
     async def scrape(self, page=None) -> List[Dict]:
-        print(f"🔍 Scraping {self.name} (API rewards, categoría combustible)...")
+        print(f"🔍 Scraping {self.name} (buscador público: supermercados y combustible)...")
         loop = asyncio.get_event_loop()
         try:
             cards = await loop.run_in_executor(None, self._fetch_cards)
@@ -147,20 +170,29 @@ class ModoScraper:
     def _fetch_cards(self) -> List[Dict]:
         import requests
         cards: List[Dict] = []
-        page = 1
-        while True:
-            params = {
-                'category_ids': _CATEGORY_FUEL, 'fcalcstatus': 'RUNNING', 'limit': 100,
-                'page': page, 'source': 'web_modo', 'origin': 'WEB_MODO',
-            }
-            resp = requests.get(_FILTER_URL, params=params, headers=_HEADERS, timeout=30)
-            resp.raise_for_status()
-            data = resp.json()
-            cards.extend(data.get('cards') or [])
-            total_pages = (data.get('pagination') or {}).get('total_pages') or 1
-            if page >= total_pages or page >= 20:
-                return cards
-            page += 1
+        seen: set[str] = set()
+        for term in _SEARCH_TERMS:
+            page = 1
+            while page <= 20:
+                resp = requests.get(
+                    _SEARCH_URL,
+                    params={'query': term, 'status': 'RUNNING', 'limit': 100, 'page': page},
+                    headers=_HEADERS,
+                    timeout=30,
+                )
+                resp.raise_for_status()
+                data = resp.json()
+                batch = data.get('cards') or []
+                for card in batch:
+                    slug = ModoScraper._slug(card)
+                    if slug and slug not in seen:
+                        seen.add(slug)
+                        cards.append(card)
+                total_pages = (data.get('pagination') or {}).get('total_pages') or 1
+                if page >= total_pages:
+                    break
+                page += 1
+        return cards
 
     def _fetch_detail(self, slug: str) -> Dict:
         import requests
@@ -188,10 +220,12 @@ class ModoScraper:
             if entry:
                 entries.append(entry)
 
-        # Agrupar segmentos de la misma promo (mismo banco, marca, beneficio, días y fin)
+        # Agrupar segmentos de la misma promo (mismo rubro, banco, marca,
+        # beneficio, días y fin).
         groups: Dict[tuple, List[Dict]] = {}
         for e in entries:
-            key = (tuple(e['brands']), e['bank_key'], e['discount'], e['valid_days'], e['valid_until'])
+            key = (e['merchant_category'], tuple(e['brands']), e['bank_key'],
+                   e['discount'], e['valid_days'], e['valid_until'])
             groups.setdefault(key, []).append(e)
         return [self._build_promo(g) for g in groups.values()]
 
@@ -203,7 +237,8 @@ class ModoScraper:
         slug = self._slug(card)
         if (card.get('calculated_status') or 'RUNNING') != 'RUNNING':
             return None
-        if _CATEGORY_FUEL not in [str(c) for c in (offer.get('categories') or [_CATEGORY_FUEL])]:
+        categories = {str(c) for c in (offer.get('categories') or [])}
+        if categories and not categories.intersection({_CATEGORY_FUEL, _CATEGORY_SUPERMARKET}):
             return None
 
         terms = _html_to_text(detail.get('terms_and_conditions'))
@@ -218,9 +253,27 @@ class ModoScraper:
         brands = self._brands(info.get('validity_place') or '',
                               [(detail.get('details') or {}).get('applicability_description') or '',
                                description])
+        if not brands and _CATEGORY_SUPERMARKET in categories:
+            place = _html_to_text(info.get('validity_place') or '')
+            # MODO publica muchas cadenas regionales además de las grandes. Si
+            # el resultado está categorizado como supermercado y el lugar es un
+            # comercio concreto, lo incorporamos por su nombre publicado; no
+            # convertimos el rubro genérico "Supermercados que acepten MODO" en
+            # una cadena ficticia.
+            generic_place = re.fullmatch(
+                r'(?:todos\s+los\s+)?(?:supermercados?|hipermercados?|mayoristas?)'
+                r'(?:\s+(?:adheridos|que\s+acepten\s+modo))?',
+                _strip_accents(place).lower(),
+            )
+            if place and not generic_place and len(place) <= 100:
+                brands = [place]
         if not brands:
-            print(f"   ⏭️ Sin marca identificable: {slug} ({info.get('validity_place')})")
             return None
+        merchant_category = (
+            'supermarket'
+            if _CATEGORY_SUPERMARKET in categories or any(b in _SUPERMARKET_NAMES for b in brands)
+            else 'fuel'
+        )
 
         cashback = (offer.get('outcomes') or {}).get('cashback') or {}
         amount = cashback.get('amount')
@@ -259,6 +312,7 @@ class ModoScraper:
         return {
             'slug': slug,
             'brands': brands,
+            'merchant_category': merchant_category,
             'bank': bank,
             'bank_title': bank_title,
             'bank_key': bank or bank_title,
@@ -281,20 +335,24 @@ class ModoScraper:
 
     @staticmethod
     def _brands(place: str, extra_texts: List[str]) -> List[str]:
-        def find(text: str) -> List[str]:
-            return [b for b, pat in _BRAND_PATTERNS if re.search(pat, text, re.I)]
+        def find(text: str, patterns: List[tuple[str, str]]) -> List[str]:
+            return [b for b, pat in patterns if re.search(pat, text, re.I)]
 
-        brands = find(place)
+        brands = find(place, _SUPERMARKET_PATTERNS + _BRAND_PATTERNS)
         if brands:
             return brands
         if not _GENERIC_PLACE.search(place):
             return []
         # "Combustible": a veces la descripción acota las marcas (Ciudad: YPF, Shell y Axion)
         for text in extra_texts:
-            brands = find(text or '')
+            brands = find(text or '', _SUPERMARKET_PATTERNS + _BRAND_PATTERNS)
+            if brands and re.search(r'combustible|estaci[oó]n|todo el pa[ií]s', place, re.I):
+                brands = [brand for brand in brands if brand not in _SUPERMARKET_NAMES]
             if brands:
                 return brands
-        return list(ALL_STATIONS)
+        if re.search(r'combustible|estaci[oó]n|todo el pa[ií]s', place, re.I):
+            return list(ALL_STATIONS)
+        return []
 
     @staticmethod
     def _bank(raw: str) -> tuple:
@@ -414,5 +472,5 @@ class ModoScraper:
             'url': f"{_BASE}/{e0['slug']}" if e0['slug'] else _BASE,
             'image_url': e0['image_url'],
             'merchant_brands': list(brands),
-            'merchant_category': 'fuel',
+            'merchant_category': e0['merchant_category'],
         }

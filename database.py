@@ -35,6 +35,27 @@ def _as_text(value) -> str:
     return value or ''
 
 
+def _discount_signature(value: object) -> Optional[tuple[str, str]]:
+    """Identifica el porcentaje/cuotas sin confundir, por ejemplo, 3 cuotas con 3%."""
+    text = _strip_accents(str(value or '')).lower()
+    percent = re.search(r'(?:hasta\s+)?(\d{1,3}(?:[.,]\d+)?)\s*%', text)
+    if percent:
+        number = percent.group(1).replace(',', '.')
+        return ('percent', number.rstrip('0').rstrip('.') if '.' in number else number)
+    installments = re.search(r'(\d{1,2})\s*cuotas?', text)
+    if installments:
+        return ('installments', installments.group(1))
+    return None
+
+
+def _money_signature(value: object) -> Optional[str]:
+    match = re.search(r'\$\s*([\d.,]+)', str(value or ''))
+    if not match:
+        return None
+    digits = re.sub(r'\D', '', match.group(1))
+    return digits or None
+
+
 def normalize_date_iso(value) -> Optional[str]:
     """Normaliza una fecha a formato ISO (YYYY-MM-DD) para que las comparaciones de strings funcionen.
 
@@ -781,31 +802,74 @@ class Database:
         conn.commit()
         conn.close()
 
-    def has_equivalent_promotion(self, supermarket_id: int, source: str, promo: Dict) -> bool:
+    def has_equivalent_promotion(
+        self, supermarket_id: int, source: str, promo: Dict, strict: bool = False,
+    ) -> bool:
         """¿Otra fuente ya publicó esta promo en el comercio?
 
         Cuenta DNI, Personal Pay o MODO repiten promos que el súper/estación
         ya publica con más detalle; mismo comercio + entidad + número del
-        beneficio + días se considera la misma promo.
+        beneficio + días se considera la misma promo. ``strict`` además evita
+        deduplicar cuando hay topes, mínimos, canales, tarjetas o requisitos
+        explícitamente distintos (se usa con agregadores-resumen como Clash).
         """
         entities = {e.strip().lower() for e in (promo.get('bank'), promo.get('wallet')) if e}
-        number = re.match(r'\s*(?:hasta\s+)?(\d{1,3})', promo.get('discount') or '', re.I)
-        if not entities or not number:
+        signature = _discount_signature(promo.get('discount'))
+        if not entities or not signature:
             return False
         days = (promo.get('valid_days') or '').strip().lower()
         conn = self.get_connection()
         rows = conn.execute("""
-            SELECT bank, wallet, discount, valid_days FROM promotions
+            SELECT bank, wallet, discount, valid_days, tope, min_purchase,
+                   store_types, card_type, payment_method, title, terms_raw, requirements
+            FROM promotions
             WHERE supermarket_id = ? AND is_active = 1 AND COALESCE(source, '') != ?
         """, (supermarket_id, source)).fetchall()
         conn.close()
-        for bank, wallet, discount, valid_days in rows:
-            row_entities = {e.strip().lower() for e in (bank, wallet) if e}
-            row_number = re.match(r'\s*(?:hasta\s+)?(\d{1,3})', discount or '', re.I)
-            if (entities & row_entities and row_number and row_number.group(1) == number.group(1)
-                    and (valid_days or '').strip().lower() == days):
-                return True
+        for row in rows:
+            row_entities = {str(e).strip().lower() for e in (row['bank'], row['wallet']) if e}
+            row_signature = _discount_signature(row['discount'])
+            if not (entities & row_entities and row_signature == signature
+                    and (row['valid_days'] or '').strip().lower() == days):
+                continue
+            if strict and not self._equivalent_promotion_conditions(row, promo):
+                continue
+            return True
         return False
+
+    @staticmethod
+    def _equivalent_promotion_conditions(existing, incoming: Dict) -> bool:
+        """Only collapse a summarized offer when its explicit qualifiers agree."""
+        existing_terms = ' '.join(str(existing[field] or '') for field in (
+            'title', 'terms_raw', 'requirements', 'card_type', 'payment_method', 'store_types',
+        ))
+        existing_folded = _strip_accents(existing_terms).lower()
+        incoming_terms = ' '.join(str(incoming.get(field) or '') for field in (
+            'title', 'terms_raw', 'requirements', 'card_type', 'payment_method', 'store_types',
+        ))
+        incoming_folded = _strip_accents(incoming_terms).lower()
+
+        # Un tope o mínimo distinto representa una condición material distinta.
+        incoming_cap = _money_signature(incoming.get('tope'))
+        existing_cap = _money_signature(existing['tope'])
+        if (incoming_cap or existing_cap) and incoming_cap != existing_cap:
+            return False
+        incoming_min = _money_signature(incoming.get('min_purchase') or incoming.get('monto_minimo'))
+        existing_min = _money_signature(existing['min_purchase'])
+        if (incoming_min or existing_min) and incoming_min != existing_min:
+            return False
+
+        # Un canal o nivel que sólo aparece en una fuente puede distinguir
+        # otra oferta; ambos lados deben coincidir antes de deduplicarlas.
+        for marker in (
+            'online', 'presencial', 'nfc', 'qr', 'modo', 'nave',
+            'black', 'platinum', 'signature', 'gold', 'plan sueldo',
+            'cartera plus', 'singular', 'plan ultra', 'santa fe',
+        ):
+            if (marker in incoming_folded) != (marker in existing_folded):
+                return False
+
+        return True
 
     def deactivate_for_source(self, supermarket_id: int, source: str, include_legacy: bool = False) -> int:
         """Desactiva sólo las promos que publicó `source` en este comercio.

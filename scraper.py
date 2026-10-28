@@ -46,6 +46,7 @@ from scrapers.buepp_scraper import BueppScraper
 from scrapers.cuentadni_scraper import CuentaDniScraper
 from scrapers.mobility_scraper import MobilityScraper
 from scrapers.santander_scraper import SantanderScraper
+from scrapers.clash_scraper import ClashScraper
 
 # AI Extractor (opcional)
 try:
@@ -152,7 +153,6 @@ class PromoScraper:
             'dia': DiaScraper,
             'coto': CotoScraper,
             'masonline': MasOnlineScraper,
-            'cencosud': CencosudScraper,
             'shell': ShellScraper,
             'axion': AxionScraper,
             'puma': PumaScraper,
@@ -168,7 +168,11 @@ class PromoScraper:
             'cuentadni': CuentaDniScraper,
             'mobility': MobilityScraper,
             'santander': SantanderScraper,
+            'clash': ClashScraper,
         }
+
+        if supermarket_key in {'cencosud', 'jumbo', 'disco', 'vea'}:
+            return CencosudScraper(store_key=supermarket_key)
         
         if supermarket_key in standalone_scrapers:
             return standalone_scrapers[supermarket_key]()
@@ -300,7 +304,12 @@ class PromoScraper:
                             self.db.deactivate_for_source(brand_id, supermarket_key)
                             touched[brand_id] = []
 
-                        if self.db.has_equivalent_promotion(brand_id, supermarket_key, promo):
+                        if self.db.has_equivalent_promotion(
+                            brand_id,
+                            supermarket_key,
+                            promo,
+                            strict=supermarket_key == 'clash',
+                        ):
                             self.log(f"   ↔️ {brand} ya publica: {promo.get('title')}")
                             continue
                         promo_for_brand = dict(promo)

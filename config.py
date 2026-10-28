@@ -109,6 +109,16 @@ SUPERMARKETS = {
         'url': 'https://www.jumbo.com.ar/descuentos-del-dia',
         'enabled': True
     },
+    'disco': {
+        'name': 'Disco',
+        'url': 'https://www.disco.com.ar/descuentos-del-dia',
+        'enabled': True,
+    },
+    'vea': {
+        'name': 'Vea',
+        'url': 'https://www.vea.com.ar/descuentos-del-dia',
+        'enabled': True,
+    },
     'masonline': {
         'name': 'Más Online (ChangoMás)',
         'url': 'https://www.masonline.com.ar/promociones-bancarias',
@@ -169,6 +179,14 @@ SUPERMARKETS = {
         'enabled': True,
         'category': 'benefits',
         # Las promos se rutean al comercio (por ejemplo Carrefour o Cabify).
+        'aggregator': True,
+    },
+    'clash': {
+        'name': 'Clash',
+        'url': 'https://promos.clash.com.ar/supermercados/',
+        'enabled': True,
+        'category': 'benefits',
+        # Los dos listados públicos se rutean a supermercados y estaciones.
         'aggregator': True,
     },
     # ── Movilidad ───────────────────────────────────────────────────────────
@@ -235,17 +253,6 @@ SUPERMARKETS = {
         # BNA es solo YPF (BnaScraper ya setea merchant_brands; esto es respaldo)
         'default_brand': 'YPF',
     },
-    # Deshabilitados por ahora (sin scraper específico)
-    # 'disco': {
-    #     'name': 'Disco',
-    #     'url': 'https://www.disco.com.ar/promociones-bancarias',
-    #     'enabled': False
-    # },
-    # 'vea': {
-    #     'name': 'Vea',
-    #     'url': 'https://www.vea.com.ar/promociones-bancarias',
-    #     'enabled': False
-    # },
 }
 
 # Palabras clave para detectar bancos y billeteras

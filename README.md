@@ -17,6 +17,7 @@ Sistema de scraping automático para extraer promociones bancarias de supermerca
 - Coto Digital
 - Disco
 - Jumbo
+- Vea
 - Día
 - Walmart
 - Changomás
@@ -164,4 +165,3 @@ Pull requests bienvenidos!
 ---
 
 **Creado con ❤️ para Argentina** 🇦🇷
-

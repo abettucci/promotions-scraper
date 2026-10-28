@@ -39,6 +39,7 @@ _LISTINGS = [
 _BRANDS = {
     'carrefour': 'Carrefour', 'coto': 'Coto Digital', 'dia': 'Supermercados Día',
     'jumbo': 'Jumbo (Cencosud)', 'changomas': 'Más Online (ChangoMás)', 'chango mas': 'Más Online (ChangoMás)',
+    'disco': 'Disco', 'vea': 'Vea',
     'ypf': 'YPF', 'shell': 'Shell', 'axion': 'Axion', 'axion energy': 'Axion', 'puma': 'Puma Energy',
     'en combo': 'En Combo',
 }

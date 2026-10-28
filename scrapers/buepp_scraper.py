@@ -40,6 +40,8 @@ _MERCHANTS = [
     (r'^carrefour',        'Carrefour',              'Carrefour'),
     (r'^(supermercados )?dia\b', 'Supermercados Día', 'Día'),
     (r'^jumbo\b',          'Jumbo (Cencosud)',       'Jumbo'),
+    (r'^disco\b',          'Disco',                  'Disco'),
+    (r'^vea\b',            'Vea',                    'Vea'),
 ]
 
 _DAYS = ['Lunes', 'Martes', 'Miércoles', 'Jueves', 'Viernes', 'Sábado', 'Domingo']
