@@ -61,7 +61,7 @@ export default function WatchlistPage() {
 
   const data = watchlist.data
   const storeLimit = data?.limits.stores ?? 12
-  const productLimit = data?.limits.products ?? 20
+  const productLimit = data?.limits.products ?? 100
   const storeSelection = selectedStores ?? data?.stores ?? []
 
   function toggleStore(name: string) {

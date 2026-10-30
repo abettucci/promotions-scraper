@@ -1209,7 +1209,7 @@ class UserDatabase:
         return [dict(r) for r in rows]
 
     # ── Alertas de precio ─────────────────────────────────────────────────────
-    MAX_PRICE_ALERTS_PER_USER = 20
+    MAX_PRICE_ALERTS_PER_USER = 100
 
     def add_price_alert(self, user_id: int, product_key: str, product_name: str, query: str,
                         baseline_price: float, target_price: Optional[float] = None) -> Optional[int]:
