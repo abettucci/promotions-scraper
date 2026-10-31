@@ -33,8 +33,8 @@ export default function MyPromotionsPage() {
   const hasNoMethods = (user.payment_methods?.length ?? 0) === 0
 
   return (
-    <div className="min-h-screen bg-slate-50">
-      <header className="bg-white border-b border-slate-200 sticky top-0 z-20 shadow-sm">
+    <div className="min-h-screen bg-background text-foreground">
+      <header className="bg-card border-b border-border sticky top-0 z-20">
         <div className="max-w-7xl mx-auto px-4 py-3 flex items-center justify-between gap-4">
           <div className="flex items-center gap-3">
             <Link href="/" className="text-slate-400 hover:text-slate-600 transition-colors">
@@ -89,7 +89,7 @@ export default function MyPromotionsPage() {
         {!hasNoMethods && (
           <div className="flex items-center justify-between">
             <div>
-              <h1 className="text-xl font-bold text-slate-900">
+              <h1 className="display text-2xl font-semibold tracking-tight text-foreground sm:text-3xl">
                 {todayOnly ? `Promos de hoy — ${todayLabel}` : "Todas mis promociones"}
               </h1>
               <p className="text-sm text-slate-500 mt-0.5">
@@ -138,14 +138,14 @@ export default function MyPromotionsPage() {
 
         {/* Results by supermarket */}
         {data?.by_supermarket.map(({ supermarket, promotions }) => (
-          <section key={supermarket}>
-            <h2 className="text-sm font-semibold text-slate-500 uppercase tracking-wide mb-3">
+          <section key={supermarket} className="space-y-4">
+            <h2 className="flex flex-wrap items-center gap-3 border-b border-border pb-3 text-lg font-semibold tracking-tight text-foreground">
               {supermarket}
-              <span className="ml-2 text-slate-300 font-normal normal-case tracking-normal">
+              <span className="rounded-full bg-secondary px-2.5 py-1 text-xs font-medium text-secondary-foreground">
                 {promotions.length} promo{promotions.length !== 1 ? "s" : ""}
               </span>
             </h2>
-            <div className="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 xl:grid-cols-4 gap-4">
+            <div className="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-3 gap-4 sm:gap-5">
               {promotions.map((promo) => (
                 <PromoCard key={promo.id} promo={promo} />
               ))}

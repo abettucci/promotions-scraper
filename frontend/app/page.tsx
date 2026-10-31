@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag, TrainFront } from "lucide-react"
+import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag, TrainFront, ShoppingBasket } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
 import type { FilterState, Category, DayCode } from "@/lib/types"
@@ -100,13 +100,13 @@ export default function Home() {
     <div className="min-h-dvh overflow-x-hidden">
       <a href="#promotions" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-[#102a4c]">Ir a promociones</a>
       <header className="sticky top-0 z-30 border-b border-[#dbe4ee]/80 bg-[#f5f7fb]/90 backdrop-blur-xl">
-        <div className="mx-auto flex h-18 max-w-7xl items-center justify-between gap-3 px-4 sm:px-6">
-          <div className="flex min-w-0 items-center gap-3 sm:gap-7">
+        <div className="mx-auto flex min-h-18 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
+          <div className="contents lg:flex lg:min-w-0 lg:items-center lg:gap-5">
             <Link href="/" className="display flex shrink-0 items-center gap-2 text-base font-semibold tracking-[-0.05em] text-[#102a4c]" aria-label="Ir al inicio de PromoAR">
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#102a4c] text-xs font-bold text-[#b8f36b]">P</span>
               <span className="hidden sm:inline">PROMOAR</span>
             </Link>
-            <nav aria-label="Categorías" className="flex items-center gap-1 rounded-xl border border-[#dbe4ee] bg-white p-1">
+            <nav aria-label="Navegación principal" className="order-3 flex w-full flex-wrap items-center gap-1 rounded-xl border border-border bg-card p-1 lg:order-none lg:w-auto">
               <button onClick={() => chooseCategory("supermarket")} aria-pressed={category === "supermarket"} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "supermarket" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
                 <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" /><span className="hidden sm:inline">Supermercados</span><span className="sm:hidden">Súper</span>
               </button>
@@ -118,6 +118,9 @@ export default function Home() {
               </button>
               <Link href="/precios" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
                 <Tag className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only sm:not-sr-only">Precios</span>
+              </Link>
+              <Link href="/watchlist" title="Armar lista habitual y recibir alertas de precios" className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-85 sm:w-auto sm:text-sm">
+                <ShoppingBasket className="h-4 w-4" aria-hidden="true" /><span>Lista habitual</span>
               </Link>
             </nav>
           </div>
@@ -139,7 +142,12 @@ export default function Home() {
               <p className="mb-4 inline-flex items-center gap-2 text-xs font-semibold text-[#b8f36b]"><span className="h-1.5 w-1.5 rounded-full bg-[#b8f36b]" /> Datos actualizados · {todayDate}</p>
               <h1 className="display max-w-xl text-4xl font-semibold leading-[1.06] tracking-[-0.06em] sm:text-6xl">Pagá mejor en cada compra.</h1>
               <p className="mt-5 max-w-lg text-base leading-relaxed text-[#d9e3ef]">{category === "mobility" ? "Beneficios públicos para viajar, con medio de pago, cobertura y condiciones antes de subir." : "Promociones bancarias de supermercados y combustible, con condiciones, topes y días para decidir antes de llegar a la caja."}</p>
-              <button onClick={toggleTodayOnly} className="mt-7 inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#b8f36b] px-4 text-sm font-semibold text-[#102a4c] transition-colors hover:bg-[#d4ff9e]">Ver las de hoy <ArrowUpRight className="h-4 w-4" /></button>
+              <div className="mt-7 flex flex-wrap gap-3">
+                <button onClick={toggleTodayOnly} className="inline-flex min-h-11 items-center gap-2 rounded-xl bg-[#b8f36b] px-4 text-sm font-semibold text-[#102a4c] transition-colors hover:bg-[#d4ff9e]">Ver las de hoy <ArrowUpRight className="h-4 w-4" /></button>
+                <Link href="/watchlist" className="inline-flex min-h-11 items-center gap-2 rounded-xl border border-white/30 bg-white/10 px-4 text-sm font-semibold text-white transition-colors hover:border-[#b8f36b] hover:bg-white/15">
+                  <ShoppingBasket className="h-4 w-4 text-[#b8f36b]" /> Mi lista habitual · precios y alertas
+                </Link>
+              </div>
             </div>
             <aside className="grid gap-px overflow-hidden rounded-2xl border border-white/15 bg-white/10 backdrop-blur-sm sm:grid-cols-3 lg:grid-cols-1" aria-label="Resumen de PromoAR">
               <div className="p-4"><p className="text-[11px] font-medium uppercase tracking-[0.12em] text-[#b8f36b]">Categoría</p><p className="mt-1 text-lg font-semibold">{category === "fuel" ? "Combustible" : category === "mobility" ? "Movilidad" : "Supermercados"}</p></div>
@@ -148,6 +156,14 @@ export default function Home() {
             </aside>
           </div>
         </section>
+
+        <Link href="/watchlist" className="flex flex-col gap-4 rounded-2xl border border-border bg-card p-5 text-card-foreground shadow-sm transition-colors hover:border-ring sm:flex-row sm:items-center sm:justify-between sm:p-6">
+          <div className="flex items-start gap-4">
+            <span className="grid h-12 w-12 shrink-0 place-items-center rounded-xl bg-accent text-accent-foreground"><ShoppingBasket className="h-6 w-6" aria-hidden="true" /></span>
+            <div><h2 className="display text-lg font-semibold tracking-tight">Armá tu lista de súper habitual</h2><p className="mt-1 max-w-xl text-sm text-muted-foreground">Guardá hasta 100 productos. Monitoreá precios y recibí avisos cuando bajen o una promoción mejore tu compra.</p></div>
+          </div>
+          <span className="inline-flex shrink-0 items-center gap-2 self-start text-sm font-semibold text-primary sm:self-center">Armar mi lista <ArrowUpRight className="h-4 w-4" aria-hidden="true" /></span>
+        </Link>
 
         <div className="grid gap-3 text-sm text-[#52657d] sm:grid-cols-3">
           {["Vigencia y condiciones a la vista", "Topes y medios de pago claros", "Datos extraídos de sitios oficiales"].map((item) => <p key={item} className="flex items-center gap-2"><Check className="h-4 w-4 shrink-0 text-[#2758d8]" aria-hidden="true" />{item}</p>)}

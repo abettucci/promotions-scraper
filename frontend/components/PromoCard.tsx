@@ -83,8 +83,8 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
     !!formatDate(promo.valid_until)
 
   return (
-    <Card className="group relative overflow-hidden rounded-2xl border-[#dbe4ee] bg-white py-0 shadow-[0_10px_28px_rgb(16_42_76_/_0.06)] transition-[transform,box-shadow,border-color] duration-200 hover:-translate-y-0.5 hover:border-[#9cb5d0] hover:shadow-[0_16px_36px_rgb(16_42_76_/_0.12)]">
-      <CardContent className="relative space-y-3 px-5 py-5">
+    <Card className="promo-card group relative h-full overflow-hidden rounded-2xl border-border bg-card py-0 text-card-foreground shadow-sm transition-[box-shadow,border-color] duration-200 hover:border-ring/50 hover:shadow-md">
+      <CardContent className="relative flex h-full min-w-0 flex-col gap-3 px-5 py-5">
         {/* Header row: supermarket logo + discount */}
         <div className="flex items-start justify-between gap-2">
           <SupermarketLogo name={promo.supermarket_name} showLabel={true} />
@@ -184,7 +184,7 @@ export function PromoCard({ promo, onOpenConditions }: Props) {
 
         {/* Ver detalles toggle + link a la promoción */}
         {(hasDetails || promotionUrl || onOpenConditions) && (
-          <div className="mt-1 flex items-center justify-between gap-2 border-t border-[#e5ebf2] pt-3">
+          <div className="mt-auto flex flex-wrap items-center justify-between gap-2 border-t border-border pt-3">
             {hasDetails ? (
               <button
                 onClick={() => setExpanded((v) => !v)}

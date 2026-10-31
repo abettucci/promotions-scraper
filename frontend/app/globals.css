@@ -94,6 +94,15 @@ html.dark { color-scheme: dark; }
 .surface { @apply border border-[#dbe4ee] bg-white shadow-[0_18px_45px_rgb(16_42_76_/_0.07)]; }
 .eyebrow { @apply text-[11px] font-semibold uppercase tracking-[0.15em] text-[#52657d]; }
 
+/* Long payment methods and caps must wrap, never overflow a narrow card. */
+.promo-card [data-slot="badge"] {
+  max-width: 100%;
+  height: auto;
+  min-height: 1.25rem;
+  white-space: normal;
+  overflow-wrap: anywhere;
+}
+
 @keyframes enter {
   from { opacity: 0; transform: translateY(10px); }
   to { opacity: 1; transform: translateY(0); }
@@ -148,10 +157,13 @@ html.dark { color-scheme: dark; }
 .dark [class~="bg-[#f5f7fb]"],
 .dark [class~="bg-[#f5f7fb]/90"] { background-color: #08182c !important; }
 .dark [class~="bg-white"],
+.dark [class~="bg-slate-50"],
+.dark [class~="bg-gray-50"],
 .dark [class~="bg-[#f8fafd]"],
 .dark [class~="bg-[#f9fbfd]"],
 .dark [class~="bg-[#fbfcfe]"] { background-color: #10233d !important; }
 .dark [class~="bg-[#edf2f7]"],
+.dark [class~="bg-slate-100"],
 .dark [class~="bg-[#f5f8fc]"],
 .dark [class~="bg-[#f1f6fd]"] { background-color: #152d49 !important; }
 .dark [class~="bg-[#efffdc]"],
@@ -186,6 +198,7 @@ html.dark { color-scheme: dark; }
 .dark [class~="text-[#40536b]"] { color: #d5e0ec !important; }
 .dark [class~="text-[#52657d]"] { color: #b9c8d9 !important; }
 .dark [class~="text-[#71839a]"],
+.dark [class~="text-slate-300"],
 .dark [class~="text-[#8a9ab0]"],
 .dark [class~="text-slate-400"],
 .dark [class~="text-slate-500"],
@@ -214,6 +227,16 @@ html.dark { color-scheme: dark; }
 .dark [class~="text-[#8f2d28]"],
 .dark [class~="text-[#9c4138]"],
 .dark [class~="text-[#a9362a]"] { color: #ffaaa1 !important; }
+
+.dark [class~="bg-amber-50"] { background-color: #3e311b !important; }
+.dark [class~="text-amber-700"],
+.dark [class~="text-amber-800"] { color: #f6d783 !important; }
+.dark [class~="bg-red-50"] { background-color: #45232c !important; }
+.dark [class~="text-red-600"] { color: #ffaaa1 !important; }
+.dark [class~="hover:bg-[#edf2f7]"]:hover,
+.dark [class~="hover:bg-[#f5f8fc]"]:hover { background-color: #193452 !important; }
+.dark [class~="hover:text-[#102a4c]"]:hover { color: #f3f7fc !important; }
+.dark input::placeholder, .dark textarea::placeholder { color: #9bafc6; opacity: 1; }
 
 /* Lime remains the action color in both themes; its foreground must stay ink. */
 .dark [class~="bg-[#b8f36b]"][class~="text-[#102a4c]"],
