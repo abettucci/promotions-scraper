@@ -83,13 +83,16 @@ PRICE_ALERTS_EVERY_HOURS = float(os.getenv("PRICE_ALERTS_EVERY_HOURS", "6"))
 
 def _prices_tick(history, user_db, notifier, whatsapp=None):
     """Una pasada: corre la canasta y/o revisa alertas si les toca."""
+    import config
     from datetime import datetime, timedelta
     from prices.alerts import check_alerts, load_active_promotions
     from prices.basket import due, run_basket
+    from prices.watchlist_quotes import WatchlistQuotes
 
     if due(history, PRICES_BASKET_EVERY_HOURS):
         print("[prices] Corriendo canasta diaria...")
-        run_basket(history, log=lambda line: print(f"[prices]{line}"))
+        run_basket(history, groups_per_query=config.PRICES_CATALOG_GROUPS_PER_QUERY,
+                   log=lambda line: print(f"[prices]{line}"))
     last = history.get_meta("alerts_last_check")
     if not last or datetime.now() - datetime.fromisoformat(last) >= timedelta(hours=PRICE_ALERTS_EVERY_HOURS):
         promotions = load_active_promotions()
@@ -98,6 +101,7 @@ def _prices_tick(history, user_db, notifier, whatsapp=None):
             lambda chat_id, text: notifier.send_message_to(chat_id, text, parse_mode="HTML"),
             send_whatsapp=(lambda phone, text: whatsapp.send_message(phone, text)) if whatsapp else None,
             promotions=promotions,
+            quote_store=WatchlistQuotes(history),
         )
         history.set_meta("alerts_last_check", datetime.now().isoformat(timespec="seconds"))
         print(f"[prices] Alertas: {stats}")

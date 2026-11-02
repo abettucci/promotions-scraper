@@ -113,6 +113,17 @@ class AlertTests(unittest.TestCase):
         other = lambda *a, **k: {"groups": [group("ean:2", 5)]}
         self.assertEqual(create_alert(self.db, self.user, "otro", search=other), {"error": "limit"})
 
+    def test_frontend_can_save_and_track_a_title_key_with_clear_instability_flag(self):
+        key = "title:yogur natural:190g"
+        search = lambda *a, **k: {"groups": [group(key, 100, name="Yogur natural 190 g")]}
+        alert = create_alert(self.db, self.user, "yogur natural", key=key, search=search)
+        self.assertEqual(alert["key"], key)
+        self.assertFalse(alert["stable_key"])
+        self.assertEqual(check_alerts(self.db, self.send, search=lambda *a, **k: {
+            "groups": [group(key, 90, name="Yogur natural 190 g")]
+        })["notified"], 1)
+        self.assertIn("nombre publicado", self.sent[0][1])
+
     def test_any_drop_notifies_once_then_tracks_the_new_price(self):
         create_alert(self.db, self.user, "leche", search=self.search_for(100))
         self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(100))["notified"], 0)

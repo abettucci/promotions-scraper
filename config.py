@@ -383,6 +383,9 @@ PRICES_RATE_LIMIT_MAX = int(os.getenv("PRICES_RATE_LIMIT_MAX", "60"))
 PRICES_RATE_LIMIT_WINDOW_SECONDS = int(os.getenv("PRICES_RATE_LIMIT_WINDOW_SECONDS", "3600"))
 # Autocompletado: una consulta por pausa al escribir, así que el límite es más alto.
 PRICES_SUGGEST_RATE_LIMIT_MAX = int(os.getenv("PRICES_SUGGEST_RATE_LIMIT_MAX", "600"))
+PRICES_CATALOG_RATE_LIMIT_MAX = int(os.getenv("PRICES_CATALOG_RATE_LIMIT_MAX", "300"))
+PRICES_CATALOG_GROUPS_PER_QUERY = max(1, min(30, int(os.getenv("PRICES_CATALOG_GROUPS_PER_QUERY", "12"))))
+WATCHLIST_REFRESH_BATCHES_PER_HOUR = int(os.getenv("WATCHLIST_REFRESH_BATCHES_PER_HOUR", "60"))
 
 # ============================================
 # CATÁLOGO DE MEDIOS DE PAGO

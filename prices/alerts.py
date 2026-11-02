@@ -80,9 +80,9 @@ def load_active_promotions() -> list[dict]:
 
 
 def create_alert(user_db, user_id: int, query: str, *, key: Optional[str] = None,
-                 target: Optional[float] = None, search: Callable[..., dict] = search_prices,
+                 target: Optional[float] = None, category: str = "", search: Callable[..., dict] = search_prices,
                  promotions: Optional[list[dict]] = None,
-                 methods: Optional[list[dict]] = None) -> Optional[dict]:
+                 methods: Optional[list[dict]] = None, quote_store=None) -> Optional[dict]:
     """Crea la alerta sobre el producto que mejor responde a ``query``.
 
     Devuelve None si no se encontró el producto, o {"error": "limit"} si el
@@ -92,17 +92,28 @@ def create_alert(user_db, user_id: int, query: str, *, key: Optional[str] = None
     if promotions is not None:
         search_args.update(promotions=promotions if methods else [], methods=methods or [])
     result = search(query, **search_args)
-    groups = [g for g in result.get("groups", []) if g["key"].startswith(("ean:", "model:"))]
-    group = next((g for g in groups if g["key"] == key), None) if key else (groups[0] if groups else None)
+    groups = result.get("groups", [])
+    stable_groups = [g for g in groups if g["key"].startswith(("ean:", "model:"))]
+    # El sitio puede guardar resultados sin EAN/modelo si el frontend manda la
+    # clave exacta del grupo. El bot, que no selecciona un resultado concreto,
+    # mantiene el criterio conservador y elige sólo identidades estables.
+    group = next((g for g in groups if g["key"] == key), None) if key else (stable_groups[0] if stable_groups else None)
     best = _best(group) if group else None
     if not group or not best:
         return None
     current = _effective_price(best)
-    alert_id = user_db.add_price_alert(user_id, group["key"], group["name"], query, current, target)
+    category = category or group.get("category", "")
+    alert_id = user_db.add_price_alert(user_id, group["key"], group["name"], query, current, target, category)
     if alert_id is None:
         return {"error": "limit"}
+    if quote_store is not None:
+        try:
+            quote_store.save(user_id, group["key"], group)
+        except sqlite3.Error:
+            pass  # La alerta ya está guardada; no informarla como fallida por el caché de precios.
     return {"id": alert_id, "key": group["key"], "name": group["name"], "price": current,
-            "store_name": best["store_name"], "target": target, "promo": best.get("promo")}
+            "store_name": best["store_name"], "target": target, "promo": best.get("promo"), "category": category,
+            "stable_key": group["key"].startswith(("ean:", "model:"))}
 
 
 def _ars(value: float) -> str:
@@ -130,12 +141,14 @@ def _message(alert: dict, best: dict, previous: float, reached_target: bool) -> 
         f'<a href="{html.escape(best["url"])}">Ver en la tienda</a>',
         "<i>Confirmá stock, condiciones y precio final antes de pagar.</i>",
     ])
+    if str(alert.get("product_key", "")).startswith("title:"):
+        lines.append("<i>Seguimiento por nombre publicado; puede cambiar si la tienda renombra el producto.</i>")
     return "\n".join(lines)
 
 
 def check_alerts(user_db, send: Callable[[str, str], bool], *, send_whatsapp: Optional[Callable[[str, str], bool]] = None,
                  search: Callable[..., dict] = search_prices,
-                 promotions: Optional[list[dict]] = None) -> dict:
+                 promotions: Optional[list[dict]] = None, quote_store=None) -> dict:
     """Revisa todas las alertas con consulta en vivo y avisa por Telegram.
 
     - Con precio objetivo: avisa cuando el más barato llega a ese precio (y
@@ -162,6 +175,11 @@ def check_alerts(user_db, send: Callable[[str, str], bool], *, send_whatsapp: Op
                 by_query[cache_key] = {"groups": []}
         group = next((g for g in by_query[cache_key].get("groups", [])
                       if g["key"] == alert["product_key"]), None)
+        if group and quote_store is not None:
+            try:
+                quote_store.save(alert["user_id"], alert["product_key"], group)
+            except sqlite3.Error:
+                pass  # Una falla de cotizaciones no puede impedir los avisos existentes.
         best = _best(group) if group else None
         if not best:
             stats["missing"] += 1

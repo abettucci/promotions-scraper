@@ -1029,6 +1029,7 @@ class UserDatabase:
                 product_key TEXT NOT NULL,
                 product_name TEXT NOT NULL,
                 query TEXT NOT NULL,
+                category TEXT NOT NULL DEFAULT '',
                 target_price REAL,
                 baseline_price REAL NOT NULL,
                 last_notified_price REAL,
@@ -1042,6 +1043,10 @@ class UserDatabase:
             pass
         try:
             conn.execute("ALTER TABLE user_payment_methods ADD COLUMN tiers_json TEXT NOT NULL DEFAULT '[]'")
+        except sqlite3.OperationalError:
+            pass
+        try:
+            conn.execute("ALTER TABLE price_alerts ADD COLUMN category TEXT NOT NULL DEFAULT ''")
         except sqlite3.OperationalError:
             pass
         for column, definition in (
@@ -1212,7 +1217,8 @@ class UserDatabase:
     MAX_PRICE_ALERTS_PER_USER = 100
 
     def add_price_alert(self, user_id: int, product_key: str, product_name: str, query: str,
-                        baseline_price: float, target_price: Optional[float] = None) -> Optional[int]:
+                        baseline_price: float, target_price: Optional[float] = None,
+                        category: str = "") -> Optional[int]:
         """Crea (o actualiza el objetivo de) la alerta. None si superó el máximo."""
         conn = self._conn()
         try:
@@ -1221,8 +1227,8 @@ class UserDatabase:
             ).fetchone()
             if existing:
                 conn.execute(
-                    "UPDATE price_alerts SET target_price = ?, baseline_price = ?, last_notified_price = NULL "
-                    "WHERE id = ?", (target_price, baseline_price, existing["id"]),
+                    "UPDATE price_alerts SET target_price = ?, baseline_price = ?, category = ?, last_notified_price = NULL "
+                    "WHERE id = ?", (target_price, baseline_price, category[:120], existing["id"]),
                 )
                 conn.commit()
                 return existing["id"]
@@ -1231,9 +1237,9 @@ class UserDatabase:
             if total >= self.MAX_PRICE_ALERTS_PER_USER:
                 return None
             cursor = conn.execute(
-                "INSERT INTO price_alerts (user_id, product_key, product_name, query, target_price, baseline_price) "
-                "VALUES (?, ?, ?, ?, ?, ?)",
-                (user_id, product_key, product_name[:200], query[:120], target_price, baseline_price),
+                "INSERT INTO price_alerts (user_id, product_key, product_name, query, category, target_price, baseline_price) "
+                "VALUES (?, ?, ?, ?, ?, ?, ?)",
+                (user_id, product_key, product_name[:200], query[:120], category[:120], target_price, baseline_price),
             )
             conn.commit()
             return cursor.lastrowid

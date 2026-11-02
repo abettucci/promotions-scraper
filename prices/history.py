@@ -8,6 +8,8 @@ de contar en la serie (un precio viejo es peor que ninguno).
 from __future__ import annotations
 
 import sqlite3
+import math
+from urllib.parse import urlsplit
 from datetime import date, timedelta
 from pathlib import Path
 from typing import Iterable, Optional
@@ -55,7 +57,20 @@ class PriceHistory:
                 PRIMARY KEY (product_key, store, date)
             );
             CREATE INDEX IF NOT EXISTS idx_price_history_key ON price_history(product_key, date);
+            CREATE INDEX IF NOT EXISTS idx_price_history_date ON price_history(date);
             CREATE TABLE IF NOT EXISTS price_meta (key TEXT PRIMARY KEY, value TEXT NOT NULL);
+            CREATE TABLE IF NOT EXISTS price_catalog_offers (
+                product_key TEXT NOT NULL, store TEXT NOT NULL, store_name TEXT NOT NULL,
+                price REAL NOT NULL, list_price REAL, url TEXT NOT NULL,
+                observed_at TEXT NOT NULL, in_stock INTEGER NOT NULL,
+                PRIMARY KEY (product_key, store)
+            );
+            CREATE INDEX IF NOT EXISTS idx_catalog_fresh ON price_catalog_offers(observed_at);
+            CREATE TABLE IF NOT EXISTS watchlist_quotes (
+                user_id INTEGER NOT NULL, product_key TEXT NOT NULL,
+                group_json TEXT NOT NULL, checked_at TEXT NOT NULL,
+                PRIMARY KEY (user_id, product_key)
+            );
         """)
         try:  # bases creadas antes de existir la columna
             conn.execute("ALTER TABLE price_products ADD COLUMN category TEXT")
@@ -87,7 +102,28 @@ class PriceHistory:
                      query, group.get("image", ""), group.get("category", ""), iso, iso),
                 )
                 for offer in group.get("offers", []):
-                    if not offer.get("in_stock", True) or not offer.get("price"):
+                    price = offer.get("price")
+                    if not isinstance(price, (int, float)) or not math.isfinite(price) or price <= 0:
+                        continue
+                    # Confirmar el precio en cada corrida, aun si no cambió.
+                    # El catálogo nunca almacena precios personalizados ni reintegros.
+                    url = offer.get("url") or ""
+                    try:
+                        parsed_url = urlsplit(url)
+                    except ValueError:
+                        continue
+                    if parsed_url.scheme not in {"http", "https"} or not parsed_url.netloc:
+                        continue
+                    conn.execute(
+                        "INSERT INTO price_catalog_offers VALUES (?, ?, ?, ?, ?, ?, ?, ?) "
+                        "ON CONFLICT(product_key, store) DO UPDATE SET "
+                        "store_name=excluded.store_name, price=excluded.price, list_price=excluded.list_price, "
+                        "url=excluded.url, observed_at=excluded.observed_at, in_stock=excluded.in_stock "
+                        "WHERE excluded.observed_at >= price_catalog_offers.observed_at",
+                        (key, offer["store"], offer["store_name"], price, offer.get("list_price"),
+                         url, iso, int(offer.get("in_stock", True))),
+                    )
+                    if not offer.get("in_stock", True):
                         continue
                     last = conn.execute(
                         "SELECT date, price FROM price_history WHERE product_key = ? AND store = ? "

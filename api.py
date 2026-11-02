@@ -8,7 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List, Literal
 from datetime import date, datetime, timedelta, timezone
-from pydantic import BaseModel, ConfigDict, field_validator
+from pydantic import BaseModel, ConfigDict, Field, field_validator
 import sqlite3
 import json
 import unicodedata
@@ -315,6 +315,7 @@ class PriceAlertBody(BaseModel):
     model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
     query: str
     key: Optional[str] = None
+    category: str = ""
     target_price: Optional[float] = None
 
     @field_validator("query")
@@ -327,8 +328,15 @@ class PriceAlertBody(BaseModel):
     @field_validator("key")
     @classmethod
     def validate_key(cls, value: Optional[str]) -> Optional[str]:
-        if value is not None and (len(value) > 120 or not value.startswith(("ean:", "model:"))):
+        if value is not None and (len(value) > 320 or not value.startswith(("ean:", "model:", "title:"))):
             raise ValueError("Clave de producto inválida")
+        return value
+
+    @field_validator("category")
+    @classmethod
+    def validate_category(cls, value: str) -> str:
+        if len(value) > 120 or any(ord(char) < 32 for char in value):
+            raise ValueError("Categoría inválida")
         return value
 
     @field_validator("target_price")
@@ -744,15 +752,72 @@ def _favorite_store_catalog() -> dict[str, str]:
 @app.get("/api/auth/me/watchlist")
 def get_watchlist(current_user=Depends(get_current_user)):
     """Lista habitual: supermercados favoritos y productos con alerta."""
+    from prices.history import PriceHistory
+    from prices.watchlist_quotes import WatchlistQuotes, category_for
+    products = _db.list_price_alerts(current_user["id"])
+    prices_available = True
+    try:
+        enriched = WatchlistQuotes(PriceHistory()).enrich(current_user["id"], products)
+    except sqlite3.Error:
+        prices_available = False
+        enriched = [dict(p, category_path=category_for(p), best_offer=None) for p in products]
     return {
         "stores": _db.get_user_favorite_stores(current_user["id"]),
-        "products": _db.list_price_alerts(current_user["id"]),
+        "products": [{k: v for k, v in item.items() if k != "offers"} for item in enriched],
+        "prices_available": prices_available,
         "telegram_linked": bool(current_user.get("telegram_chat_id")),
         "limits": {
             "stores": _db.MAX_FAVORITE_STORES_PER_USER,
             "products": _db.MAX_PRICE_ALERTS_PER_USER,
         },
     }
+
+
+class WatchlistRefreshBody(BaseModel):
+    model_config = ConfigDict(extra="forbid")
+    alert_ids: list[int] = Field(min_length=1, max_length=3)
+
+    @field_validator("alert_ids", mode="before")
+    @classmethod
+    def valid_ids(cls, value):
+        if not isinstance(value, list) or not 1 <= len(value) <= 3 or any(type(i) is not int or i <= 0 for i in value) or len(set(value)) != len(value):
+            raise ValueError("Seleccioná hasta tres productos distintos de tu lista.")
+        return value
+
+
+def _watchlist_quota(user_id: int, purpose: str, maximum: int, seconds: int):
+    identity = hmac.new(config.ASSISTANT_PUBLIC_RATE_LIMIT_SECRET.encode(),
+                        (purpose+":"+str(user_id)).encode(), hashlib.sha256).hexdigest()
+    if _db.consume_public_assistant_quota(identity, maximum, seconds):
+        raise HTTPException(429, "Alcanzaste el límite temporal de consultas de la canasta. Probá más tarde.")
+
+
+@app.post("/api/auth/me/watchlist/refresh-prices")
+def refresh_watchlist_prices(body: WatchlistRefreshBody, current_user=Depends(get_current_user)):
+    from prices.history import PriceHistory
+    from prices.watchlist_quotes import WatchlistQuotes
+    owned = {p["id"]: p for p in _db.list_price_alerts(current_user["id"])}
+    if any(identifier not in owned for identifier in body.alert_ids):
+        raise HTTPException(404, "Producto no encontrado en tu lista.")
+    _watchlist_quota(current_user["id"], "watchlist-refresh", config.WATCHLIST_REFRESH_BATCHES_PER_HOUR, 3600)
+    try:
+        return {"results": WatchlistQuotes(PriceHistory()).refresh(current_user["id"], [owned[i] for i in body.alert_ids])}
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "No pudimos guardar la actualización de precios. Probá nuevamente.") from exc
+
+
+@app.get("/api/auth/me/watchlist/basket")
+def get_watchlist_basket(current_user=Depends(get_current_user)):
+    from prices.history import PriceHistory
+    from prices.watchlist_quotes import WatchlistQuotes
+    from prices.basket_compare import compare_basket
+    _watchlist_quota(current_user["id"], "watchlist-basket", 60, 60)
+    try:
+        products = WatchlistQuotes(PriceHistory()).enrich(current_user["id"], _db.list_price_alerts(current_user["id"]))
+        return compare_basket(products, _assistant_promotions(), _db.get_user_payment_methods(current_user["id"]),
+                              _db.get_user_favorite_stores(current_user["id"]))
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "La comparación de tu canasta no está disponible temporalmente.") from exc
 
 
 @app.put("/api/auth/me/watchlist/stores")
@@ -925,6 +990,59 @@ def ask_public_assistant(body: AssistantQuestionBody, request: Request):
 _PRICE_CATEGORIES = {"supermarket", "electro", "supplements"}
 
 
+def _catalog_history(request: Request):
+    from prices.history import PriceHistory
+    retry_after = _db.consume_public_assistant_quota(
+        hashlib.sha256(b"catalog:" + _public_assistant_rate_key(request).encode()).hexdigest(),
+        config.PRICES_CATALOG_RATE_LIMIT_MAX, config.PRICES_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(429, "Alcanzaste el límite de consultas del catálogo. Probá más tarde.")
+    return PriceHistory()
+
+
+@app.get("/api/prices/catalog")
+def browse_price_catalog(
+    request: Request, q: str = Query("", max_length=120),
+    rubric: str = Query("", max_length=80, pattern=r"^[A-Za-zÁÉÍÓÚÜÑáéíóúüñ0-9 ,&-]*$"),
+    sort: Literal["recent", "price_asc", "price_desc", "name"] = "recent",
+    page: int = Query(1, ge=1, le=1000), page_size: int = Query(12, ge=1, le=30),
+    ean: str = Query("", max_length=14, pattern=r"^[0-9]*$"),
+):
+    from prices.barcodes import valid_gtin
+    from prices.catalog import Catalog
+    if ean and not valid_gtin(ean):
+        raise HTTPException(422, "Código de barras inválido. Revisá los dígitos.")
+    try:
+        return Catalog(_catalog_history(request)).browse(q=q, rubric=rubric, sort=sort,
+                                                        page=page, page_size=page_size, ean=ean)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "El catálogo no está disponible temporalmente.") from exc
+
+
+@app.get("/api/prices/catalog/product")
+def price_catalog_product(request: Request, key: str = Query(..., max_length=120, pattern=r"^(ean:|model:).+$")):
+    from prices.catalog import Catalog
+    try:
+        result = Catalog(_catalog_history(request)).product(key)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "El catálogo no está disponible temporalmente.") from exc
+    if result is None:
+        raise HTTPException(404, "Este producto todavía no tiene precios recientes en el catálogo.")
+    return result
+
+
+@app.get("/api/prices/trends")
+def price_category_trends(request: Request, days: int = Query(30, ge=7, le=30)):
+    from prices.trends import trends
+    if days not in (7, 30):
+        raise HTTPException(422, "Elegí un período de 7 o 30 días.")
+    try:
+        return trends(_catalog_history(request), days=days)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "La evolución de precios no está disponible temporalmente.") from exc
+
+
 def _optional_user(credentials: Optional[HTTPAuthorizationCredentials]) -> Optional[dict]:
     """Usuario de la sesión si hay token válido; anónimo si no (sin error)."""
     if not credentials or not _auth_is_ready():
@@ -1010,6 +1128,8 @@ def product_price_history(key: str = Query(..., max_length=120), days: int = Que
 def create_price_alert(body: PriceAlertBody, current_user=Depends(get_current_user)):
     """Avisa por Telegram cuando baje el precio (o llegue al objetivo)."""
     from prices.alerts import create_alert
+    from prices.history import PriceHistory
+    from prices.watchlist_quotes import WatchlistQuotes
 
     retry_after = _db.consume_assistant_quota(
         current_user["id"], config.ASSISTANT_RATE_LIMIT_MAX, config.ASSISTANT_RATE_LIMIT_WINDOW_SECONDS,
@@ -1021,9 +1141,11 @@ def create_price_alert(body: PriceAlertBody, current_user=Depends(get_current_us
         current_user["id"],
         body.query,
         key=body.key,
+        category=body.category,
         target=body.target_price,
         promotions=_assistant_promotions(),
         methods=_db.get_user_payment_methods(current_user["id"]),
+        quote_store=WatchlistQuotes(PriceHistory()),
     )
     if alert is None:
         raise HTTPException(404, "No encontré ese producto en las tiendas.")

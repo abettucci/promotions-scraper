@@ -147,6 +147,17 @@ promo-scraper/
 - Los selectores CSS pueden haber cambiado
 - Edita el scraper específico en `scrapers/`
 
+## Catálogo de productos y escáner
+
+La sección **Precios** incorpora catálogo por rubros, ordenamiento, consulta exacta
+de códigos de barras y un panel experimental de evolución. No exige servicios de
+IA pagos. La cobertura depende del recolector de precios y de su activación.
+
+- [Configuración, API y metodología](docs/product-catalog.md)
+- [Comparación con Descuentito y Calculabot](docs/competitive-review.md)
+
+- [Lista habitual y comparación de canasta](docs/watchlist-basket.md)
+
 ## 📝 TODO
 
 - [ ] Agregar notificaciones por email/Telegram

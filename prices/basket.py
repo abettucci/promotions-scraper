@@ -35,6 +35,8 @@ def run_basket(
     history: PriceHistory, *, basket: Optional[list[dict]] = None, pause: float = 0.6,
     today: Optional[date] = None, log: Callable[[str], None] = print,
     search: Callable[..., dict] = search_prices,
+    groups_per_query: int = 12,
+    mark_complete: bool = True,
 ) -> dict:
     """Consulta cada producto y registra los cambios. Nunca levanta por una tienda caída."""
     basket = basket if basket is not None else load_basket()
@@ -44,7 +46,7 @@ def run_basket(
         query = entry["query"]
         stats["queries"] += 1
         try:
-            result = search(query, category=entry.get("category"), max_groups=3)
+            result = search(query, category=entry.get("category"), max_groups=max(1, min(groups_per_query, 30)))
         except Exception as error:
             stats["errors"] += 1
             log(f"   ⚠️ {query}: {type(error).__name__}: {error}")
@@ -53,10 +55,11 @@ def run_basket(
         if not groups:
             stats["empty"] += 1
         stats["rows"] += history.record_groups(groups, query, today)
-        seen_keys.update(g["key"] for g in groups)
+        seen_keys.update(g["key"] for g in groups if g["key"].startswith(("ean:", "model:")))
         time.sleep(pause)
     stats["products"] = len(seen_keys)
-    history.set_meta(_LAST_RUN_KEY, datetime.now().isoformat(timespec="seconds"))
+    if seen_keys and mark_complete:
+        history.set_meta(_LAST_RUN_KEY, datetime.now().isoformat(timespec="seconds"))
     log(f"   ✅ Canasta: {stats['queries']} búsquedas, {stats['products']} productos, "
         f"{stats['rows']} cambios de precio, {stats['empty']} sin resultados, {stats['errors']} errores")
     return stats

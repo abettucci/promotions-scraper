@@ -11,6 +11,9 @@ import { BankBadge } from "@/components/BankBadge"
 import { PriceHistoryChart } from "@/components/PriceHistoryChart"
 import { PriceAlertButton } from "@/components/PriceAlertButton"
 import { ProductAutocomplete } from "@/components/ProductAutocomplete"
+import { BarcodeScanner } from "@/components/BarcodeScanner"
+import { PriceCatalog } from "@/components/PriceCatalog"
+import { PriceTrends } from "@/components/PriceTrends"
 import type { PriceFacet, PriceGroup, PriceOffer } from "@/lib/types"
 
 const CATEGORIES = [
@@ -56,13 +59,14 @@ function FinalPrice({ offer }: { offer: PriceOffer }) {
   )
 }
 
-function OfferRow({ offer, best }: { offer: PriceOffer; best: boolean }) {
+function OfferRow({ offer, best, snapshot = false }: { offer: PriceOffer; best: boolean; snapshot?: boolean }) {
   const promo = offer.promo
   return (
     <tr className={best ? "bg-[#f4ffec]" : "transition-colors hover:bg-[#f5f8fc]"}>
       <td className="px-4 py-3 align-top sm:px-5">
         <p className="text-sm font-semibold text-[#102a4c]">{offer.store_name}</p>
-        {best && <span className="mt-1 inline-block rounded-full bg-[#b8f36b] px-2 py-0.5 text-[10px] font-bold text-[#102a4c]">MÁS BARATO HOY</span>}
+        {best && <span className="mt-1 inline-block rounded-full bg-[#b8f36b] px-2 py-0.5 text-[10px] font-bold text-[#102a4c]">{snapshot ? "MENOR PRECIO RELEVADO" : "MÁS BARATO HOY"}</span>}
+        {snapshot && <p className="mt-1 text-xs text-muted-foreground">Confirmado {offer.observed_at}</p>}
       </td>
       <td className="px-3 py-3 align-top text-sm text-[#102a4c]">
         <p className="font-semibold">{ars(offer.price)}</p>
@@ -80,7 +84,7 @@ function OfferRow({ offer, best }: { offer: PriceOffer; best: boolean }) {
               {promo.requires_min_purchase && <p className="text-xs text-[#8f2d28]">Compra mínima {promo.min_purchase}</p>}
               {promo.store_types && promo.store_types.toLowerCase() !== "online, tiendas" && <p className="text-xs text-[#52657d]">{promo.store_types}</p>}
             </>
-          ) : offer.deal !== "multibuy" && <span className="text-xs text-[#8a9ab0]">Sin promo bancaria hoy</span>}
+          ) : offer.deal !== "multibuy" && <span className="text-xs text-[#8a9ab0]">{snapshot ? "Sin calcular reintegros" : "Sin promo bancaria hoy"}</span>}
           <MultiBuyNote offer={offer} />
         </div>
       </td>
@@ -94,14 +98,15 @@ function OfferRow({ offer, best }: { offer: PriceOffer; best: boolean }) {
   )
 }
 
-function OfferItem({ offer, best }: { offer: PriceOffer; best: boolean }) {
+function OfferItem({ offer, best, snapshot = false }: { offer: PriceOffer; best: boolean; snapshot?: boolean }) {
   const promo = offer.promo
   return (
     <li className={`px-4 py-3 ${best ? "bg-[#f4ffec]" : ""}`}>
       <div className="flex items-start justify-between gap-3">
         <div>
           <p className="text-sm font-semibold text-[#102a4c]">{offer.store_name}</p>
-          {best && <span className="mt-1 inline-block rounded-full bg-[#b8f36b] px-2 py-0.5 text-[10px] font-bold text-[#102a4c]">MÁS BARATO HOY</span>}
+          {best && <span className="mt-1 inline-block rounded-full bg-[#b8f36b] px-2 py-0.5 text-[10px] font-bold text-[#102a4c]">{snapshot ? "MENOR PRECIO RELEVADO" : "MÁS BARATO HOY"}</span>}
+          {snapshot && <p className="mt-1 text-xs text-muted-foreground">Confirmado {offer.observed_at}</p>}
         </div>
         <div className="text-right"><FinalPrice offer={offer} /></div>
       </div>
@@ -111,7 +116,7 @@ function OfferItem({ offer, best }: { offer: PriceOffer; best: boolean }) {
           <b>{promo.discount}</b> con {promo.entity}{promo.tope && /\d|sin tope/i.test(promo.tope) ? ` · tope ${promo.tope}` : ""}
           {promo.requires_min_purchase && <span className="text-[#8f2d28]"> · mín. {promo.min_purchase}</span>}
         </p>
-      ) : offer.deal !== "multibuy" && <p className="mt-1 text-xs text-[#8a9ab0]">Sin promo bancaria hoy{offer.installments > 0 ? ` · hasta ${offer.installments} cuotas sin interés` : ""}</p>}
+      ) : offer.deal !== "multibuy" && <p className="mt-1 text-xs text-[#8a9ab0]">{snapshot ? "Sin calcular reintegros" : "Sin promo bancaria hoy"}{offer.installments > 0 ? ` · hasta ${offer.installments} cuotas sin interés` : ""}</p>}
       <a href={offer.url} target="_blank" rel="noopener noreferrer" className="mt-1 inline-flex items-center gap-1 text-xs font-bold text-[#2758d8]">
         Ver en la tienda <ExternalLink className="h-3 w-3" />
       </a>
@@ -130,10 +135,11 @@ function ProductImage({ src }: { src: string }) {
   )
 }
 
-function GroupCard({ group, query }: { group: PriceGroup; query: string }) {
+function GroupCard({ group, query, snapshot = false }: { group: PriceGroup; query: string; snapshot?: boolean }) {
   const [showHistory, setShowHistory] = useState(false)
-  // Las claves por título no identifican al producto entre días: sin historial ni alertas.
+  // El historial exige una identidad estable; los productos sin EAN sí pueden guardarse por título.
   const trackable = group.key.startsWith("ean:") || group.key.startsWith("model:")
+  const canSave = trackable || group.key.startsWith("title:")
   const offers = group.offers
   const cheapest = offers[0]
   const priciest = offers[offers.length - 1]
@@ -151,19 +157,19 @@ function GroupCard({ group, query }: { group: PriceGroup; query: string }) {
           </p>
         </div>
       </header>
-      {trackable && (
+      {canSave && (
         <div className="flex flex-wrap items-center gap-x-5 gap-y-2 border-b border-[#e5ebf2] px-4 py-2.5 sm:px-5">
-          <button type="button" onClick={() => setShowHistory((value) => !value)} aria-expanded={showHistory}
+          {trackable && <button type="button" onClick={() => setShowHistory((value) => !value)} aria-expanded={showHistory}
             className="inline-flex items-center gap-1.5 text-xs font-bold text-[#2758d8] hover:text-[#102a4c]">
             <LineChart className="h-3.5 w-3.5" /> {showHistory ? "Ocultar historial" : "Ver historial de precios"}
-          </button>
-          <PriceAlertButton query={query} productKey={group.key} />
+          </button>}
+          <PriceAlertButton query={query} productKey={group.key} category={group.category} stableProduct={trackable} />
         </div>
       )}
       {trackable && showHistory && <div className="border-b border-[#e5ebf2] bg-[#fbfcfe]"><PriceHistoryChart productKey={group.key} /></div>}
       {/* Mobile: una tarjeta por tienda; desde sm, tabla comparativa. */}
       <ul className="divide-y divide-[#e5ebf2] sm:hidden">
-        {offers.map((offer, index) => <OfferItem key={`${offer.store}-${index}`} offer={offer} best={index === 0 && offers.length > 1} />)}
+        {offers.map((offer, index) => <OfferItem key={`${offer.store}-${index}`} offer={offer} best={index === 0 && offers.length > 1} snapshot={snapshot} />)}
       </ul>
       <div className="hidden overflow-x-auto sm:block">
         <table className="w-full min-w-[720px] table-fixed border-collapse text-left">
@@ -174,13 +180,13 @@ function GroupCard({ group, query }: { group: PriceGroup; query: string }) {
             <tr>
               <th className="px-4 py-2.5 sm:px-5">Tienda</th>
               <th className="px-3 py-2.5">Precio online</th>
-              <th className="px-3 py-2.5">Mejor promo de hoy</th>
-              <th className="px-3 py-2.5">Precio final</th>
+              <th className="px-3 py-2.5">{snapshot ? "Condiciones del catálogo" : "Mejor promo de hoy"}</th>
+              <th className="px-3 py-2.5">{snapshot ? "Precio registrado" : "Precio final"}</th>
               <th className="px-4 py-2.5 sm:px-5"></th>
             </tr>
           </thead>
           <tbody className="divide-y divide-[#e5ebf2]">
-            {offers.map((offer, index) => <OfferRow key={`${offer.store}-${index}`} offer={offer} best={index === 0 && offers.length > 1} />)}
+            {offers.map((offer, index) => <OfferRow key={`${offer.store}-${index}`} offer={offer} best={index === 0 && offers.length > 1} snapshot={snapshot} />)}
           </tbody>
         </table>
       </div>
@@ -251,6 +257,12 @@ export default function PreciosPage() {
   const [qty, setQty] = useState(1)
   const [filter, setFilter] = useState<CategoryFilter>(NO_FILTER)
   const [shown, setShown] = useState(PAGE_SIZE)
+  const [barcode, setBarcode] = useState("")
+  const [catalogKey, setCatalogKey] = useState("")
+  const catalogProduct = useQuery({
+    queryKey: ["catalog-product", catalogKey], queryFn: () => api.getCatalogProduct(catalogKey),
+    enabled: !!catalogKey && !query, staleTime: 60_000,
+  })
 
   const { data, isFetching, error } = useQuery({
     queryKey: ["prices", query, category, mine, qty],
@@ -260,10 +272,12 @@ export default function PreciosPage() {
   })
 
   const submit = (value: string, nextFilter: CategoryFilter = NO_FILTER) => {
-    setInput(value)
-    setQuery(value.trim())
+    setInput(value.slice(0, 120))
+    setQuery(value.trim().slice(0, 120))
     setFilter(nextFilter)
     setShown(PAGE_SIZE)
+    setCatalogKey("")
+    setBarcode("")
   }
 
   const visible = (data?.groups ?? []).filter((group) => inCategory(group, filter))
@@ -275,7 +289,8 @@ export default function PreciosPage() {
           <Link href="/" className="text-[#52657d] hover:text-[#102a4c]" aria-label="Volver al inicio"><ArrowLeft className="h-5 w-5" /></Link>
           <span className="display text-base font-semibold tracking-[-0.05em] text-[#102a4c]">PROMOAR</span>
           <span className="text-[#cbd8e6]">/</span>
-          <span className="text-sm text-[#52657d]">Comparador de precios</span>
+          <span className="text-sm text-[#52657d]">Precios</span>
+          <Link href="/watchlist" className="ml-auto text-sm font-semibold text-primary">Mi lista habitual</Link>
         </div>
       </header>
 
@@ -285,7 +300,8 @@ export default function PreciosPage() {
           <p className="mt-3 max-w-2xl text-sm leading-relaxed text-[#d9e3ef] sm:text-base">
             Comparamos el precio online en Carrefour, Coto, Día, Jumbo, Disco, Vea, ChangoMás, Frávega, Naldo, Easy, Cetrogar, On City y Coppel, y le restamos la mejor promo bancaria vigente hoy.
           </p>
-          <form onSubmit={(event) => { event.preventDefault(); submit(input) }} className="mt-6 flex flex-col gap-2 sm:flex-row">
+          <div className="mt-6 flex flex-col gap-2 sm:flex-row">
+          <form onSubmit={(event) => { event.preventDefault(); submit(input) }} className="flex min-w-0 flex-1 flex-col gap-2 sm:flex-row">
             <ProductAutocomplete
               value={input} onChange={setInput}
               onSelect={({ text, categoryPath }) => submit(text, categoryPath ? { level1: categoryPath[0] ?? null, level2: categoryPath[1] ?? null } : NO_FILTER)}
@@ -294,6 +310,9 @@ export default function PreciosPage() {
               <Search className="h-4 w-4" /> Comparar
             </button>
           </form>
+          <BarcodeScanner onRead={(value) => { setQuery(""); setCatalogKey(""); setBarcode(value) }} />
+          </div>
+          <p className="mt-2 text-xs text-[#d9e3ef]">Para guardar un producto, buscalo y elegí “Agregar a mi lista” en su resultado.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {CATEGORIES.map(({ value, label, icon: Icon }) => (
               <button key={value || "all"} type="button" onClick={() => setCategory(value)} aria-pressed={category === value}
@@ -318,6 +337,12 @@ export default function PreciosPage() {
           </div>
         </section>
 
+        <nav aria-label="Opciones de precios" className="flex flex-wrap gap-4 text-sm font-semibold text-primary">
+          <button type="button" onClick={() => { setQuery(""); setCatalogKey(""); setBarcode("") }}>Explorar catálogo</button>
+          <a href="#evolucion">Evolución por rubro</a>
+          <Link href="/watchlist">Armar mi lista y recibir alertas</Link>
+        </nav>
+
         {!query && (
           <div className="flex flex-wrap items-center gap-2 text-sm text-[#52657d]">
             Probá con:
@@ -326,6 +351,19 @@ export default function PreciosPage() {
             ))}
           </div>
         )}
+
+        {!query && (!catalogKey
+          ? <PriceCatalog ean={barcode} onClearBarcode={() => setBarcode("")} onChoose={setCatalogKey} />
+          : <section className="space-y-4" aria-label="Comparación del catálogo">
+              <button type="button" onClick={() => setCatalogKey("")} className="text-sm font-semibold text-primary">← Volver al catálogo</button>
+              {catalogProduct.isFetching && <p role="status" className="text-sm text-muted-foreground">Cargando precios registrados…</p>}
+              {catalogProduct.error && <p role="alert" className="text-sm text-red-600">{(catalogProduct.error as Error).message}</p>}
+              {catalogProduct.data && <>
+                <p className="text-sm text-muted-foreground">Precios online relevados, sin envío ni reintegros. Confirmá en la tienda antes de comprar.</p>
+                <button type="button" onClick={() => submit(catalogProduct.data.name)} className="rounded-xl bg-primary px-4 py-3 text-sm font-semibold text-primary-foreground">Actualizar en vivo y consultar promociones</button>
+                <GroupCard group={catalogProduct.data} query={catalogProduct.data.name.slice(0, 120)} snapshot />
+              </>}
+            </section>)}
 
         {isFetching && <p className="flex items-center gap-2 text-sm text-[#52657d]"><Loader2 className="h-4 w-4 animate-spin" /> Consultando las tiendas…</p>}
         {error && <p className="rounded-xl border border-[#f0c7c3] bg-[#fff5f4] px-4 py-3 text-sm text-[#9c4138]">{(error as Error).message}</p>}
@@ -355,6 +393,8 @@ export default function PreciosPage() {
             </p>
           </>
         )}
+
+        <PriceTrends />
       </main>
     </div>
   )

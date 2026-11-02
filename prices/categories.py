@@ -23,12 +23,12 @@ _RULES: list[tuple[str, str, str]] = [
     # ── Almacén
     ("Almacén", "Dulces y mermeladas", r"\bdulce de leche\b|\bmermelada\b|\bdulce de (batata|membrillo)\b|\bmiel\b"),
     ("Almacén", "Aceites y vinagres", r"\baceites?\b|\bvinagres?\b|\baceto balsamico\b"),
-    ("Almacén", "Aderezos y salsas", r"\bmayonesa\b|\bketchup\b|\bmostaza\b|\baderezo\b|\bsalsa (golf|criolla|barbacoa|de soja)\b|\bsalsa (de )?tomate\b|\bpure de tomate\b|\bpulpa de tomate\b|\btomate cubeteado\b|\btomate (triturado|perita|en cubos)\b|\bsalsa (lista|pizza|filetto|bolognesa)\b"),
+    ("Almacén", "Aderezos y salsas", r"\bhummus\b|\bguacamole\b|\bdips?\b|\bmayonesa\b|\bketchup\b|\bmostaza\b|\baderezo\b|\bsalsa (golf|criolla|barbacoa|de soja)\b|\bsalsa (de )?tomate\b|\bpure de tomate\b|\bpulpa de tomate\b|\btomate cubeteado\b|\btomate (triturado|perita|en cubos)\b|\bsalsa (lista|pizza|filetto|bolognesa)\b"),
     ("Almacén", "Conservas", r"\b(atun|caballa|sardinas?|arvejas?|choclo|lentejas? (en )?lata|palmitos?|duraznos? en almibar|champi(n|ñ)ones? (en )?lata|aceitunas?|pickles?)\b|\bconservas?\b"),
     ("Almacén", "Fideos y pastas", r"\bfideos?\b|\bspaghetti\b|\btallarines?\b|\bravioles?\b|\bnoquis\b|\bsorrentinos?\b|\bpastas? (secas?|frescas?|rellenas?)\b|\bmo(n|ñ)itos\b|\btirabuzon\b"),
     ("Almacén", "Arroz, legumbres y harinas", r"\barroz\b|\blentejas?\b|\bgarbanzos?\b|\bporotos?\b|\bharinas?\b|\bpolenta\b|\bsemola\b|\bpremezcla\b"),
     ("Almacén", "Yerba, café y té", r"\byerba\b|\bcafe\b|\bte (en saquitos|verde|negro|de|rojo)\b|\bsaquitos\b|\bmate cocido\b|\bcacao\b|\bnesquik\b|\binfusion(es)?\b|\bcapsulas? (de )?cafe\b|\bnescafe\b"),
-    ("Almacén", "Galletitas, snacks y golosinas", r"\bgalletitas?\b|\bgalletas?\b|\boreo\b|\bsnacks?\b|\bpapas fritas\b|\blays\b|\bpringles\b|\balfajor(es)?\b|\bchocolates?\b|\bgolosinas?\b|\bcaramelos?\b|\bchicles?\b|\bbarras? de cereal\b|\bmani\b|\bturron\b|\bbombones?\b"),
+    ("Almacén", "Galletitas, snacks y golosinas", r"\bgalletitas?\b|\bgalletas?\b|\boreo\b|\bsnacks?\b|\bnachos\b|\bpapas fritas\b|\blays\b|\bpringles\b|\balfajor(es)?\b|\bchocolates?\b|\bgolosinas?\b|\bcaramelos?\b|\bchicles?\b|\bbarras? de cereal\b|\bmani\b|\bturron\b|\bbombones?\b"),
     ("Almacén", "Azúcar y endulzantes", r"\bazucar\b|\bedulcorantes?\b|\bstevia\b|\bsacarina\b"),
     ("Almacén", "Sal y condimentos", r"\bsal (fina|gruesa|entrefina|de mesa)\b|\bcelusal\b|\bpimienta\b|\bcondimentos?\b|\boregano\b|\bpimenton\b|\bespecias?\b|\bcomino\b"),
     ("Almacén", "Cereales y desayuno", r"\bcereales?\b|\bavena\b|\bgranola\b|\bcopos\b|\bmuesli\b"),
@@ -41,7 +41,7 @@ _RULES: list[tuple[str, str, str]] = [
     ("Bebidas", "Aperitivos y licores", r"\bfernet\b|\bgin\b|\bvodka\b|\bwhisky\b|\bron\b|\blicor\b|\bcampari\b|\baperol\b|\bbranca\b|\bcinzano\b|\bgancia\b|\bcoctel\b|\btequila\b"),
     ("Bebidas", "Jugos y energizantes", r"\bjugos?\b|\bcepita\b|\bbaggio\b|\bclight\b|\btang\b|\bisotonic[ao]s?\b|\bgatorade\b|\bpowerade\b|\benergizantes?\b|\bmonster\b|\bred bull\b|\bspeed\b"),
     # ── Lácteos
-    ("Lácteos", "Manteca y cremas", r"\bmanteca\b|\bmargarina\b|\bcrema (de leche|para batir|doble|de leche)\b|\bcrema chantilly\b"),
+    ("Lácteos", "Manteca y cremas", r"\bmanteca\b|\bmargarina\b|\bcrema (de leche|para batir|doble|culinaria|para cocinar)\b|\bcrema\b.{0,50}\bculinaria\b|\bcrema chantilly\b"),
     ("Lácteos", "Quesos", r"\bquesos?\b|\bcremoso\b|\bmozzarella\b|\bmuzzarella\b|\bmuzarela\b|\brallado\b|\bfontina\b|\bprovolone\b|\bsardo\b|\bport salut\b|\bricota\b|\bpasteurizado\b|\bdambo\b|\btybo\b"),
     ("Lácteos", "Yogures y postres", r"\byogu?r(t)?\b|\bpostres?\b|\bflan\b|\bgelatina\b|\bdanette\b|\bdanonino\b"),
     ("Lácteos", "Leches", r"\bleche\b|\bleche en polvo\b|\bla serenisima\b.*\b(entera|descremada|larga vida)\b"),

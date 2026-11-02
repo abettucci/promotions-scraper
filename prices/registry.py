@@ -1,8 +1,7 @@
 """Tiendas consultadas por el comparador.
 
 ``merchant`` es el nombre del comercio en la DB de promos: permite cruzar el
-precio con las promos bancarias de ese comercio. Disco y Vea comparten el
-catálogo VTEX de Cencosud pero no tienen promos scrapeadas propias.
+precio con las promos bancarias de ese comercio.
 """
 from __future__ import annotations
 
@@ -25,8 +24,8 @@ STORES: tuple[Store, ...] = (
     Store("carrefour", "Carrefour", "vtex", "www.carrefour.com.ar", "Carrefour"),
     Store("dia", "Día", "vtex", "diaonline.supermercadosdia.com.ar", "Supermercados Día"),
     Store("jumbo", "Jumbo", "vtex", "www.jumbo.com.ar", "Jumbo (Cencosud)"),
-    Store("disco", "Disco", "vtex", "www.disco.com.ar"),
-    Store("vea", "Vea", "vtex", "www.vea.com.ar"),
+    Store("disco", "Disco", "vtex", "www.disco.com.ar", "Disco"),
+    Store("vea", "Vea", "vtex", "www.vea.com.ar", "Vea"),
     Store("masonline", "ChangoMás", "vtex", "www.masonline.com.ar", "Más Online (ChangoMás)"),
     Store("coto", "Coto", "coto", "www.coto.com.ar", "Coto Digital"),
     # Electro y hogar

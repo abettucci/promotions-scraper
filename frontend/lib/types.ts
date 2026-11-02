@@ -150,6 +150,7 @@ export interface PriceOfferPromo {
 }
 
 export interface PriceOffer {
+  observed_at?: string
   store: string
   store_name: string
   merchant: string | null
@@ -226,6 +227,21 @@ export interface PriceSearchResponse {
   failed_stores: string[]
 }
 
+export interface CatalogProduct {
+  key: string; name: string; brand: string; ean: string; image: string
+  category_path: string[]; price: number; store_count: number; observed_at: string; query: string
+}
+export interface PriceCatalogResponse {
+  products: CatalogProduct[]; total: number; page: number; page_size: number
+  facets: { name: string; count: number }[]; fresh_days: number; source: "catalog"
+}
+export interface PriceTrendsResponse {
+  days: number; baseline: string; as_of: string; experimental: boolean
+  min_products: number; min_coverage_pct: number
+  categories: { category: string; baseline_products: number; compared_products: number
+    coverage_pct: number; change_pct: number | null; status: "ready" | "insufficient_data" }[]
+}
+
 export interface PricePoint { date: string; min: number; avg: number; max: number; stores: number }
 
 export interface PriceHistoryResponse {
@@ -243,9 +259,34 @@ export interface PriceAlert {
   product_key: string
   product_name: string
   query: string
+  category: string
   target_price: number | null
   baseline_price: number
   created_at?: string
+  category_path?: string[]
+  best_offer?: WatchlistQuote | null
+}
+
+export interface WatchlistQuote {
+  store: string; store_name: string; price: number; url: string
+  observed_at: string; modality: "online"; merchant?: string | null
+}
+
+export interface BasketOption {
+  store: string; store_name: string; modality: "online"; date: string; day: string; payment: string
+  subtotal: number; savings: number; total: number; priced_count: number; eligible_count: number
+  missing: string[]; coverage_pct?: number
+  promotion: { id?: number | null; title?: string | null; discount?: string | null
+    tope?: string | null; min_purchase?: string | null; requirements?: string[] | string | null; exclusions?: string[] | string | null } | null
+  comparison?: { product_count: number; difference: number; reference_total: number; store_total: number
+    store_day: string; store_payment: string; reference_day: string; reference_payment: string } | null
+}
+
+export interface BasketComparisonResponse {
+  reference: BasketOption | null; reference_kind: "complete" | "partial" | "single_option" | "insufficient"
+  options: BasketOption[]; product_count: number; as_of: string; horizon_days: number
+  quantity_per_product: number; shipping_included: false; physical_prices_available: false
+  warnings: string[]; unsupported_favorites: string[]
 }
 
 export interface PriceAlertCreated {
@@ -257,11 +298,13 @@ export interface PriceAlertCreated {
   target: number | null
   promo?: PriceOfferPromo | null
   telegram_linked: boolean
+  stable_key: boolean
 }
 
 export interface Watchlist {
   stores: string[]
   products: PriceAlert[]
   telegram_linked: boolean
+  prices_available?: boolean
   limits: { stores: number; products: number }
 }

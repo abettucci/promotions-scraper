@@ -2,7 +2,8 @@ import type {
   PromotionsResponse, TodayResponse, Bank, Supermarket, Stats, PromotionDetails,
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
   PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated, PriceSuggestResponse,
-  Watchlist,
+  Watchlist, BasketComparisonResponse,
+  PriceCatalogResponse, PriceGroup, PriceTrendsResponse,
 } from "./types"
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
@@ -37,6 +38,7 @@ async function fetchMutation<T>(
   path: string,
   body: unknown,
   token?: string | null,
+  signal?: AbortSignal,
 ): Promise<T> {
   const headers: HeadersInit = {
     "Content-Type": "application/json",
@@ -45,6 +47,7 @@ async function fetchMutation<T>(
   const res = await fetch(new URL(path, API_BASE).toString(), {
     method,
     headers,
+    signal,
     body: method === "DELETE" ? undefined : JSON.stringify(body),
   })
   if (!res.ok) {
@@ -84,7 +87,11 @@ export const api = {
     fetchJSON<PriceSuggestResponse>("/api/prices/suggest", { q, live }, null, signal),
   getPriceHistory: (key: string, days = 90) =>
     fetchJSON<PriceHistoryResponse>("/api/prices/history", { key, days }),
-  createPriceAlert: (body: { query: string; key?: string; target_price?: number }, token: string) =>
+  getPriceCatalog: (params: { q?: string; rubric?: string; sort?: string; page?: number; ean?: string }) =>
+    fetchJSON<PriceCatalogResponse>("/api/prices/catalog", params),
+  getCatalogProduct: (key: string) => fetchJSON<PriceGroup>("/api/prices/catalog/product", { key }),
+  getPriceTrends: (days: 7 | 30) => fetchJSON<PriceTrendsResponse>("/api/prices/trends", { days }),
+  createPriceAlert: (body: { query: string; key?: string; category?: string; target_price?: number }, token: string) =>
     fetchMutation<PriceAlertCreated>("POST", "/api/prices/alerts", body, token),
   listPriceAlerts: (token: string) =>
     fetchJSON<{ alerts: PriceAlert[]; telegram_linked: boolean }>("/api/prices/alerts", undefined, token),
@@ -92,6 +99,11 @@ export const api = {
     fetchMutation<{ ok: boolean }>("DELETE", `/api/prices/alerts/${id}`, undefined, token),
   getWatchlist: (token: string) =>
     fetchJSON<Watchlist>("/api/auth/me/watchlist", undefined, token),
+  getWatchlistBasket: (token: string) =>
+    fetchJSON<BasketComparisonResponse>("/api/auth/me/watchlist/basket", undefined, token),
+  refreshWatchlistPrices: (alert_ids: number[], token: string, signal?: AbortSignal) =>
+    fetchMutation<{ results: { id: number; status: "updated" | "cached" | "missing" | "error" }[] }>(
+      "POST", "/api/auth/me/watchlist/refresh-prices", { alert_ids }, token, signal),
   updateWatchlistStores: (stores: string[], token: string) =>
     fetchMutation<{ stores: string[] }>("PUT", "/api/auth/me/watchlist/stores", { stores }, token),
   getPaymentMethodsCatalog: () => fetchJSON<PaymentMethodsCatalog>("/api/catalog/payment-methods"),
