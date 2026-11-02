@@ -77,7 +77,8 @@ class ExternalSourcesRunner:
         for source, entry in (snapshot.get("sources") or {}).items():
             promotions = entry.get("promotions") if isinstance(entry, dict) else None
             if source in _SOURCES and isinstance(promotions, list) and promotions:
-                hydrated[source] = self._publish(source, promotions)
+                hydrated[source] = self._publish(source, promotions,
+                    history_observed_at=entry.get("updated_at") or "unknown", history_provenance="legacy")
         return hydrated
 
     def run(self, sources: Optional[Iterable[str]] = None) -> Dict:
@@ -141,7 +142,7 @@ class ExternalSourcesRunner:
                 seen.add(key)
         return current
 
-    def _publish(self, source: str, promotions: List[Dict]) -> int:
+    def _publish(self, source: str, promotions: List[Dict], *, history_observed_at=None, history_provenance="scrape") -> int:
         """Reemplaza sólo filas de ``source``; nunca toca otros scrapers."""
         grouped: Dict[tuple, List[Dict]] = {}
         for promo in promotions:
@@ -163,7 +164,8 @@ class ExternalSourcesRunner:
             supermarket_id = self.db.insert_supermarket(merchant, items[0].get("url") or "", category, update_existing=False)
             self.db.deactivate_for_source(supermarket_id, source)
             for promo in items:
-                promotion_id = self.db.insert_promotion(supermarket_id, {**promo, "source": source})
+                promotion_id = self.db.insert_promotion(supermarket_id, {**promo, "source": source},
+                    history_observed_at=history_observed_at, history_provenance=history_provenance)
                 if not promotion_id:
                     continue
                 self.db.insert_terms(promotion_id, {
@@ -171,7 +173,7 @@ class ExternalSourcesRunner:
                     "requirements": promo.get("requirements", []), "max_discount": promo.get("tope", ""),
                     "min_purchase": promo.get("min_purchase", ""), "valid_days": [promo.get("valid_days", "")],
                     "payment_methods": [promo.get("payment_method", "")],
-                })
+                }, history_observed_at=history_observed_at, history_provenance=history_provenance)
                 inserted += 1
             self.db.update_supermarket_scraped(supermarket_id)
             self.db.insert_scrape_history(supermarket_id, "success", len(items), f"External source: {source}")

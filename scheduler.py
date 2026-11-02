@@ -20,6 +20,7 @@ def _run_scraper():
             text=True,
             timeout=2400,  # 40 min max
         )
+        _persist_promotion_history()
         print(f"[scheduler] Scraper terminó (exit code {result.returncode})")
         if result.stdout:
             # últimas líneas del output
@@ -57,8 +58,21 @@ EXTERNAL_SOURCES_DELAY_SECONDS = int(os.getenv("EXTERNAL_SOURCES_DELAY_SECONDS",
 def _run_external_sources():
     from external_sources import ExternalSourcesRunner
     result = ExternalSourcesRunner().run()
+    _persist_promotion_history()
     print(f"[external-sources] Resultado: {result}")
     return result
+
+
+def _persist_promotion_history():
+    """Preserva en el Volume la historia pública generada dentro de Railway."""
+    import sqlite3
+    import config
+    from database import UserDatabase
+    from purchases import PurchaseStore
+    try:
+        PurchaseStore(UserDatabase()).sync(config.DATABASE_PATH)
+    except sqlite3.Error:
+        print("[purchases] No se pudo persistir la historia pública; se conserva la copia anterior.")
 
 
 def start_external_sources():

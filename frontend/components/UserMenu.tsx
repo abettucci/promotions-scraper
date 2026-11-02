@@ -96,6 +96,11 @@ export function UserMenu() {
             Mi lista habitual
           </Link>
 
+          <Link href="/purchases" onClick={() => setOpen(false)} className="flex items-center gap-2.5 px-4 py-2.5 text-sm text-[#40536b] transition-colors hover:bg-[#f5f8fc]">
+            <ShoppingBasket className="h-4 w-4 text-[#71839a]" />
+            Mis compras y ahorro
+          </Link>
+
           <div className="mt-1 border-t border-[#e5ebf2]">
             <button
               onClick={() => { logout(); setOpen(false) }}

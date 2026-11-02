@@ -4,6 +4,7 @@ import type {
   PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated, PriceSuggestResponse,
   Watchlist, BasketComparisonResponse,
   PriceCatalogResponse, PriceGroup, PriceTrendsResponse,
+  PurchaseInput, PurchaseReport,
 } from "./types"
 
 const API_BASE = typeof window !== "undefined" ? window.location.origin : "http://localhost:3000"
@@ -60,6 +61,11 @@ async function fetchMutation<T>(
 }
 
 export const api = {
+  getPurchaseOptions: (token: string) => fetchJSON<{ merchants: string[]; banks: string[]; wallets: string[] }>("/api/auth/me/purchases/options", undefined, token),
+  getPurchases: (token: string, params: { date_from?: string; date_to?: string; page?: number }) => fetchJSON<PurchaseReport>("/api/auth/me/purchases", params, token),
+  createPurchase: (token: string, body: PurchaseInput) => fetchMutation<{ id: string }>("POST", "/api/auth/me/purchases", body, token),
+  deletePurchase: (token: string, id: string) => fetchMutation<{ ok: boolean }>("DELETE", `/api/auth/me/purchases/${encodeURIComponent(id)}`, undefined, token),
+  refreshPurchaseHistory: (token: string) => fetchMutation<{ ok: boolean }>("POST", "/api/auth/me/purchases/refresh-history", {}, token),
   // ── Public endpoints ────────────────────────────────────────────────────────
   getPromotions: (params: {
     supermarket?: string; bank?: string; day?: string; search?: string

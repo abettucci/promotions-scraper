@@ -308,3 +308,29 @@ export interface Watchlist {
   prices_available?: boolean
   limits: { stores: number; products: number }
 }
+
+export interface PurchaseInput {
+  request_id: string; purchased_on: string; merchant: string; amount: string
+  received_discount: string | null; bank: string; wallet: string
+  card_type: "credit" | "debit" | "account" | "cash" | "unknown"
+  modality: "online" | "in_store" | "unknown"
+}
+export interface HistoricalPurchasePromo {
+  revision: string; title: string | null; discount: string | null; percentage: number | null
+  bank: string | null; wallet: string | null; card_type: string | null; store_types: string | null
+  tope: string | null; min_purchase: string | null; exclusions: string[]; requirements: string[]
+  evidence: "scrape" | "legacy"; payment_match: "possible" | "different" | "unknown"; observed_at: string
+}
+export interface PurchaseRecord extends Omit<PurchaseInput, "request_id" | "amount" | "received_discount"> {
+  id: string; amount: number; received_discount: number | null
+  history_status: "observed" | "insufficient"; has_percentage_promo: boolean
+  promotions: HistoricalPurchasePromo[]; promotion_count: number
+}
+export interface PurchaseReport {
+  purchases: PurchaseRecord[]; page: number; page_size: number; total: number; from: string; to: string
+  summary: { purchase_count: number; with_history_count: number; without_history_count: number
+    promo_day_count: number; promo_day_share_pct: number | null; possible_payment_count: number
+    total_amount: number; declared_savings: number; declared_savings_count: number
+    declared_effective_pct: number | null; by_published_percentage: { label: string; purchases: number }[] }
+  history: { first_day: string | null; last_day: string | null }; notes: string[]
+}

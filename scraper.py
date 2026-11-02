@@ -255,6 +255,7 @@ class PromoScraper:
                 self._mark_verified_cache_targets(
                     supermarket_id, promotions, is_aggregator, supermarket_data.get('default_brand'),
                 )
+                self.db.observe_verified_source(supermarket_id, supermarket_key)
                 self.stats['total_promotions'] += len(promotions)
                 self.stats['successful_scrapes'] += 1
                 self.log(

@@ -157,6 +157,7 @@ IA pagos. La cobertura depende del recolector de precios y de su activación.
 - [Comparación con Descuentito y Calculabot](docs/competitive-review.md)
 
 - [Lista habitual y comparación de canasta](docs/watchlist-basket.md)
+- [Compras realizadas, cruce con promociones y metodología](docs/purchase-metrics.md)
 
 ## 📝 TODO
 

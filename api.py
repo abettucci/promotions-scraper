@@ -8,6 +8,7 @@ from fastapi.middleware.cors import CORSMiddleware
 from fastapi.security import HTTPBearer, HTTPAuthorizationCredentials
 from typing import Optional, List, Literal
 from datetime import date, datetime, timedelta, timezone
+from uuid import UUID
 from pydantic import BaseModel, ConfigDict, Field, field_validator
 import sqlite3
 import json
@@ -28,6 +29,7 @@ def _strip_accents(s: str) -> str:
 sys.path.insert(0, str(Path(__file__).parent))
 import config
 from database import Database, UserDatabase
+from purchases import PurchaseBody, PurchaseStore, today as purchases_today
 
 # ── Auth deps ─────────────────────────────────────────────────────────────────
 try:
@@ -158,6 +160,11 @@ try:
         print(f"[external-sources] Snapshot restaurado: {_external_sources_hydration}")
 except Exception as _external_sources_error:
     print(f"⚠️ No se pudo restaurar snapshot externo: {_external_sources_error}")
+
+try:
+    PurchaseStore(_db).sync(config.DATABASE_PATH)
+except sqlite3.Error:
+    print("[purchases] Histórico pendiente de sincronización; no se registraron datos personales.")
 
 # ── JWT helpers ───────────────────────────────────────────────────────────────
 security = HTTPBearer(auto_error=False)
@@ -831,6 +838,82 @@ def update_watchlist_stores(body: UpdateFavoriteStoresBody, current_user=Depends
         canonical.append(name)
     stores = _db.set_user_favorite_stores(current_user["id"], canonical)
     return {"stores": stores}
+
+
+@app.get("/api/auth/me/purchases/options")
+def purchase_options(current_user=Depends(get_current_user)):
+    _watchlist_quota(current_user["id"], "purchase-options", 60, 60)
+    try:
+        conn = get_conn()
+        try:
+            merchants = [r[0] for r in conn.execute("SELECT name FROM supermarkets ORDER BY name COLLATE NOCASE")]
+        finally:
+            conn.close()
+        return {"merchants": merchants, "banks": config.PAYMENT_METHODS_CATALOG["bank"],
+                "wallets": config.PAYMENT_METHODS_CATALOG["wallet"]}
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "No pudimos cargar los comercios. Probá nuevamente.") from exc
+
+
+@app.post("/api/auth/me/purchases")
+def add_purchase(body: PurchaseBody, current_user=Depends(get_current_user)):
+    _watchlist_quota(current_user["id"], "purchase-write", 60, 3600)
+    try:
+        conn = get_conn()
+        try:
+            found = conn.execute("SELECT 1 FROM supermarkets WHERE name=?", (body.merchant,)).fetchone()
+        finally:
+            conn.close()
+        if not found or (body.bank and body.bank not in config.PAYMENT_METHODS_CATALOG["bank"]) or (body.wallet and body.wallet not in config.PAYMENT_METHODS_CATALOG["wallet"]):
+            raise HTTPException(422, "Seleccioná un comercio y medios de pago del catálogo.")
+        store = PurchaseStore(_db)
+        store.sync(config.DATABASE_PATH)
+        purchase = store.create(current_user["id"], body)
+        return {"id": purchase["id"]}
+    except ValueError as exc:
+        message = "Llegaste al máximo de 5000 compras." if str(exc) == "limit" else "La clave de guardado ya corresponde a otra compra. Revisá el registro antes de reintentar."
+        raise HTTPException(409, message) from exc
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "No pudimos guardar la compra. Podés reintentar sin duplicarla.") from exc
+
+
+@app.get("/api/auth/me/purchases")
+def get_purchases(
+    date_from: Optional[date] = Query(None), date_to: Optional[date] = Query(None),
+    page: int = Query(1, ge=1, le=250), page_size: int = Query(20, ge=1, le=100),
+    current_user=Depends(get_current_user),
+):
+    _watchlist_quota(current_user["id"], "purchase-report", 30, 60)
+    end = date_to or purchases_today()
+    start = date_from or end-timedelta(days=89)
+    if start < date(2000, 1, 1) or end > purchases_today() or start > end or (end-start).days > 365:
+        raise HTTPException(422, "Elegí un período pasado de hasta 366 días.")
+    try:
+        return PurchaseStore(_db).report(current_user["id"], start, end, page, page_size)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "Las métricas de compras no están disponibles temporalmente.") from exc
+
+
+@app.post("/api/auth/me/purchases/refresh-history")
+def refresh_purchase_history(current_user=Depends(get_current_user)):
+    _watchlist_quota(current_user["id"], "purchase-history", 6, 3600)
+    try:
+        PurchaseStore(_db).sync(config.DATABASE_PATH)
+        return {"ok": True}
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "No pudimos actualizar el cruce histórico. Probá más tarde.") from exc
+
+
+@app.delete("/api/auth/me/purchases/{purchase_id}")
+def remove_purchase(purchase_id: UUID, current_user=Depends(get_current_user)):
+    _watchlist_quota(current_user["id"], "purchase-write", 60, 3600)
+    try:
+        if not PurchaseStore(_db).delete(current_user["id"], str(purchase_id)):
+            raise HTTPException(404, "Compra no encontrada.")
+        return {"ok": True}
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "No pudimos eliminar la compra. Probá más tarde.") from exc
+
 
 
 @app.get("/api/auth/me/promotions")

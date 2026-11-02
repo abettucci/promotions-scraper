@@ -353,6 +353,12 @@ class Database:
         conn.commit()
         conn.close()
 
+        from promotion_history import init_history, bootstrap_history
+        with self.get_connection() as history_conn:
+            init_history(history_conn)
+            bootstrap_history(history_conn)
+        history_conn.close()
+
         print(f"✅ Base de datos inicializada: {self.db_path}")
 
     # ── User CRUD ─────────────────────────────────────────────────────────────
@@ -549,7 +555,7 @@ class Database:
         conn.commit()
         conn.close()
     
-    def insert_promotion(self, supermarket_id: int, promo_data: Dict) -> Optional[int]:
+    def insert_promotion(self, supermarket_id: int, promo_data: Dict, *, history_observed_at=None, history_provenance="scrape") -> Optional[int]:
         """Inserta una promoción"""
         conn = self.get_connection()
         cursor = conn.cursor()
@@ -620,17 +626,15 @@ class Database:
                 promo_data.get('coverage'),
             ))
             
-            promotion_id = cursor.lastrowid
-            
-            # Si lastrowid es 0, significa que fue un UPDATE (ON CONFLICT)
-            if not promotion_id:
-                result = cursor.execute("""
-                    SELECT id FROM promotions
-                    WHERE supermarket_id = ? AND title = ? AND bank = ?
-                """, (supermarket_id, title, promo_data.get('bank') or '')).fetchone()
-                
-                if result:
-                    promotion_id = result[0]
+            # lastrowid no identifica de forma confiable la fila de un UPSERT.
+            result = cursor.execute("""
+                SELECT id FROM promotions WHERE supermarket_id=? AND title=? AND bank=?
+            """, (supermarket_id, title, promo_data.get('bank') or '')).fetchone()
+            promotion_id = result[0] if result else None
+            if promotion_id:
+                from promotion_history import capture_promotion
+                capture_promotion(conn, promotion_id, with_terms=False,
+                                  observed_at=history_observed_at, provenance=history_provenance)
             
             conn.commit()
             return promotion_id
@@ -643,7 +647,7 @@ class Database:
         finally:
             conn.close()
     
-    def insert_terms(self, promotion_id: int, terms_data: Dict):
+    def insert_terms(self, promotion_id: int, terms_data: Dict, *, history_observed_at=None, history_provenance="scrape"):
         """Inserta términos y condiciones (one row per promotion)"""
         def as_list(value):
             """Mantiene separados los requisitos/exclusiones en la API.
@@ -688,6 +692,9 @@ class Database:
             json.dumps(terms_data.get('valid_days', [])),
             json.dumps(terms_data.get('payment_methods', []))
         ))
+
+        from promotion_history import capture_promotion
+        capture_promotion(conn, promotion_id, observed_at=history_observed_at, provenance=history_provenance)
 
         conn.commit()
         conn.close()
@@ -887,6 +894,19 @@ class Database:
         conn.close()
         return deactivated
 
+    def observe_verified_source(self, supermarket_id: int, source: str):
+        """Una respuesta recién verificada e idéntica también aporta evidencia diaria."""
+        from promotion_history import capture_promotion
+        conn = self.get_connection()
+        try:
+            rows = conn.execute("SELECT id FROM promotions WHERE supermarket_id=? AND source=? AND is_active=1",
+                                (supermarket_id, source)).fetchall()
+            for row in rows:
+                capture_promotion(conn, row["id"])
+            conn.commit()
+        finally:
+            conn.close()
+
     def active_promotions_for_source_count(self, supermarket_id: int, source: str) -> int:
         """Cantidad activa que una fuente realmente dejó en la base.
 
@@ -1060,6 +1080,10 @@ class UserDatabase:
                 pass
         conn.commit()
         conn.close()
+        from purchases import init_purchases
+        with self._conn() as purchases_conn:
+            init_purchases(purchases_conn)
+        purchases_conn.close()
         print(f"✅ Users DB inicializada: {self.db_path}")
 
     def create_user(self, email: str, password_hash: str) -> Optional[int]:

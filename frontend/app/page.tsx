@@ -122,6 +122,7 @@ export default function Home() {
               <Link href="/watchlist" title="Armar lista habitual y recibir alertas de precios" className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-85 sm:w-auto sm:text-sm">
                 <ShoppingBasket className="h-4 w-4" aria-hidden="true" /><span>Lista habitual</span>
               </Link>
+              <Link href="/purchases" className="inline-flex min-h-9 items-center rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:bg-secondary sm:text-sm">Mis compras</Link>
             </nav>
           </div>
           <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
