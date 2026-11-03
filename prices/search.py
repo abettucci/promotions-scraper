@@ -180,3 +180,36 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
         "facets": build_facets(shown),
         "failed_stores": sorted(set(failed)),
     }
+
+
+def search_ean_prices(ean: str, *, category: Optional[str] = "supermarket") -> dict:
+    """Busca GTIN en fuentes con lookup directo y exige que la respuesta coincida."""
+    digits = "".join(char for char in str(ean or "") if char.isdigit())
+    wanted = digits.lstrip("0")
+    offers: list[Offer] = []
+    failed: list[str] = []
+    stores = stores_for(category)
+    with ThreadPoolExecutor(max_workers=max(1, len(stores))) as pool:
+        futures = {}
+        for store in stores:
+            try:
+                lookup = getattr(_source(store), "search_ean", None)
+                if lookup is not None:
+                    futures[pool.submit(lookup, store, digits)] = store
+            except ModuleNotFoundError:
+                failed.append(store.name)
+        for future in as_completed(futures, timeout=20):
+            store = futures[future]
+            try:
+                offers.extend(o for o in future.result()
+                              if "".join(c for c in str(o.ean) if c.isdigit()).lstrip("0") == wanted and o.in_stock)
+            except Exception:
+                failed.append(store.name)
+    if not offers:
+        return {"ean": digits, "group": None, "failed_stores": sorted(set(failed))}
+    offers.sort(key=lambda offer: offer.price)
+    first = offers[0]
+    group = ProductGroup(key=f"ean:{wanted}", name=first.title, brand=first.brand,
+                         ean=digits, image=first.image, offers=offers)
+    _fill_group_metadata(group)
+    return {"ean": digits, "group": group.to_dict(), "failed_stores": sorted(set(failed))}

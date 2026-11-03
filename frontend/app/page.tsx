@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag, TrainFront, ShoppingBasket } from "lucide-react"
+import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag, TrainFront, ShoppingBasket, ScanBarcode } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
 import type { FilterState, Category, DayCode } from "@/lib/types"
@@ -118,6 +118,9 @@ export default function Home() {
               </button>
               <Link href="/precios" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
                 <Tag className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only sm:not-sr-only">Precios</span>
+              </Link>
+              <Link href="/escanear" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
+                <ScanBarcode className="h-3.5 w-3.5" aria-hidden="true" /><span>Escanear</span>
               </Link>
               <Link href="/watchlist" title="Armar lista habitual y recibir alertas de precios" className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-85 sm:w-auto sm:text-sm">
                 <ShoppingBasket className="h-4 w-4" aria-hidden="true" /><span>Lista habitual</span>

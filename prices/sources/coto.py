@@ -53,6 +53,24 @@ def search(store: Store, query: str, limit: int = 8, timeout: float = 8.0) -> li
         return []
 
 
+def search_ean(store: Store, ean: str, timeout: float = 8.0) -> list[Offer]:
+    """Consulta Endeca por código, si está indexado; nunca retorna fuzzy matches."""
+    host = store.host or "www.coto.com.ar"
+    response = requests.get(f"https://{host}/sitios/cdigi/categoria",
+                            params={"Ntt": ean, "Nrpp": 10, "format": "json"},
+                            headers=_HEADERS, timeout=timeout)
+    if response.status_code == 404:
+        return []
+    if response.status_code != 200:
+        response.raise_for_status()
+    wanted = _normalized_ean(ean)
+    return [offer for offer in parse_search(store, response.json()) if _normalized_ean(offer.ean) == wanted]
+
+
+def _normalized_ean(value: object) -> str:
+    return "".join(char for char in str(value or "") if char.isdigit()).lstrip("0")
+
+
 def parse_search(store: Store, payload: Any) -> list[Offer]:
     results = _find_results_list(payload)
     if not results:

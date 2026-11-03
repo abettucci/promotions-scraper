@@ -12,7 +12,7 @@ const shortDate = (iso: string) => {
 }
 
 /** Línea del mínimo (verde) y del máximo (gris) entre tiendas, día por día. */
-function Chart({ points }: { points: PricePoint[] }) {
+function Chart({ points, series = [] }: { points: PricePoint[]; series?: { store: string; store_name: string; points: { date: string; price: number }[] }[] }) {
   const width = 600
   const height = 150
   const pad = 8
@@ -23,6 +23,11 @@ function Chart({ points }: { points: PricePoint[] }) {
   const y = (value: number) => height - pad - ((value - low) / span) * (height - pad * 2)
   const line = (pick: (p: PricePoint) => number) => points.map((p, i) => `${x(i)},${y(pick(p))}`).join(" ")
   const area = `${pad},${height - pad} ${line((p) => p.min)} ${width - pad},${height - pad}`
+  const storeValues = series.flatMap((item) => item.points.map((point) => point.price))
+  const storeLow = Math.min(...storeValues), storeHigh = Math.max(...storeValues)
+  const storeSpan = storeHigh - storeLow || 1
+  const storeY = (value: number) => height - pad - ((value - storeLow) / storeSpan) * (height - pad * 2)
+  const colors = ["#3d6626", "#2758d8", "#b45309", "#a21caf", "#0891b2", "#be123c", "#475569"]
 
   return (
     <div className="flex gap-2">
@@ -33,9 +38,7 @@ function Chart({ points }: { points: PricePoint[] }) {
       <div className="min-w-0 flex-1">
         <svg viewBox={`0 0 ${width} ${height}`} preserveAspectRatio="none" className="h-36 w-full" role="img"
           aria-label={`Evolución del precio entre ${shortDate(points[0].date)} y ${shortDate(points[points.length - 1].date)}`}>
-          <polygon points={area} fill="#b8f36b" fillOpacity="0.25" />
-          <polyline points={line((p) => p.max)} fill="none" stroke="#c7d4e3" strokeWidth="2" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" />
-          <polyline points={line((p) => p.min)} fill="none" stroke="#3d6626" strokeWidth="2.5" vectorEffect="non-scaling-stroke" />
+          {series.length > 0 ? series.map((item, index) => <polyline key={item.store} points={item.points.map((point, i) => `${pad + (i / Math.max(item.points.length - 1, 1)) * (width - pad * 2)},${storeY(point.price)}`).join(" ")} fill="none" stroke={colors[index % colors.length]} strokeWidth="2.5" vectorEffect="non-scaling-stroke" />) : <><polygon points={area} fill="#b8f36b" fillOpacity="0.25" /><polyline points={line((p) => p.max)} fill="none" stroke="#c7d4e3" strokeWidth="2" strokeDasharray="4 4" vectorEffect="non-scaling-stroke" /><polyline points={line((p) => p.min)} fill="none" stroke="#3d6626" strokeWidth="2.5" vectorEffect="non-scaling-stroke" /></>}
         </svg>
         <div className="flex justify-between text-[10px] text-[#8a9ab0]">
           <span>{shortDate(points[0].date)}</span>
@@ -70,8 +73,9 @@ export function PriceHistoryChart({ productKey }: { productKey: string }) {
           {summary.change_pct !== 0 && <> · <b className={summary.change_pct < 0 ? "text-[#3d6626]" : "text-[#8f2d28]"}>{summary.change_pct > 0 ? "+" : ""}{summary.change_pct}%</b> desde {shortDate(data.points[0].date)}</>}
         </p>
       )}
-      <Chart points={data.points} />
-      <p className="text-[10px] text-[#8a9ab0]">Línea verde: tienda más barata. Línea punteada: la más cara. Precios online publicados, sin envío.</p>
+      <Chart points={data.points} series={data.series} />
+      {data.series?.length ? <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#52657d]">{data.series.map((item, index) => <span key={item.store} className="inline-flex items-center gap-1.5"><i className="h-0.5 w-3" style={{ backgroundColor: ["#3d6626", "#2758d8", "#b45309", "#a21caf", "#0891b2", "#be123c", "#475569"][index % 7] }} />{item.store_name}</span>)}</div> : <p className="text-[10px] text-[#8a9ab0]">Línea verde: tienda más barata. Línea punteada: la más cara.</p>}
+      <p className="text-[10px] text-[#8a9ab0]">Precios online observados, sin envío. Las líneas se interrumpen cuando la tienda deja de confirmar el precio.</p>
     </div>
   )
 }

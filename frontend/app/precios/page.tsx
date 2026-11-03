@@ -12,6 +12,7 @@ import { PriceHistoryChart } from "@/components/PriceHistoryChart"
 import { PriceAlertButton } from "@/components/PriceAlertButton"
 import { ProductAutocomplete } from "@/components/ProductAutocomplete"
 import { BarcodeScanner } from "@/components/BarcodeScanner"
+import { BarcodePriceLookup } from "@/components/BarcodePriceLookup"
 import { PriceCatalog } from "@/components/PriceCatalog"
 import { PriceTrends } from "@/components/PriceTrends"
 import type { PriceFacet, PriceGroup, PriceOffer } from "@/lib/types"
@@ -290,7 +291,8 @@ export default function PreciosPage() {
           <span className="display text-base font-semibold tracking-[-0.05em] text-[#102a4c]">PROMOAR</span>
           <span className="text-[#cbd8e6]">/</span>
           <span className="text-sm text-[#52657d]">Precios</span>
-          <Link href="/watchlist" className="ml-auto text-sm font-semibold text-primary">Mi lista habitual</Link>
+          <Link href="/escanear" className="ml-auto text-sm font-semibold text-primary">Escanear producto</Link>
+          <Link href="/watchlist" className="text-sm font-semibold text-primary">Mi lista habitual</Link>
         </div>
       </header>
 
@@ -352,7 +354,7 @@ export default function PreciosPage() {
           </div>
         )}
 
-        {!query && (!catalogKey
+        {!query && barcode ? <BarcodePriceLookup ean={barcode} /> : !query && (!catalogKey
           ? <PriceCatalog ean={barcode} onClearBarcode={() => setBarcode("")} onChoose={setCatalogKey} />
           : <section className="space-y-4" aria-label="Comparación del catálogo">
               <button type="button" onClick={() => setCatalogKey("")} className="text-sm font-semibold text-primary">← Volver al catálogo</button>

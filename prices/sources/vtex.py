@@ -36,8 +36,30 @@ def search(store: Store, query: str, limit: int = 8, timeout: float = 8.0) -> li
     return [offer for product in products if (offer := parse_product(store, product))]
 
 
-def parse_product(store: Store, product: dict) -> Optional[Offer]:
+def search_ean(store: Store, ean: str, timeout: float = 8.0) -> list[Offer]:
+    """Consulta el endpoint público VTEX por EAN y no usa coincidencias aproximadas."""
+    response = requests.get(f"https://{store.host}/api/intelligent-search/v1/products",
+                            params={"sc": "1", "field": "ean", "value": ean},
+                            headers=_HEADERS, timeout=timeout)
+    if response.status_code == 404:
+        return []
+    if response.status_code != 200:
+        response.raise_for_status()
+    try:
+        product = response.json()
+    except ValueError:
+        return []
+    if not isinstance(product, dict):
+        return []
+    offer = parse_product(store, product, ean=ean)
+    return [offer] if offer else []
+
+
+def parse_product(store: Store, product: dict, ean: str = "") -> Optional[Offer]:
     items = product.get("items") or []
+    if ean:
+        wanted = _normalized_ean(ean)
+        items = [item for item in items if _normalized_ean(item.get("ean")) == wanted]
     if not items:
         return None
     item = items[0]
@@ -73,6 +95,10 @@ def parse_product(store: Store, product: dict) -> Optional[Offer]:
         # categories[0] es la ruta más específica ("/Almacén/Aceites/Girasol/")
         category=categories[0] if categories and isinstance(categories[0], str) else "",
     )
+
+
+def _normalized_ean(value: object) -> str:
+    return "".join(char for char in str(value or "") if char.isdigit()).lstrip("0")
 
 
 def _teaser_name(teaser: dict) -> str:

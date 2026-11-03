@@ -1192,6 +1192,33 @@ def suggest_products(request: Request, q: str = Query(..., min_length=2, max_len
     return suggest(q, products=products, live=live)
 
 
+@app.get("/api/prices/scan")
+def scan_product_barcode(request: Request, ean: str = Query(..., min_length=8, max_length=14, pattern=r"^[0-9]+$")):
+    """Lookup exacto de un código; registra la observación para el historial."""
+    from datetime import datetime
+    from zoneinfo import ZoneInfo
+    from prices.barcodes import valid_gtin
+    from prices.history import PriceHistory
+    from prices.search import search_ean_prices
+    if not valid_gtin(ean):
+        raise HTTPException(422, "Código de barras inválido. Revisá los dígitos.")
+    retry_after = _db.consume_public_assistant_quota(
+        hashlib.sha256(b"price-scan:" + _public_assistant_rate_key(request).encode()).hexdigest(),
+        config.PRICES_RATE_LIMIT_MAX, config.PRICES_RATE_LIMIT_WINDOW_SECONDS,
+    )
+    if retry_after:
+        raise HTTPException(429, "Alcanzaste el límite de escaneos. Probá más tarde.")
+    result = search_ean_prices(ean)
+    group = result.get("group")
+    if group:
+        try:
+            PriceHistory().record_groups([group], query=ean)
+        except sqlite3.Error as exc:
+            raise HTTPException(503, "No pudimos guardar esta observación para el historial.") from exc
+    return {**result, "checked_at": datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).isoformat(timespec="minutes"),
+            "history_key": group["key"] if group else None}
+
+
 @app.get("/api/prices/history")
 def product_price_history(key: str = Query(..., max_length=120), days: int = Query(90, ge=7, le=365)):
     """Serie diaria (mín/prom/máx entre tiendas) de un producto de la canasta."""

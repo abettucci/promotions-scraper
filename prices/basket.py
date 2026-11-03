@@ -8,7 +8,7 @@ from pathlib import Path
 from typing import Callable, Optional
 
 from .history import PriceHistory
-from .search import search_prices
+from .search import search_ean_prices, search_prices
 
 BASKET_PATH = Path(__file__).with_name("basket.json")
 _LAST_RUN_KEY = "basket_last_run"
@@ -35,6 +35,7 @@ def run_basket(
     history: PriceHistory, *, basket: Optional[list[dict]] = None, pause: float = 0.6,
     today: Optional[date] = None, log: Callable[[str], None] = print,
     search: Callable[..., dict] = search_prices,
+    search_ean: Callable[..., dict] = search_ean_prices,
     groups_per_query: int = 12,
     mark_complete: bool = True,
 ) -> dict:
@@ -56,6 +57,24 @@ def run_basket(
             stats["empty"] += 1
         stats["rows"] += history.record_groups(groups, query, today)
         seen_keys.update(g["key"] for g in groups if g["key"].startswith(("ean:", "model:")))
+        time.sleep(pause)
+    for ean in history.scanned_eans(limit=100):
+        key = "ean:" + ean.lstrip("0")
+        if key in seen_keys:
+            continue
+        stats["queries"] += 1
+        try:
+            result = search_ean(ean)
+        except Exception as error:
+            stats["errors"] += 1
+            log(f"   ⚠️ EAN {ean}: {type(error).__name__}: {error}")
+            continue
+        group = result.get("group")
+        if not group:
+            stats["empty"] += 1
+            continue
+        stats["rows"] += history.record_groups([group], ean, today)
+        seen_keys.add(group["key"])
         time.sleep(pause)
     stats["products"] = len(seen_keys)
     if seen_keys and mark_complete:

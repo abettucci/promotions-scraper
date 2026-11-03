@@ -250,8 +250,17 @@ export interface PriceHistoryResponse {
   tracked: boolean
   name?: string
   points: PricePoint[]
+  series?: { store: string; store_name: string; points: { date: string; price: number }[] }[]
   current: { store: string; store_name: string; price: number; date: string }[]
   summary: { today: number; lowest: number; lowest_date: string; highest: number; change_pct: number } | null
+}
+
+export interface BarcodePriceResponse {
+  ean: string
+  group: PriceGroup | null
+  failed_stores: string[]
+  checked_at: string
+  history_key: string | null
 }
 
 export interface PriceAlert {

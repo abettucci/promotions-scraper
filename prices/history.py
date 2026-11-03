@@ -171,6 +171,14 @@ class PriceHistory:
         conn.close()
         return [dict(row) for row in rows]
 
+    def scanned_eans(self, limit: int = 100) -> list[str]:
+        """EANs consultados por escaneo, limitados para acotar la corrida diaria."""
+        conn = self._conn()
+        rows = conn.execute("SELECT ean FROM price_products WHERE query = ean AND ean <> '' "
+                            "ORDER BY last_seen DESC LIMIT ?", (max(0, min(int(limit), 100)),)).fetchall()
+        conn.close()
+        return [row["ean"] for row in rows]
+
     def series(self, key: str, days: int = 90, today: Optional[date] = None) -> dict:
         """Serie diaria (mínimo/promedio/máximo entre tiendas) con carry-forward."""
         today = today or date.today()
@@ -189,6 +197,7 @@ class PriceHistory:
             names[row["store"]] = row["store_name"]
 
         points = []
+        store_series = []
         day = start
         while day <= today:
             values = []
@@ -202,6 +211,17 @@ class PriceHistory:
                                "stores": len(values)})
             day += timedelta(days=1)
 
+        for store, history in by_store.items():
+            store_points = []
+            day = start
+            while day <= today:
+                known = [(observed, price) for observed, price in history if observed <= day]
+                if known and (day - known[-1][0]).days <= STALE_DAYS:
+                    store_points.append({"date": day.isoformat(), "price": known[-1][1]})
+                day += timedelta(days=1)
+            if store_points:
+                store_series.append({"store": store, "store_name": names[store], "points": store_points})
+
         current = []
         for store, history in by_store.items():
             last_date, last_price = history[-1]
@@ -209,7 +229,8 @@ class PriceHistory:
                 current.append({"store": store, "store_name": names[store], "price": last_price,
                                 "date": last_date.isoformat()})
         current.sort(key=lambda item: item["price"])
-        return {"key": key, "days": days, "points": points, "current": current,
+        store_series.sort(key=lambda item: item["store_name"].casefold())
+        return {"key": key, "days": days, "points": points, "series": store_series, "current": current,
                 "summary": _summary(points)}
 
 
