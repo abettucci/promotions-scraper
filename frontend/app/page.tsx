@@ -101,35 +101,33 @@ export default function Home() {
     <div className="min-h-dvh overflow-x-hidden">
       <a href="#promotions" className="sr-only focus:not-sr-only focus:absolute focus:left-4 focus:top-4 focus:z-50 focus:rounded-lg focus:bg-white focus:px-4 focus:py-2 focus:text-[#102a4c]">Ir a promociones</a>
       <header className="sticky top-0 z-30 border-b border-[#dbe4ee]/80 bg-[#f5f7fb]/90 backdrop-blur-xl">
-        <div className="mx-auto flex min-h-18 max-w-7xl flex-wrap items-center justify-between gap-3 px-4 py-3 sm:px-6">
-          <div className="contents lg:flex lg:min-w-0 lg:items-center lg:gap-5">
-            <Link href="/" className="display flex shrink-0 items-center gap-2 text-base font-semibold tracking-[-0.05em] text-[#102a4c]" aria-label="Ir al inicio de PromoAR">
+        <div className="mx-auto flex max-w-7xl flex-wrap items-center gap-2 px-4 py-3 sm:px-6">
+            <Link href="/" className="order-0 display flex shrink-0 items-center gap-2 text-base font-semibold tracking-[-0.05em] text-[#102a4c]" aria-label="Ir al inicio de PromoAR">
               <span className="grid h-7 w-7 place-items-center rounded-lg bg-[#102a4c] text-xs font-bold text-[#b8f36b]">P</span>
               <span className="hidden sm:inline">PROMOAR</span>
             </Link>
-            <nav aria-label="Navegación principal" className="order-3 flex w-full flex-wrap items-center gap-1 rounded-xl border border-border bg-card p-1 lg:order-none lg:w-auto">
-              <button onClick={() => chooseCategory("supermarket")} aria-pressed={category === "supermarket"} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "supermarket" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
+            <nav aria-label="Navegación principal" className="order-3 flex min-w-0 w-full flex-nowrap items-center gap-1 overflow-x-auto rounded-xl border border-border bg-card p-1 [scrollbar-width:none] [&::-webkit-scrollbar]:hidden xl:order-1 xl:ml-3 xl:w-auto xl:flex-1">
+              <button onClick={() => chooseCategory("supermarket")} aria-pressed={category === "supermarket"} className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "supermarket" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
                 <ShoppingCart className="h-3.5 w-3.5" aria-hidden="true" /><span className="hidden sm:inline">Supermercados</span><span className="sm:hidden">Súper</span>
               </button>
-              <button onClick={() => chooseCategory("fuel")} aria-pressed={category === "fuel"} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "fuel" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
+              <button onClick={() => chooseCategory("fuel")} aria-pressed={category === "fuel"} className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "fuel" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
                 <Fuel className="h-3.5 w-3.5" aria-hidden="true" /><span>Combustible</span>
               </button>
-              <button onClick={() => chooseCategory("mobility")} aria-pressed={category === "mobility"} className={`inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "mobility" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
+              <button onClick={() => chooseCategory("mobility")} aria-pressed={category === "mobility"} className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "mobility" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
                 <TrainFront className="h-3.5 w-3.5" aria-hidden="true" /><span>Movilidad</span>
               </button>
-              <Link href="/precios" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
+              <Link href="/precios" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
                 <Tag className="h-3.5 w-3.5" aria-hidden="true" /><span className="sr-only sm:not-sr-only">Precios</span>
               </Link>
-              <Link href="/escanear" className="inline-flex min-h-9 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
-                <ScanBarcode className="h-3.5 w-3.5" aria-hidden="true" /><span>Escanear</span>
+              <Link href="/escanear" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg bg-[#102a4c] px-3 text-xs font-semibold text-white transition-colors hover:bg-[#1d4169] sm:text-sm">
+                <ScanBarcode className="h-4 w-4 text-[#b8f36b]" aria-hidden="true" /><span>Escanear</span>
               </Link>
-              <Link href="/watchlist" title="Armar lista habitual y recibir alertas de precios" className="inline-flex min-h-9 w-full shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-85 sm:w-auto sm:text-sm">
+              <Link href="/watchlist" title="Armar lista habitual y recibir alertas de precios" className="inline-flex min-h-9 shrink-0 items-center justify-center gap-1.5 rounded-lg bg-accent px-3 text-xs font-semibold text-accent-foreground transition-opacity hover:opacity-85 sm:text-sm">
                 <ShoppingBasket className="h-4 w-4" aria-hidden="true" /><span>Lista habitual</span>
               </Link>
-              <Link href="/purchases" className="inline-flex min-h-9 items-center rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:bg-secondary sm:text-sm">Mis compras</Link>
+              <Link href="/purchases" className="inline-flex min-h-9 shrink-0 items-center rounded-lg px-3 text-xs font-semibold text-muted-foreground hover:bg-secondary sm:text-sm">Mis compras</Link>
             </nav>
-          </div>
-          <div className="flex shrink-0 items-center gap-1.5 sm:gap-2">
+          <div className="order-2 ml-auto flex shrink-0 items-center gap-1.5 sm:gap-2 xl:order-2">
             <Button variant="outline" size="sm" onClick={toggleTodayOnly} className={`hidden min-h-9 border-[#cbd8e6] bg-white text-[#102a4c] hover:bg-[#edf2f7] md:inline-flex ${todayOnly ? "border-[#102a4c] bg-[#102a4c] text-white hover:bg-[#102a4c] hover:text-white" : ""}`}>
               <CalendarDays className="h-3.5 w-3.5" /> Hoy
             </Button>
@@ -176,7 +174,7 @@ export default function Home() {
 
         <StatsBar stats={stats ?? null} loading={statsLoading} category={category} />
 
-        {!myPromosMode && <section className="surface enter rounded-2xl p-4 sm:p-6" style={{ animationDelay: "70ms" }}><div className="mb-5 flex items-end justify-between gap-4"><div><p className="eyebrow">Explorá beneficios</p><h2 className="display mt-1 text-xl font-semibold tracking-[-0.045em] text-[#102a4c]">Encontrá cómo te conviene pagar</h2></div><button onClick={toggleTodayOnly} className="hidden text-sm font-semibold text-[#2758d8] hover:text-[#102a4c] sm:block">Solo hoy</button></div><FilterBar key={category} filters={filters} banks={banks} supermarkets={supermarkets} category={category} onChange={updateFilters} onReset={resetFilters} totalResults={promos?.total ?? 0} loading={isFetching} /></section>}
+        {!myPromosMode && <section className="surface enter relative z-20 rounded-2xl p-4 sm:p-6" style={{ animationDelay: "70ms" }}><div className="mb-5 flex items-end justify-between gap-4"><div><p className="eyebrow">Explorá beneficios</p><h2 className="display mt-1 text-xl font-semibold tracking-[-0.045em] text-[#102a4c]">Encontrá cómo te conviene pagar</h2></div><button onClick={toggleTodayOnly} className="hidden text-sm font-semibold text-[#2758d8] hover:text-[#102a4c] sm:block">Solo hoy</button></div><FilterBar key={category} filters={filters} banks={banks} supermarkets={supermarkets} category={category} onChange={updateFilters} onReset={resetFilters} totalResults={promos?.total ?? 0} loading={isFetching} /></section>}
 
         {myPromosMode && <div className="flex flex-wrap items-center justify-between gap-3 rounded-2xl border border-[#b8f36b] bg-[#efffdc] px-4 py-3 text-[#102a4c]"><p className="text-sm font-medium"><span className="font-semibold">Tus promos de {todayLabel}</span> · {promos?.total ?? 0} resultados para tus medios de pago</p><Button variant="ghost" size="sm" onClick={resetFilters} className="text-[#102a4c] hover:bg-[#dff5bd]">Ver todas</Button></div>}
 

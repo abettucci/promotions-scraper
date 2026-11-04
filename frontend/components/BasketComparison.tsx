@@ -2,7 +2,7 @@
 
 import Link from "next/link"
 import { useQuery } from "@tanstack/react-query"
-import { CalendarDays, CreditCard, Loader2, ShoppingBasket, Truck } from "lucide-react"
+import { CalendarDays, ChevronDown, CreditCard, Loader2, ShoppingBasket, Truck } from "lucide-react"
 import { api } from "@/lib/api"
 import { money, quoteDate } from "@/lib/watchlist"
 import type { BasketOption } from "@/lib/types"
@@ -22,8 +22,10 @@ export function BasketComparison({ token, userId, productCount }: { token: strin
   const data = query.data
   const reference = data?.reference
   return <section aria-labelledby="basket-heading" className="overflow-hidden rounded-2xl border border-border bg-card text-card-foreground">
-    <header className="flex flex-wrap items-start justify-between gap-4 border-b border-border p-5 sm:p-6"><div><p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tu canasta, comparada</p><h2 id="basket-heading" className="display text-2xl font-semibold tracking-tight">Dónde y cuándo conviene comprar</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Próximos siete días, con tus medios de pago y supermercados guardados. Una unidad de cada producto; valores online estimados.</p></div><Link href="/profile" className="text-sm font-semibold text-primary">Revisar mis medios de pago →</Link></header>
+    <details open className="group/basket">
+    <summary className="flex cursor-pointer list-none items-center justify-between gap-4 border-b border-border p-5 outline-none marker:hidden focus-visible:ring-2 focus-visible:ring-inset focus-visible:ring-primary sm:p-6 [&::-webkit-details-marker]:hidden"><div><p className="mb-1 text-xs font-semibold uppercase tracking-widest text-muted-foreground">Tu canasta, comparada</p><h2 id="basket-heading" className="display text-2xl font-semibold tracking-tight">Dónde y cuándo conviene comprar</h2><p className="mt-2 max-w-2xl text-sm text-muted-foreground">Próximos siete días, con tus medios de pago y supermercados guardados. Una unidad de cada producto; valores online estimados.</p></div><span className="inline-flex shrink-0 items-center gap-2 rounded-lg border border-border bg-background px-3 py-2 text-xs font-semibold text-primary"><span className="group-open/basket:hidden">Expandir</span><span className="hidden group-open/basket:inline">Contraer</span><ChevronDown aria-hidden="true" className="h-4 w-4 transition-transform group-open/basket:rotate-180" /></span></summary>
     <div className="space-y-5 p-5 sm:p-6">
+      <div className="flex justify-end"><Link href="/profile" className="text-sm font-semibold text-primary">Revisar mis medios de pago →</Link></div>
       <p className="flex items-center gap-2 rounded-xl border border-border bg-secondary px-4 py-3 text-sm font-semibold text-secondary-foreground"><Truck className="h-5 w-5 shrink-0" /> Falta considerar el costo de envío y posibles cargos de servicio.</p>
       {query.isFetching && <p role="status" className="flex items-center gap-2 text-sm text-muted-foreground"><Loader2 className="h-4 w-4 animate-spin" /> Calculando con los precios relevados…</p>}
       {query.error && <p role="alert" className="text-sm text-red-600">{(query.error as Error).message} <button type="button" onClick={() => query.refetch()} className="font-semibold underline">Reintentar</button></p>}
@@ -45,5 +47,6 @@ export function BasketComparison({ token, userId, productCount }: { token: strin
         <details className="text-xs leading-relaxed text-muted-foreground"><summary className="cursor-pointer font-semibold">Supuestos y límites de la comparación</summary><ul className="mt-2 list-disc space-y-1 pl-4">{data.warnings.map((warning) => <li key={warning}>{warning}</li>)}</ul><p className="mt-2">“Gran parte” exige al menos 70% de la lista sobre los mismos productos. No se compararon precios de sucursales presenciales. Confirmá stock, localidad, exclusiones y condiciones antes de pagar.</p></details>
       </>}
     </div>
+    </details>
   </section>
 }
