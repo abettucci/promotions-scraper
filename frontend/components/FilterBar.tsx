@@ -61,6 +61,35 @@ const DISCOUNT_TYPES = [
 
 const ALL_VALUE = "__all__"
 
+const PROVINCES = [
+  ["buenos aires", "Buenos Aires"], ["caba", "CABA"], ["catamarca", "Catamarca"],
+  ["chaco", "Chaco"], ["chubut", "Chubut"], ["cordoba", "Córdoba"], ["corrientes", "Corrientes"],
+  ["entre rios", "Entre Ríos"], ["formosa", "Formosa"], ["jujuy", "Jujuy"], ["la pampa", "La Pampa"],
+  ["la rioja", "La Rioja"], ["mendoza", "Mendoza"], ["misiones", "Misiones"], ["neuquen", "Neuquén"],
+  ["rio negro", "Río Negro"], ["salta", "Salta"], ["san juan", "San Juan"], ["san luis", "San Luis"],
+  ["santa cruz", "Santa Cruz"], ["santa fe", "Santa Fe"], ["santiago del estero", "Santiago del Estero"],
+  ["tierra del fuego", "Tierra del Fuego"], ["tucuman", "Tucumán"],
+] as const
+
+function MultiChoice({ label, allLabel, selected, options, onChange }: {
+  label: string; allLabel: string; selected: string[]
+  options: { value: string; label: string }[]; onChange: (values: string[]) => void
+}) {
+  const toggle = (value: string) => onChange(selected.includes(value) ? selected.filter((item) => item !== value) : [...selected, value])
+  const summary = selected.length === 0 ? allLabel : selected.length === 1
+    ? (options.find((option) => option.value === selected[0])?.label ?? selected[0])
+    : `${selected.length} seleccionados`
+  return <details className="group relative">
+    <summary className="flex h-11 min-w-[170px] cursor-pointer list-none items-center justify-between gap-3 rounded-xl border border-[#cbd8e6] bg-[#f8fafd] px-3 text-sm text-[#102a4c] shadow-sm hover:border-[#9cb5d0] [&::-webkit-details-marker]:hidden">
+      <span className="max-w-[220px] truncate">{summary}</span><span aria-hidden="true" className="text-[#71839a] transition-transform group-open:rotate-180">⌄</span>
+    </summary>
+    <div className="absolute left-0 top-[calc(100%+6px)] z-40 max-h-72 min-w-full w-max max-w-[min(90vw,22rem)] overflow-y-auto rounded-xl border border-[#dbe4ee] bg-white p-2 shadow-[0_16px_40px_rgb(16_42_76_/_0.16)]" role="group" aria-label={label}>
+      <div className="flex items-center justify-between gap-4 border-b border-[#edf1f5] px-2 pb-2"><span className="text-[11px] font-semibold uppercase tracking-wide text-[#71839a]">{selected.length ? `${selected.length} seleccionados` : "Sin filtro"}</span>{selected.length > 0 && <button type="button" onClick={() => onChange([])} className="text-xs font-semibold text-[#2758d8] hover:underline">Limpiar</button>}</div>
+      <div className="pt-1">{options.map((option) => <label key={option.value} className="flex cursor-pointer items-center gap-2 rounded-lg px-2.5 py-2 text-sm text-[#102a4c] hover:bg-[#f1f5f9]"><input type="checkbox" checked={selected.includes(option.value)} onChange={() => toggle(option.value)} className="h-4 w-4 accent-[#102a4c]" /><span className="min-w-0 flex-1 truncate">{option.label}</span></label>)}</div>
+    </div>
+  </details>
+}
+
 export function FilterBar({
   filters,
   banks,
@@ -77,8 +106,9 @@ export function FilterBar({
   const merchantAllLabel = isMobility ? "Todos los servicios" : isFuel ? "Todas las empresas" : "Todos los super"
 
   const hasActiveFilters =
-    filters.supermarket ||
-    filters.bank ||
+    filters.supermarket.length > 0 ||
+    filters.bank.length > 0 ||
+    filters.province ||
     filters.days.length > 0 ||
     filters.search ||
     filters.discount_type ||
@@ -228,37 +258,21 @@ export function FilterBar({
       <section className="space-y-2">
         <h4 className="eyebrow">Filtros adicionales</h4>
         <div className="flex flex-wrap gap-2">
-          <Select
-            value={filters.supermarket || ALL_VALUE}
-            onValueChange={(v) => onChange({ supermarket: v === ALL_VALUE ? "" : v, page: 1 })}
-          >
-            <SelectTrigger className="h-11 min-w-[170px] w-auto rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
-              <SelectValue placeholder={merchantLabel} />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>{merchantAllLabel}</SelectItem>
-              {supermarkets.map((s) => (
-                <SelectItem key={s.id} value={s.name}>
-                  {s.name} ({s.active_promotions})
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
+          <MultiChoice label={merchantLabel} allLabel={merchantAllLabel} selected={filters.supermarket}
+            options={supermarkets.map((s) => ({ value: s.name, label: `${s.name} (${s.active_promotions})` }))}
+            onChange={(supermarket) => onChange({ supermarket, page: 1 })} />
 
-          <Select
-            value={filters.bank || ALL_VALUE}
-            onValueChange={(v) => onChange({ bank: v === ALL_VALUE ? "" : v, page: 1 })}
-          >
-            <SelectTrigger className="h-11 w-[160px] rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
-              <SelectValue placeholder="Banco / Wallet" />
+          <MultiChoice label="Banco o billetera" allLabel="Todos los bancos" selected={filters.bank}
+            options={banks.map((b) => ({ value: b.name, label: `${b.name} (${b.count})` }))}
+            onChange={(bank) => onChange({ bank, page: 1 })} />
+
+          <Select value={filters.province || ALL_VALUE}
+            onValueChange={(province) => onChange({ province: province === ALL_VALUE ? "" : province, page: 1 })}>
+            <SelectTrigger aria-label="Filtrar por provincia" className="h-11 w-[190px] rounded-xl border-[#cbd8e6] bg-[#f8fafd] text-sm text-[#102a4c]">
+              <SelectValue placeholder="Todas las provincias" />
             </SelectTrigger>
-            <SelectContent>
-              <SelectItem value={ALL_VALUE}>Todos los bancos</SelectItem>
-              {banks.map((b) => (
-                <SelectItem key={b.name} value={b.name}>
-                  {b.name} ({b.count})
-                </SelectItem>
-              ))}
+            <SelectContent><SelectItem value={ALL_VALUE}>Todas las provincias</SelectItem>
+              {PROVINCES.map(([value, name]) => <SelectItem key={value} value={value}>{name}</SelectItem>)}
             </SelectContent>
           </Select>
 
@@ -292,6 +306,8 @@ export function FilterBar({
           )}
         </div>
       </section>
+
+      <p className="-mt-4 text-[11px] leading-relaxed text-[#71839a]">La provincia se detecta en las condiciones publicadas. Las promos sin una región explícita también se incluyen; verificá los términos antes de comprar.</p>
 
       {/* Results count */}
       <p aria-live="polite" className={`text-xs font-medium transition-opacity ${loading ? "text-[#52657d]/40" : "text-[#52657d]"}`}>

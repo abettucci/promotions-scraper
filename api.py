@@ -126,6 +126,66 @@ def _append_category_filter(conditions: list[str], params: list, category: Optio
         conditions.append("1 = 0")
 
 
+_ARGENTINE_PROVINCES = {
+    "buenos aires": ("buenos aires",), "caba": ("caba", "capital federal", "ciudad autonoma de buenos aires", "ciudad autónoma de buenos aires"),
+    "catamarca": ("catamarca",), "chaco": ("chaco",), "chubut": ("chubut",),
+    "cordoba": ("cordoba", "córdoba"), "corrientes": ("corrientes",), "entre rios": ("entre rios", "entre ríos"),
+    "formosa": ("formosa",), "jujuy": ("jujuy",), "la pampa": ("la pampa",),
+    "la rioja": ("la rioja",), "mendoza": ("mendoza",), "misiones": ("misiones",),
+    "neuquen": ("neuquen", "neuquén"), "rio negro": ("rio negro", "río negro"), "salta": ("salta",),
+    "san juan": ("san juan",), "san luis": ("san luis",), "santa cruz": ("santa cruz",),
+    "santa fe": ("santa fe",), "santiago del estero": ("santiago del estero",),
+    "tierra del fuego": ("tierra del fuego", "tierra del fuego, antartida e islas del atlantico sur", "tierra del fuego, antártida e islas del atlántico sur"),
+    "tucuman": ("tucuman", "tucumán"),
+}
+
+
+def _filter_values(value: Optional[str]) -> list[str]:
+    if not value:
+        return []
+    return list(dict.fromkeys(part.strip()[:120] for part in value.split(",") if part.strip()))[:30]
+
+
+def _append_supermarket_filter(conditions: list[str], params: list, value: Optional[str]):
+    names = [name.lower() for name in _filter_values(value)]
+    if names:
+        conditions.append("LOWER(s.name) IN (" + ",".join("?" for _ in names) + ")")
+        params.extend(names)
+
+
+def _append_bank_filter(conditions: list[str], params: list, value: Optional[str]):
+    banks = [bank.lower() for bank in _filter_values(value)]
+    if banks:
+        clauses = ["(LOWER(COALESCE(p.bank,'')) LIKE ? OR LOWER(COALESCE(p.wallet,'')) LIKE ? "
+                   "OR LOWER(COALESCE(p.payment_method,'')) LIKE ?)" for _ in banks]
+        conditions.append("(" + " OR ".join(clauses) + ")")
+        for bank in banks:
+            params.extend([f"%{bank}%"] * 3)
+
+
+def _append_province_filter(conditions: list[str], params: list, province: Optional[str]):
+    """Filtra menciones regionales explícitas y conserva promos sin provincia detectada."""
+    selected = _strip_accents((province or "").strip().lower())
+    if not selected:
+        return
+    aliases = _ARGENTINE_PROVINCES.get(selected)
+    if not aliases:
+        raise HTTPException(422, "Provincia inválida")
+    source = "LOWER(COALESCE(p.title,'') || ' ' || COALESCE(p.terms_raw,'') || ' ' || COALESCE(p.exclusions,'') || ' ' || " \
+             "COALESCE(p.requirements,'') || ' ' || COALESCE(p.store_types,''))"
+    all_terms = list(dict.fromkeys(term for values in _ARGENTINE_PROVINCES.values() for term in values))
+    selected_match = " OR ".join(f"{source} LIKE ?" for _ in aliases)
+    any_match = " OR ".join(f"{source} LIKE ?" for _ in all_terms)
+    selected_clause = f"({selected_match})"
+    if selected == "buenos aires":
+        selected_clause = f"({selected_clause} AND {source} NOT LIKE '%ciudad autonoma de buenos aires%' " \
+                          f"AND {source} NOT LIKE '%ciudad autónoma de buenos aires%' " \
+                          f"AND {source} NOT LIKE '%capital federal%' AND {source} NOT LIKE '%caba%')"
+    conditions.append(f"({selected_clause} OR NOT ({any_match}))")
+    params.extend(f"%{alias}%" for alias in aliases)
+    params.extend(f"%{term}%" for term in all_terms)
+
+
 def row_to_dict(row: sqlite3.Row) -> dict:
     d = dict(row)
     for field in ("exclusions", "requirements"):
@@ -1289,6 +1349,7 @@ def get_payment_methods_catalog():
 def get_promotions(
     supermarket: Optional[str] = Query(None),
     bank: Optional[str] = Query(None),
+    province: Optional[str] = Query(None, max_length=80),
     day: Optional[str] = Query(None, description="Días separados por coma (ej: lunes,martes)"),
     search: Optional[str] = Query(None),
     discount_type: Optional[str] = Query(None),
@@ -1322,16 +1383,9 @@ def get_promotions(
 
     _append_category_filter(conditions, params, category)
 
-    if supermarket:
-        conditions.append("LOWER(s.name) = ?")
-        params.append(supermarket.lower())
-
-    if bank:
-        conditions.append(
-            "(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? "
-            "OR LOWER(COALESCE(p.payment_method,'')) LIKE ?)"
-        )
-        params.extend([f"%{bank.lower()}%", f"%{bank.lower()}%", f"%{bank.lower()}%"])
+    _append_supermarket_filter(conditions, params, supermarket)
+    _append_bank_filter(conditions, params, bank)
+    _append_province_filter(conditions, params, province)
 
     if day:
         # Multi-día: cualquier día match O "todos los días" O sin día definido.
@@ -1541,6 +1595,7 @@ def get_promotion(promotion_id: int):
 @app.get("/api/banks")
 def get_banks(
     supermarket: Optional[str] = Query(None),
+    province: Optional[str] = Query(None, max_length=80),
     day: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
     discount_type: Optional[str] = Query(None),
@@ -1568,9 +1623,8 @@ def get_banks(
 
     _append_category_filter(conditions, params, category)
 
-    if supermarket:
-        conditions.append("LOWER(s.name) = ?")
-        params.append(supermarket.lower())
+    _append_supermarket_filter(conditions, params, supermarket)
+    _append_province_filter(conditions, params, province)
 
     if day:
         days = [d.strip().lower() for d in day.split(",") if d.strip()]
@@ -1661,6 +1715,7 @@ def get_banks(
 def get_supermarkets(
     category: Optional[str] = Query(None),
     bank: Optional[str] = Query(None),
+    province: Optional[str] = Query(None, max_length=80),
     day: Optional[str] = Query(None),
     search: Optional[str] = Query(None, max_length=120),
     discount_type: Optional[str] = Query(None),
@@ -1689,11 +1744,8 @@ def get_supermarkets(
 
     _append_category_filter(promo_conditions, promo_params, category)
 
-    if bank:
-        promo_conditions.append(
-            "(LOWER(p.bank) LIKE ? OR LOWER(p.wallet) LIKE ? OR LOWER(COALESCE(p.payment_method,'')) LIKE ?)"
-        )
-        promo_params.extend([f"%{bank.lower()}%"] * 3)
+    _append_bank_filter(promo_conditions, promo_params, bank)
+    _append_province_filter(promo_conditions, promo_params, province)
 
     if day:
         days = [value.strip().lower() for value in day.split(",") if value.strip()]

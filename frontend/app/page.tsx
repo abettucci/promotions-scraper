@@ -16,7 +16,7 @@ import { UserMenu } from "@/components/UserMenu"
 import { PromoAssistant } from "@/components/PromoAssistant"
 
 const DEFAULT_FILTERS: FilterState = {
-  supermarket: "", bank: "", days: [], search: "", discount_type: "",
+  supermarket: [], bank: [], province: "", days: [], search: "", discount_type: "",
   state: "activa", modality: [], mobility_kind: "", page: 1,
 }
 
@@ -49,9 +49,9 @@ export default function Home() {
 
   const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ["stats"], queryFn: api.getStats })
   const { data: banks = [] } = useQuery({
-    queryKey: ["banks", category, filters.supermarket, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
+    queryKey: ["banks", category, filters.supermarket, filters.province, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
     queryFn: () => api.getBanks({
-      category, supermarket: filters.supermarket || undefined,
+      category, supermarket: filters.supermarket.join(",") || undefined, province: filters.province || undefined,
       day: filters.days.length ? filters.days.join(",") : undefined,
       discount_type: filters.discount_type || undefined, state: filters.state || undefined,
       modality: filters.modality.length ? filters.modality.join(",") : undefined,
@@ -60,9 +60,9 @@ export default function Home() {
     }),
   })
   const { data: supermarkets = [] } = useQuery({
-    queryKey: ["supermarkets", category, filters.bank, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
+    queryKey: ["supermarkets", category, filters.bank, filters.province, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
     queryFn: () => api.getSupermarkets(category, {
-      bank: filters.bank || undefined,
+      bank: filters.bank.join(",") || undefined, province: filters.province || undefined,
       day: filters.days.length ? filters.days.join(",") : undefined,
       discount_type: filters.discount_type || undefined,
       state: filters.state || undefined,
@@ -78,7 +78,8 @@ export default function Home() {
         return api.getMyPromotions(token, true, category).then((r) => ({ total: r.total, page: 1, page_size: r.total, pages: 1, data: r.by_supermarket.flatMap((s) => s.promotions) }))
       }
       return api.getPromotions({
-        supermarket: filters.supermarket || undefined, bank: filters.bank || undefined,
+        supermarket: filters.supermarket.join(",") || undefined, bank: filters.bank.join(",") || undefined,
+        province: filters.province || undefined,
         day: filters.days.length ? filters.days.join(",") : undefined, search: filters.search || undefined,
         discount_type: filters.discount_type || undefined, state: filters.state || undefined,
         modality: filters.modality.length ? filters.modality.join(",") : undefined,
@@ -181,7 +182,7 @@ export default function Home() {
 
         {error && <div role="alert" className="flex items-start gap-3 rounded-xl border border-[#f0b7b2] bg-[#fff3f2] px-4 py-3 text-sm text-[#8f2d28]"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>No se pudo conectar con la API. Verificá que el backend esté corriendo y reintentá.</span></div>}
 
-        <div id="promotions"><PromoGrid promotions={promos?.data ?? []} loading={promosLoading || isFetching} page={promos?.page ?? 1} pages={promos?.pages ?? 1} total={promos?.total ?? 0} layout={filters.supermarket ? "table" : "grid"} marketName={filters.supermarket || undefined} onPageChange={(page) => updateFilters({ page })} /></div>
+        <div id="promotions"><PromoGrid promotions={promos?.data ?? []} loading={promosLoading || isFetching} page={promos?.page ?? 1} pages={promos?.pages ?? 1} total={promos?.total ?? 0} layout={filters.supermarket.length === 1 ? "table" : "grid"} marketName={filters.supermarket.length === 1 ? filters.supermarket[0] : undefined} onPageChange={(page) => updateFilters({ page })} /></div>
       </main>
 
       <footer className="mx-auto mt-10 max-w-7xl border-t border-[#dbe4ee] px-4 py-7 text-sm text-[#52657d] sm:px-6"><span className="display mr-2 font-semibold tracking-[-0.04em] text-[#102a4c]">PROMOAR</span> Información extraída de sitios oficiales. Confirmá las condiciones antes de pagar.</footer>

@@ -79,8 +79,9 @@ export type Modality = "presencial" | "online"
 export type DayCode = "lunes" | "martes" | "miércoles" | "jueves" | "viernes" | "sábado" | "domingo"
 
 export interface FilterState {
-  supermarket: string
-  bank: string
+  supermarket: string[]
+  bank: string[]
+  province: string
   days: DayCode[]
   search: string
   discount_type: string
