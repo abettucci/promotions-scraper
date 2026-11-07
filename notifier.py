@@ -360,6 +360,75 @@ class TelegramNotifier:
 
             print(f"   ✅ Enviado a {user['email']} ({len(promos)} promos)")
 
+    def send_watchlist_recommendations(self, user_db, history, promotions, today=None) -> dict:
+        """Envía una comparación diaria de productos seguidos a usuarios de Telegram."""
+        from zoneinfo import ZoneInfo
+        from prices.basket_compare import compare_basket
+        from prices.watchlist_quotes import WatchlistQuotes
+
+        today = today or datetime.now(ZoneInfo("America/Argentina/Buenos_Aires")).date()
+        quotes = WatchlistQuotes(history)
+        stats = {"users": 0, "sent": 0, "no_quotes": 0}
+
+        def money(value):
+            rendered = f"{value:,.2f}"
+            return "$" + rendered.replace(",", "X").replace(".", ",").replace("X", ".")
+
+        for user in user_db.get_users_for_notification():
+            chat_id = user.get("telegram_chat_id")
+            if not chat_id or not user.get("notify_daily"):
+                continue
+            user_id = user["id"]
+            marker = f"watchlist_recommendation_sent:{user_id}"
+            if history.get_meta(marker) == today.isoformat():
+                continue
+            alerts = user_db.list_price_alerts(user_id)
+            if not alerts:
+                continue
+
+            products = quotes.enrich(user_id, alerts)
+            comparison = compare_basket(
+                products, promotions, user_db.get_user_payment_methods(user_id),
+                user_db.get_user_favorite_stores(user_id), today=today,
+            )
+            recommendation = comparison.get("reference")
+            if not recommendation:
+                stats["no_quotes"] += 1
+                continue
+
+            stats["users"] += 1
+            store = recommendation["store"]
+            items = {p["product_key"]: p for p in products}
+            lines = ["🧺 Recomendación para tu canasta habitual"]
+            date_label = "hoy" if recommendation["date"] == today.isoformat() else f"el {recommendation['day']}"
+            lines.append(f"🛒 {recommendation['store_name']} · conviene comprar {date_label}")
+            lines.append(f"📦 {recommendation['priced_count']} de {comparison['product_count']} productos con precio relevado")
+            lines.append("")
+            for key in recommendation["keys"]:
+                product = items.get(key)
+                if not product:
+                    continue
+                offer = next((o for o in product.get("offers", []) if o.get("store") == store), None)
+                if offer:
+                    name = " ".join(str(product.get("product_name") or "Producto").split())[:120]
+                    lines.append(f"• {name}: {money(offer['price'])}")
+            lines.extend([
+                "",
+                f"🧾 Subtotal publicado: {money(recommendation['subtotal'])}",
+                f"💳 Ahorro estimado con tus medios de pago: {money(recommendation['savings'])}",
+                f"✅ Total estimado: {money(recommendation['total'])}",
+                "Precios online relevados; una unidad por producto, sin envío. Los días futuros mantienen los precios actuales.",
+            ])
+            if recommendation.get("missing"):
+                lines.append(f"Faltan precios para: {', '.join(recommendation['missing'][:8])}")
+            if recommendation.get("payment") and recommendation["savings"] > 0:
+                lines.append(f"Beneficio considerado: {recommendation['payment']}")
+
+            if self.send_message_to(chat_id, "\n".join(lines), parse_mode=None):
+                history.set_meta(marker, today.isoformat())
+                stats["sent"] += 1
+        return stats
+
     def send_message_to(self, chat_id: str, text: str,
                          reply_markup: dict = None,
                          parse_mode: str = "Markdown") -> bool:
@@ -377,9 +446,10 @@ class TelegramNotifier:
             payload = {
                 "chat_id": chat_id,
                 "text": chunk,
-                "parse_mode": parse_mode,
                 "disable_web_page_preview": True,
             }
+            if parse_mode:
+                payload["parse_mode"] = parse_mode
             if reply_markup is not None and i == len(chunks) - 1:
                 payload["reply_markup"] = reply_markup
             try:

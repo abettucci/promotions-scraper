@@ -119,6 +119,10 @@ def _prices_tick(history, user_db, notifier, whatsapp=None):
         )
         history.set_meta("alerts_last_check", datetime.now().isoformat(timespec="seconds"))
         print(f"[prices] Alertas: {stats}")
+        recommendations = notifier.send_watchlist_recommendations(
+            user_db, history, promotions,
+        )
+        print(f"[prices] Recomendaciones Telegram: {recommendations}")
 
 
 def start_prices():

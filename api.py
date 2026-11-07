@@ -54,7 +54,7 @@ if os.getenv("ENABLE_EXTERNAL_SOURCES_JOB", "").lower() in ("1", "true", "yes"):
     import scheduler as _external_sources_scheduler
     _external_sources_scheduler.start_external_sources()
 
-if os.getenv("ENABLE_PRICES_JOB", "").lower() in ("1", "true", "yes"):
+if os.getenv("ENABLE_PRICES_JOB", "true").lower() in ("1", "true", "yes"):
     import scheduler as _prices_scheduler
     _prices_scheduler.start_prices()
 

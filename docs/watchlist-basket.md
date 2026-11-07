@@ -58,8 +58,8 @@ una garantía de reintegro ni un cálculo del saldo disponible del tope.
   Autenticado, validación estricta y cuota persistente por usuario. Se configura
   con `WATCHLIST_REFRESH_BATCHES_PER_HOUR` (60 por defecto); 100 productos
   requieren 34 lotes. Una falla individual se devuelve como `error`.
-- `GET /api/auth/me/watchlist/basket`: comparación propia; máximo 60/minuto.
-  No dispara scraping. Los GET no envían mensajes ni alteran alertas.
+- `GET /api/auth/me/watchlist/basket`: comparación propia; máximo 60/minuto. No dispara scraping ni envía mensajes.
+- El job de precios, activado por defecto (`ENABLE_PRICES_JOB=false` para desactivarlo), actualiza cotizaciones y manda por Telegram una recomendación diaria con tienda/día y precios de los productos de la lista. Respeta `notify_daily`; si no hay cotizaciones suficientes, espera al próximo ciclo.
 
 Usa las bases SQLite y adaptadores existentes; no requiere claves nuevas ni IA,
 ni incorpora un proveedor pago. La actualización manual aumenta el trabajo de

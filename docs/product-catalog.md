@@ -21,8 +21,8 @@ después de cerrar. Un código desconocido no se reemplaza por un producto simil
 ## Activación en Railway
 
 - Persistir `USERS_DB_DIR` en el volumen existente; allí vive `prices.db`.
-- `ENABLE_PRICES_JOB=true` activa el recolector ya existente. No se activó ni
-  cambió ninguna variable remota en esta implementación.
+- El recolector y las recomendaciones de canasta quedan activados por defecto.
+  `ENABLE_PRICES_JOB=false` los desactiva.
 - `PRICES_BASKET_EVERY_HOURS` mantiene el intervalo existente (20 h por defecto).
 - `PRICES_CATALOG_GROUPS_PER_QUERY=12` conserva más resultados del conjunto que
   ya devolvían las tiendas (antes se conservaban 3). Rango 1–30. No incrementa
