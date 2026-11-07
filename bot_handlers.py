@@ -440,6 +440,8 @@ def cmd_start(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "• /seguir &lt;super&gt; — agregar un supermercado a tu lista\n"
         "• /mis — promos para tus medios de pago\n"
         "• /mis-miercoles — tus promos para un día específico\n"
+        "• /mis-dias-nafta — qué días hay promos de nafta con tus medios\n"
+        "• /mis-dias-super — qué días hay promos de súper con tus medios\n"
         "• /medios — ver tus medios\n"
         "• /notify on|off — toggle notificaciones diarias\n"
         "• /hora &lt;0-23&gt; — hora del digest diario\n\n"
@@ -458,6 +460,8 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "<code>/miercoles</code> — Promos vigentes que aplican el miércoles. También "
         "<code>/lunes</code> a <code>/domingo</code>.\n"
         "<code>/mis-miercoles</code> — Lo mismo, filtrado por tus medios de pago.\n"
+        "<code>/mis-dias-nafta</code> — Días con promos de combustible para tus medios.\n"
+        "<code>/mis-dias-super</code> — Días con promos de supermercados para tus medios.\n"
         "<code>/carrefour</code> o <code>/galicia</code> — Atajo por supermercado, "
         "banco o billetera. Combiná: <code>/carrefour-miercoles</code>.\n"
         "Podés usar guión bajo si preferís: <code>/mis_miercoles</code>.\n\n"
@@ -604,6 +608,74 @@ def cmd_mis_mobility(chat_id: str, args: str, user_db: UserDatabase,
         chat_id, user_db, "mobility", "🚇 <b>Tus promos de movilidad — hoy</b>",
         "mismobility", page,
     )
+
+
+def _cmd_mis_dias_category(
+    chat_id: str,
+    user_db: UserDatabase,
+    *,
+    category: str,
+    category_label: str,
+    emoji: str,
+) -> tuple[str, dict]:
+    """Resume los días con promociones semanales para los medios vinculados."""
+    error, methods = _linked_payment_methods(chat_id, user_db)
+    if error:
+        return error, {}
+
+    promos = _query_promotions(category=category, payment_methods=methods, limit=1000)
+    days_with_promos: dict[str, list[dict]] = {}
+    for day_name in DAY_NAMES_ES:
+        day_promos = [
+            promo for promo in promos
+            if _promo_applies_on_day(promo.get("valid_days"), day_name)
+        ]
+        if day_promos:
+            days_with_promos[day_name] = day_promos
+
+    if not days_with_promos:
+        return (
+            f"{emoji} <b>No encontré promos vigentes de {category_label} para tus medios de pago.</b>\n\n"
+            "Probá más tarde: las promociones se actualizan cuando se renuevan las fuentes.",
+            {},
+        )
+
+    lines = [f"{emoji} <b>Días con promos de {category_label} para tus medios</b>", ""]
+    for day_name, day_promos in days_with_promos.items():
+        lines.append(f"📅 <b>{_esc(day_name.capitalize())}</b> · {len(day_promos)} promo{'s' if len(day_promos) != 1 else ''}")
+        for promo in day_promos[:3]:
+            merchant = _esc(promo.get("supermarket_name") or "Comercio")
+            discount = _esc(promo.get("discount") or "Beneficio")
+            entity = _esc(promo.get("bank") or promo.get("wallet") or promo.get("payment_method") or "medio de pago")
+            lines.append(f"  • {merchant}: {discount} con {entity}")
+        if len(day_promos) > 3:
+            lines.append(f"  • y {len(day_promos) - 3} más")
+        lines.append("")
+
+    methods_str = _esc(", ".join(method["name"] for method in methods if method.get("name")))
+    lines.append(f"<i>Medios: {methods_str}</i>")
+    return "\n".join(lines), {}
+
+
+def cmd_mis_dias_nafta(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    return _cmd_mis_dias_category(
+        chat_id, user_db, category="fuel", category_label="nafta", emoji="⛽",
+    )
+
+
+def cmd_mis_dias_super(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict]:
+    return _cmd_mis_dias_category(
+        chat_id, user_db, category="supermarket", category_label="supermercados", emoji="🛒",
+    )
+
+
+def _promo_applies_on_day(valid_days: Optional[str], day_name: str) -> bool:
+    """Interpreta restricciones semanales y conserva promos sin días publicados."""
+    value = _strip_accents(str(valid_days or "")).casefold()
+    if not value or "todos los d" in value or "diario" in value:
+        return True
+    normalized_day = _strip_accents(day_name).casefold()
+    return normalized_day in value
 
 
 def cmd_movilidad(chat_id: str, args: str, user_db: UserDatabase,
@@ -1243,6 +1315,10 @@ COMMANDS = {
     "banco": cmd_banco,
     "super": cmd_super,
     "combustible": cmd_combustible,
+    "mos-dias-nafta": cmd_mis_dias_nafta,
+    "mis-dias-nafta": cmd_mis_dias_nafta,
+    "mis-dias-super": cmd_mis_dias_super,
+    "mis-dias-supermercados": cmd_mis_dias_super,
     "movilidad": cmd_movilidad,
     "transporte": cmd_movilidad,
     "stats": cmd_stats,
