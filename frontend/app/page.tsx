@@ -4,7 +4,7 @@ import { useState, useCallback } from "react"
 import { useQuery } from "@tanstack/react-query"
 import Link from "next/link"
 import { useRouter } from "next/navigation"
-import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag, TrainFront, ShoppingBasket, ScanBarcode } from "lucide-react"
+import { CalendarDays, AlertCircle, CreditCard, ShoppingCart, Fuel, ArrowUpRight, Check, Tag, TrainFront, ShoppingBasket, ScanBarcode, Pill } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
 import type { FilterState, Category, DayCode } from "@/lib/types"
@@ -116,6 +116,9 @@ export default function Home() {
               <button onClick={() => chooseCategory("mobility")} aria-pressed={category === "mobility"} className={`inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold transition-colors sm:px-3 sm:text-sm ${category === "mobility" ? "bg-[#102a4c] text-white" : "text-[#52657d] hover:bg-[#edf2f7] hover:text-[#102a4c]"}`}>
                 <TrainFront className="h-3.5 w-3.5" aria-hidden="true" /><span>Movilidad</span>
               </button>
+              <Link href="/precios?category=pharmacy" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
+                <Pill className="h-3.5 w-3.5" aria-hidden="true" /><span>Farmacia</span>
+              </Link>
               <Link href="/precios" className="inline-flex min-h-9 shrink-0 items-center gap-1.5 rounded-lg px-2.5 text-xs font-semibold text-[#52657d] transition-colors hover:bg-[#edf2f7] hover:text-[#102a4c] sm:px-3 sm:text-sm">
                 <Tag className="h-3.5 w-3.5" aria-hidden="true" /><span>Precios</span>
               </Link>

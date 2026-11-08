@@ -1,6 +1,6 @@
 "use client"
 
-import { useState } from "react"
+import { useEffect, useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
@@ -261,6 +261,12 @@ export default function PreciosPage() {
   const [shown, setShown] = useState(PAGE_SIZE)
   const [barcode, setBarcode] = useState("")
   const [catalogKey, setCatalogKey] = useState("")
+  useEffect(() => {
+    const requestedCategory = new URLSearchParams(window.location.search).get("category")
+    if (CATEGORIES.some((item) => item.value === requestedCategory)) {
+      setCategory(requestedCategory ?? "")
+    }
+  }, [])
   const catalogProduct = useQuery({
     queryKey: ["catalog-product", catalogKey], queryFn: () => api.getCatalogProduct(catalogKey),
     enabled: !!catalogKey && !query, staleTime: 60_000,

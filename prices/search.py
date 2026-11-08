@@ -8,7 +8,7 @@ from datetime import date
 from typing import Optional
 
 from .effective import apply_best_promo
-from .matching import _SIZE_RE, group_key, model_code, norm, relevance
+from .matching import _SEARCH_QUALIFIERS, _SIZE_RE, group_key, model_code, norm, relevance, tokens
 from .categories import OTHER, category_string, classify
 from .models import Offer, ProductGroup
 from .registry import Store, stores_for
@@ -29,13 +29,16 @@ def _store_query(query: str) -> str:
     texto trae el tamaño; el tamaño se usa después para ordenar por relevancia.
     """
     stripped = _SIZE_RE.sub(" ", norm(query))
-    stripped = " ".join(stripped.split())
-    return stripped if len(stripped.split()) >= 2 else norm(query)
+    words = [word for word in tokens(stripped) if word not in _SEARCH_QUALIFIERS]
+    if words:
+        return " ".join(words)
+    return " ".join(stripped.split())
 
 
-def _fetch_offers(query: str, category: Optional[str]) -> tuple[list[Offer], list[str]]:
+def _fetch_offers(query: str, category: Optional[str], limit: int = 8) -> tuple[list[Offer], list[str]]:
     query = _store_query(query)
-    key = (query, category)
+    limit = max(1, min(int(limit), 50))
+    key = (query, category, limit)
     cached = _cache.get(key)
     if cached and time.monotonic() - cached[0] < _CACHE_TTL_SECONDS:
         return cached[1], cached[2]
@@ -47,7 +50,7 @@ def _fetch_offers(query: str, category: Optional[str]) -> tuple[list[Offer], lis
         futures = {}
         for store in stores:
             try:
-                futures[pool.submit(_source(store).search, store, query)] = store
+                futures[pool.submit(_source(store).search, store, query, limit)] = store
             except ModuleNotFoundError:
                 failed.append(store.name)
         for future in as_completed(futures, timeout=20):
@@ -137,7 +140,7 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
     query = (query or "").strip()[:120]
     if len(norm(query)) < 2:
         return {"query": query, "groups": [], "failed_stores": []}
-    offers, failed = _fetch_offers(query, category)
+    offers, failed = _fetch_offers(query, category, max_groups)
 
     scored = [(relevance(query, o.title, o.brand), o) for o in offers if o.in_stock]
     top = max((score for score, _ in scored), default=0)

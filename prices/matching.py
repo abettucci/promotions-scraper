@@ -9,6 +9,9 @@ import re
 import unicodedata
 
 _STOP = {"de", "del", "la", "el", "los", "las", "con", "sin", "para", "en", "y", "x", "a", "por"}
+# Palabras de presentación/intención que los catálogos no incluyen en el nombre
+# comercial (p. ej. "lata de atún marca propia Carrefour").
+_SEARCH_QUALIFIERS = {"lata", "latas", "marca", "marcas", "propio", "propia", "propios", "propias"}
 _UNITS = {
     "l": "l", "lt": "l", "lts": "l", "litro": "l", "litros": "l",
     "ml": "ml", "cc": "ml", "kg": "kg", "kgs": "kg", "kilo": "kg", "kilos": "kg",
@@ -33,7 +36,9 @@ def tokens(text: object) -> list[str]:
 
 def relevance(query: str, title: str, brand: str = "") -> float:
     """Fracción de términos de la búsqueda presentes en la publicación."""
-    wanted = tokens(query)
+    wanted = [token for token in tokens(query) if token not in _SEARCH_QUALIFIERS]
+    if not wanted:
+        wanted = tokens(query)
     if not wanted:
         return 0.0
     have = set(tokens(f"{title} {brand}"))
