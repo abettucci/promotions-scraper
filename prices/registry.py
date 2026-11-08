@@ -13,10 +13,10 @@ from typing import Optional
 class Store:
     key: str
     name: str
-    platform: str           # vtex | coto | supleradar
+    platform: str           # vtex | coto | supleradar | drahorro | preciosderemedios
     host: str = ""
     merchant: Optional[str] = None
-    category: str = "supermarket"   # supermarket | electro | supplements
+    category: str = "supermarket"   # supermarket | electro | supplements | pharmacy
 
 
 STORES: tuple[Store, ...] = (
@@ -37,10 +37,17 @@ STORES: tuple[Store, ...] = (
     Store("coppel", "Coppel", "vtex", "www.coppel.com.ar", category="electro"),
     # Suplementos (comparador público de terceros)
     Store("supleradar", "SupleRadar", "supleradar", category="supplements"),
+    # Farmacias. Farmacity y FarmaPlus exponen el catálogo público VTEX.
+    Store("farmacity", "Farmacity", "vtex", "www.farmacity.com", category="pharmacy"),
+    Store("farmaplus", "FarmaPlus", "vtex", "www.farmaplus.com.ar", category="pharmacy"),
+    Store("drahorro", "Dr. Ahorro", "drahorro", "www.farmaciasdrahorro.com.ar", category="pharmacy"),
+    # Referencia de precio por principio activo, no precio de una sucursal.
+    Store("preciosderemedios", "Precio de referencia · Precios de Remedios",
+          "preciosderemedios", "preciosderemedios.com.ar", category="pharmacy"),
 )
 
 
 def stores_for(category: Optional[str] = None) -> list[Store]:
     if not category:
-        return [s for s in STORES if s.category != "supplements"]
+        return [s for s in STORES if s.category not in {"supplements", "pharmacy"}]
     return [s for s in STORES if s.category == category]

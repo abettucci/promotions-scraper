@@ -1130,7 +1130,7 @@ def ask_public_assistant(body: AssistantQuestionBody, request: Request):
     return {"answer": _assistant_plain_text(answer)}
 
 # ── Comparador de precios ─────────────────────────────────────────────────────
-_PRICE_CATEGORIES = {"supermarket", "electro", "supplements"}
+_PRICE_CATEGORIES = {"supermarket", "electro", "supplements", "pharmacy"}
 
 
 def _catalog_history(request: Request):

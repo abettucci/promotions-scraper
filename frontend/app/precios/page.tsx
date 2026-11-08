@@ -4,7 +4,7 @@ import { useState } from "react"
 import Link from "next/link"
 import Image from "next/image"
 import { useQuery } from "@tanstack/react-query"
-import { ArrowLeft, ExternalLink, LineChart, Loader2, Search, ShoppingCart, Tv, Dumbbell } from "lucide-react"
+import { ArrowLeft, ExternalLink, LineChart, Loader2, Search, ShoppingCart, Tv, Dumbbell, Pill } from "lucide-react"
 import { api } from "@/lib/api"
 import { useAuthStore } from "@/lib/auth"
 import { BankBadge } from "@/components/BankBadge"
@@ -22,6 +22,7 @@ const CATEGORIES = [
   { value: "supermarket", label: "Súper", icon: ShoppingCart },
   { value: "electro", label: "Electro y hogar", icon: Tv },
   { value: "supplements", label: "Suplementos", icon: Dumbbell },
+  { value: "pharmacy", label: "Farmacia", icon: Pill },
 ]
 
 const EXAMPLES = ["leche La Serenísima 1 L", "aceite Cocinero 1,5 L", "heladera Samsung no frost", "smart tv 50 Samsung"]
