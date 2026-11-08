@@ -168,7 +168,7 @@ class AlertTests(unittest.TestCase):
         self.assertIn("a,b", text)
         self.assertIn("$1.235", text)
 
-    def test_personalized_promo_can_trigger_a_price_drop(self):
+    def test_cashback_alone_does_not_trigger_a_published_price_drop(self):
         create_alert(self.db, self.user, "leche", search=self.search_for(100))
         self.db.set_user_payment_methods(
             self.user,
@@ -180,8 +180,8 @@ class AlertTests(unittest.TestCase):
             self.assertEqual(kwargs["methods"][0]["name"], "Banco Galicia")
             result = group("ean:1", 100)
             result["offers"][0].update({
-                "final_price": 80,
-                "promo": {"discount": "20%", "entity": "Banco Galicia"},
+                "final_price": 0,
+                "promo": {"discount": "100% reintegro", "entity": "MODO"},
             })
             return {"groups": [result]}
 
@@ -191,9 +191,8 @@ class AlertTests(unittest.TestCase):
             search=personalized_search,
             promotions=[{"id": 1}],
         )
-        self.assertEqual(stats["notified"], 1)
-        self.assertIn("precio final estimado", self.sent[0][1].lower())
-        self.assertIn("Banco Galicia", self.sent[0][1])
+        self.assertEqual(stats["notified"], 0)
+        self.assertEqual(self.sent, [])
 
 
 class WatchlistTests(unittest.TestCase):
