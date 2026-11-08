@@ -34,9 +34,8 @@ def _best(group: dict) -> Optional[dict]:
 
 
 def _effective_price(offer: dict) -> float:
-    """Precio unitario final: tienda + promo personalizada, si fue calculada."""
-    final = offer.get("final_price")
-    return float(final if final is not None else offer["price"])
+    """Las alertas siguen el precio publicado, no reintegros posteriores."""
+    return float(offer["price"])
 
 
 def load_active_promotions() -> list[dict]:
@@ -130,12 +129,12 @@ def _message(alert: dict, best: dict, previous: float, reached_target: bool) -> 
         f"<b>{html.escape(best['store_name'])}</b>: {_ars(current)} (antes {_ars(previous)})",
     ]
     promo = best.get("promo")
-    if promo and current < float(best["price"]):
+    if promo:
         entity = html.escape(str(promo.get("entity") or "tu medio de pago"))
         discount = html.escape(str(promo.get("discount") or "beneficio"))
         lines.append(
-            f"✨ Precio final estimado con <b>{discount}</b> de {entity}; "
-            f"precio publicado {_ars(float(best['price']))}."
+            f"✨ Promo detectada: <b>{discount}</b> de {entity}. "
+            "El comercio cobra el precio publicado; el reintegro depende de sus condiciones."
         )
     lines.extend([
         f'<a href="{html.escape(best["url"])}">Ver en la tienda</a>',
