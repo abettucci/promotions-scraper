@@ -80,15 +80,38 @@ def _entity_matches(promotion: dict, method: dict) -> bool:
     name = _norm(method.get("name"))
     if not name:
         return False
-    haystack = _norm(" ".join(str(promotion.get(field) or "") for field in (
-        "bank", "wallet", "payment_method", "title",
-    )))
-    if name in haystack:
-        return True
-    # Las fuentes a veces omiten el prefijo "Banco". Requerimos una palabra
-    # significativa para no confundir entidades por artículos o abreviaturas.
-    tokens = [token for token in name.split() if len(token) >= 4 and token not in {"banco", "tarjeta"}]
-    return bool(tokens) and any(token in haystack for token in tokens)
+
+    def matches_field(value: object) -> bool:
+        field = _norm(value)
+        if not field:
+            return False
+        # Match the complete configured name. Partial tokens such as "club"
+        # or "cuenta" are too generic and caused unrelated banks to pass.
+        variants = {name}
+        if name.startswith("banco "):
+            variants.add(name.removeprefix("banco "))
+        if field.startswith("banco "):
+            variants.add(field.removeprefix("banco "))
+        return field in variants or any(
+            re.search(rf"(?<![a-z0-9]){re.escape(variant)}(?![a-z0-9])", field)
+            for variant in variants
+        )
+
+    # `bank` is the eligibility institution when populated. A title may say
+    # “vía MODO”, but that does not make an ICBC-only promotion available to
+    # someone who configured MODO without an ICBC account/card.
+    bank = promotion.get("bank")
+    if _norm(bank):
+        return matches_field(bank)
+
+    # For promotions without a bank, use the structured wallet first. Only
+    # fall back to descriptive fields when the source omitted both entities.
+    wallet = promotion.get("wallet")
+    if _norm(wallet):
+        return matches_field(wallet)
+    return any(matches_field(promotion.get(field)) for field in (
+        "payment_method", "title",
+    ))
 
 
 def promotion_allows_tier(promotion: dict, method: dict) -> bool:
