@@ -187,7 +187,7 @@ class PriceHistory:
         rows = conn.execute(
             "SELECT store, store_name, date, price FROM price_history "
             "WHERE product_key = ? AND date >= ? ORDER BY date",
-            (key, (start - timedelta(days=STALE_DAYS)).isoformat()),
+            (key, (today - timedelta(days=max(days, 30) + STALE_DAYS)).isoformat()),
         ).fetchall()
         conn.close()
         by_store: dict[str, list[tuple[date, float]]] = {}
@@ -231,7 +231,7 @@ class PriceHistory:
         current.sort(key=lambda item: item["price"])
         store_series.sort(key=lambda item: item["store_name"].casefold())
         return {"key": key, "days": days, "points": points, "series": store_series, "current": current,
-                "summary": _summary(points)}
+                "summary": _summary(points), "changes": _period_changes(by_store, today)}
 
 
 def _summary(points: list[dict]) -> Optional[dict]:
@@ -242,3 +242,25 @@ def _summary(points: list[dict]) -> Optional[dict]:
     return {"today": points[-1]["min"], "lowest": min(lows), "lowest_date": low_point["date"],
             "highest": max(p["max"] for p in points),
             "change_pct": round((points[-1]["min"] / points[0]["min"] - 1) * 100) if points[0]["min"] else 0}
+
+
+def _period_changes(by_store: dict[str, list[tuple[date, float]]], today: date) -> dict:
+    result = {}
+    for label, days in (("weekly", 7), ("monthly", 30)):
+        reference = today - timedelta(days=days)
+        changes = []
+        for history in by_store.values():
+            baseline = next(((observed, price) for observed, price in reversed(history)
+                             if observed <= reference), None)
+            current = next(((observed, price) for observed, price in reversed(history)
+                            if observed <= today), None)
+            if not baseline or not current:
+                continue
+            base_date, base_price = baseline
+            current_date, current_price = current
+            if (reference - base_date).days > STALE_DAYS or (today - current_date).days > STALE_DAYS or base_price <= 0:
+                continue
+            changes.append((current_price/base_price - 1)*100)
+        result[label] = {"change_pct": round(sum(changes)/len(changes), 2) if changes else None,
+                         "stores": len(changes)}
+    return result

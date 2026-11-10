@@ -244,6 +244,54 @@
 "category": "supermarket"
 },
 {
+"query": "atun carrefour",
+"category": "supermarket"
+},
+{
+"query": "atun coto",
+"category": "supermarket"
+},
+{
+"query": "atun dia",
+"category": "supermarket"
+},
+{
+"query": "atun jumbo",
+"category": "supermarket"
+},
+{
+"query": "atun vea",
+"category": "supermarket"
+},
+{
+"query": "atun changomas",
+"category": "supermarket"
+},
+{
+"query": "arvejas carrefour",
+"category": "supermarket"
+},
+{
+"query": "arvejas coto",
+"category": "supermarket"
+},
+{
+"query": "tomate triturado carrefour",
+"category": "supermarket"
+},
+{
+"query": "tomate triturado coto",
+"category": "supermarket"
+},
+{
+"query": "choclo en lata carrefour",
+"category": "supermarket"
+},
+{
+"query": "choclo en lata coto",
+"category": "supermarket"
+},
+{
 "query": "heladera samsung no frost 300 litros",
 "category": "electro"
 },

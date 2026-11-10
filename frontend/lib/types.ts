@@ -239,8 +239,19 @@ export interface PriceCatalogResponse {
 export interface PriceTrendsResponse {
   days: number; baseline: string; as_of: string; experimental: boolean
   min_products: number; min_coverage_pct: number
+  basket: { category: string; baseline_products: number; compared_products: number; coverage_pct: number
+    change_pct: number | null; vs_inflation_pp: number | null; status: "ready" | "insufficient_data" }
+  ipc: { period: string; monthly_pct: number; comparison_pct: number; estimated: boolean; source: string; fetched_at: string } | null
   categories: { category: string; baseline_products: number; compared_products: number
-    coverage_pct: number; change_pct: number | null; status: "ready" | "insufficient_data" }[]
+    coverage_pct: number; change_pct: number | null; vs_inflation_pp: number | null; status: "ready" | "insufficient_data" }[]
+}
+
+export interface PriceIndexResponse {
+  period: string; currency: "ars" | "usd_official" | "usd_blue"; from: string; to: string; min_products: number; min_coverage_pct: number
+  method: string; experimental: boolean
+  exchange_source: string | null; exchange_updated_at: string | null
+  series: { category: string; products: number; last_change_pct: number | null
+    points: { date: string; index: number | null; weekly_change_pct: number | null; products: number; coverage_pct: number }[] }[]
 }
 
 export interface PricePoint { date: string; min: number; avg: number; max: number; stores: number }
@@ -254,6 +265,8 @@ export interface PriceHistoryResponse {
   series?: { store: string; store_name: string; points: { date: string; price: number }[] }[]
   current: { store: string; store_name: string; price: number; date: string }[]
   summary: { today: number; lowest: number; lowest_date: string; highest: number; change_pct: number } | null
+  changes?: { weekly: { change_pct: number | null; stores: number }; monthly: { change_pct: number | null; stores: number } }
+  ipc?: { period: string; monthly_pct: number; comparison_pct: number; estimated: boolean; source: string; fetched_at: string } | null
 }
 
 export interface BarcodePriceResponse {

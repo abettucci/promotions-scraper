@@ -17,6 +17,27 @@ _CACHE_TTL_SECONDS = 2 * 60 * 60
 _cache: dict[tuple, tuple[float, list[Offer], list[str]]] = {}
 _MIN_RELEVANCE = 0.6
 
+# Cuando se nombra una cadena en la búsqueda ("atún Carrefour"), esa palabra
+# selecciona el catálogo donde buscar; no es parte del nombre que debe tener el
+# producto. Esto es clave para marcas propias que el catálogo publica sin el
+# nombre del supermercado en el título.
+_STORE_ALIASES = {
+    "carrefour": "carrefour", "coto": "coto", "dia": "dia",
+    "jumbo": "jumbo", "disco": "disco", "vea": "vea",
+    "changomas": "masonline",
+}
+
+
+def _store_hint(query: str, category: Optional[str] = None) -> tuple[Optional[str], str]:
+    if category not in (None, "supermarket"):
+        return None, query
+    words = tokens(query)
+    selected = next((_STORE_ALIASES[word] for word in words if word in _STORE_ALIASES), None)
+    if not selected:
+        return None, query
+    product_query = " ".join(word for word in words if word not in _STORE_ALIASES)
+    return selected, product_query or query
+
 
 def _source(store: Store):
     return importlib.import_module(f"prices.sources.{store.platform}")
@@ -35,17 +56,18 @@ def _store_query(query: str) -> str:
     return " ".join(stripped.split())
 
 
-def _fetch_offers(query: str, category: Optional[str], limit: int = 8) -> tuple[list[Offer], list[str]]:
+def _fetch_offers(query: str, category: Optional[str], limit: int = 8,
+                  store_key: Optional[str] = None) -> tuple[list[Offer], list[str]]:
     query = _store_query(query)
     limit = max(1, min(int(limit), 50))
-    key = (query, category, limit)
+    key = (query, category, limit, store_key)
     cached = _cache.get(key)
     if cached and time.monotonic() - cached[0] < _CACHE_TTL_SECONDS:
         return cached[1], cached[2]
 
     offers: list[Offer] = []
     failed: list[str] = []
-    stores = stores_for(category)
+    stores = [store for store in stores_for(category) if store_key is None or store.key == store_key]
     with ThreadPoolExecutor(max_workers=len(stores) or 1) as pool:
         futures = {}
         for store in stores:
@@ -140,9 +162,10 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
     query = (query or "").strip()[:120]
     if len(norm(query)) < 2:
         return {"query": query, "groups": [], "failed_stores": []}
-    offers, failed = _fetch_offers(query, category, max_groups)
+    store_key, product_query = _store_hint(query, category)
+    offers, failed = _fetch_offers(product_query, category, max_groups, store_key)
 
-    scored = [(relevance(query, o.title, o.brand), o) for o in offers if o.in_stock]
+    scored = [(relevance(product_query, o.title, o.brand), o) for o in offers if o.in_stock]
     top = max((score for score, _ in scored), default=0)
     threshold = min(_MIN_RELEVANCE, top)
     relevant = [o for score, o in scored if score >= threshold and score > 0]
@@ -160,7 +183,7 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
         group.offers = [o for o in group.offers if o.store != offer.store] + [Offer(**{
             k: v for k, v in offer.__dict__.items()
         })]
-        scores[key] = max(scores.get(key, 0), relevance(query, offer.title, offer.brand))
+        scores[key] = max(scores.get(key, 0), relevance(product_query, offer.title, offer.brand))
 
     groups = _merge_by_model(groups, scores)
     for group in groups.values():

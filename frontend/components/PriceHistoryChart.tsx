@@ -73,6 +73,15 @@ export function PriceHistoryChart({ productKey }: { productKey: string }) {
           {summary.change_pct !== 0 && <> · <b className={summary.change_pct < 0 ? "text-[#3d6626]" : "text-[#8f2d28]"}>{summary.change_pct > 0 ? "+" : ""}{summary.change_pct}%</b> desde {shortDate(data.points[0].date)}</>}
         </p>
       )}
+      {data.changes && <div className="grid gap-2 sm:grid-cols-3">
+        {[{ label: "Últimos 7 días", value: data.changes.weekly.change_pct, stores: data.changes.weekly.stores },
+          { label: "Últimos 30 días", value: data.changes.monthly.change_pct, stores: data.changes.monthly.stores },
+          { label: `IPC INDEC · ${data.ipc?.period ?? "sin dato"}`, value: data.ipc?.monthly_pct ?? null, stores: null }].map((item) => <div key={item.label} className="rounded-lg bg-[#f5f7fb] px-3 py-2">
+            <p className="text-[10px] text-[#71839a]">{item.label}</p><p className={`mt-0.5 text-sm font-bold ${(item.value ?? 0) < 0 ? "text-[#3d6626]" : "text-[#8f2d28]"}`}>{item.value === null ? "Sin datos comparables" : `${item.value > 0 ? "+" : ""}${item.value.toLocaleString("es-AR", { maximumFractionDigits: 1 })}%`}</p>
+            {item.stores !== null && <p className="text-[10px] text-[#8a9ab0]">{item.stores} tienda{item.stores === 1 ? "" : "s"} comparables</p>}
+          </div>)}
+      </div>}
+      {data.ipc && <p className="text-[10px] text-[#8a9ab0]">El IPC es mensual y nacional; se muestra como referencia, no como inflación propia de este producto.</p>}
       <Chart points={data.points} series={data.series} />
       {data.series?.length ? <div className="flex flex-wrap gap-x-4 gap-y-1 text-[10px] text-[#52657d]">{data.series.map((item, index) => <span key={item.store} className="inline-flex items-center gap-1.5"><i className="h-0.5 w-3" style={{ backgroundColor: ["#3d6626", "#2758d8", "#b45309", "#a21caf", "#0891b2", "#be123c", "#475569"][index % 7] }} />{item.store_name}</span>)}</div> : <p className="text-[10px] text-[#8a9ab0]">Línea verde: tienda más barata. Línea punteada: la más cara.</p>}
       <p className="text-[10px] text-[#8a9ab0]">Precios online observados, sin envío. Las líneas se interrumpen cuando la tienda deja de confirmar el precio.</p>

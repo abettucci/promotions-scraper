@@ -14,6 +14,7 @@ import { StatsBar } from "@/components/StatsBar"
 import { Button } from "@/components/ui/button"
 import { UserMenu } from "@/components/UserMenu"
 import { PromoAssistant } from "@/components/PromoAssistant"
+import { SupportProject } from "@/components/SupportProject"
 
 const DEFAULT_FILTERS: FilterState = {
   supermarket: [], bank: [], province: "", days: [], search: "", discount_type: "",
@@ -184,6 +185,7 @@ export default function Home() {
         {error && <div role="alert" className="flex items-start gap-3 rounded-xl border border-[#f0b7b2] bg-[#fff3f2] px-4 py-3 text-sm text-[#8f2d28]"><AlertCircle className="mt-0.5 h-4 w-4 shrink-0" /><span>No se pudo conectar con la API. Verificá que el backend esté corriendo y reintentá.</span></div>}
 
         <div id="promotions"><PromoGrid promotions={promos?.data ?? []} loading={promosLoading || isFetching} page={promos?.page ?? 1} pages={promos?.pages ?? 1} total={promos?.total ?? 0} layout={filters.supermarket.length === 1 ? "table" : "grid"} marketName={filters.supermarket.length === 1 ? filters.supermarket[0] : undefined} onPageChange={(page) => updateFilters({ page })} /></div>
+        <SupportProject />
       </main>
 
       <footer className="mx-auto mt-10 max-w-7xl border-t border-[#dbe4ee] px-4 py-7 text-sm text-[#52657d] sm:px-6"><span className="display mr-2 font-semibold tracking-[-0.04em] text-[#102a4c]">PROMOAR</span> Información extraída de sitios oficiales. Confirmá las condiciones antes de pagar.</footer>

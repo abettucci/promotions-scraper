@@ -25,7 +25,7 @@ const CATEGORIES = [
   { value: "pharmacy", label: "Farmacia", icon: Pill },
 ]
 
-const EXAMPLES = ["leche La Serenísima 1 L", "aceite Cocinero 1,5 L", "heladera Samsung no frost", "smart tv 50 Samsung"]
+const EXAMPLES = ["atún Carrefour", "atún Coto", "atún Día", "arvejas Carrefour", "arvejas Coto", "tomate triturado Carrefour", "leche La Serenísima 1 L", "aceite Cocinero 1,5 L", "heladera Samsung no frost", "smart tv 50 Samsung"]
 
 const ars = (value: number) => `$${Math.round(value).toLocaleString("es-AR")}`
 
@@ -321,7 +321,7 @@ export default function PreciosPage() {
           </form>
           <BarcodeScanner onRead={(value) => { setQuery(""); setCatalogKey(""); setBarcode(value) }} />
           </div>
-          <p className="mt-2 text-xs text-[#d9e3ef]">Para guardar un producto, buscalo y elegí “Agregar a mi lista” en su resultado.</p>
+          <p className="mt-2 text-xs text-[#d9e3ef]">Probá “atún Carrefour” o “arvejas Coto” para buscar también productos de marca propia dentro de ese supermercado. Para guardar un producto, elegí “Agregar a mi lista” en su resultado.</p>
           <div className="mt-4 flex flex-wrap gap-2">
             {CATEGORIES.map(({ value, label, icon: Icon }) => (
               <button key={value || "all"} type="button" onClick={() => setCategory(value)} aria-pressed={category === value}

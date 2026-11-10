@@ -119,7 +119,7 @@ export default function WatchlistPage() {
         <div className="mx-auto flex min-h-16 max-w-7xl flex-wrap items-center gap-3 px-4 py-3 sm:px-6">
           <Link href="/" aria-label="Volver al inicio" className="text-muted-foreground hover:text-foreground"><ArrowLeft className="h-5 w-5" /></Link>
           <span className="display text-base font-semibold tracking-tight">PROMOAR</span><span className="text-muted-foreground">/ Mi lista habitual</span>
-          <Link href="/precios" className="ml-auto text-sm font-semibold text-primary">Agregar productos →</Link>
+          <Link href="/precios" className="ml-auto inline-flex min-h-10 items-center gap-2 rounded-xl bg-primary px-4 text-sm font-semibold text-primary-foreground shadow-sm transition-opacity hover:opacity-90"><Search className="h-4 w-4" /> Buscar y agregar productos</Link>
         </div>
       </header>
       <main className="mx-auto max-w-7xl space-y-6 px-4 py-7 sm:px-6 sm:py-10">
@@ -162,7 +162,6 @@ export default function WatchlistPage() {
               })}</ul>
             </details>)}
             {data && products.length === 0 && <div className="rounded-xl border border-dashed border-border bg-card p-8 text-center text-card-foreground"><PackageSearch className="mx-auto h-7 w-7 text-muted-foreground" /><p className="mt-3 font-semibold">Todavía no hay productos en tu lista</p><p className="mt-2 text-sm text-muted-foreground">Buscá un producto y elegí “Guardar y avisarme”.</p></div>}
-            <Link href="/precios" className="inline-flex min-h-11 items-center justify-center gap-2 rounded-xl bg-primary px-5 text-sm font-semibold text-primary-foreground"><Search className="h-4 w-4" /> Buscar y agregar productos</Link>
             </div>
             </details>
           </section>

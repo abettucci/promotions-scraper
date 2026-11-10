@@ -3,7 +3,7 @@ import type {
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
   PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated, PriceSuggestResponse,
   Watchlist, BasketComparisonResponse,
-  PriceCatalogResponse, PriceGroup, PriceTrendsResponse, BarcodePriceResponse,
+  PriceCatalogResponse, PriceGroup, PriceTrendsResponse, PriceIndexResponse, BarcodePriceResponse,
   PurchaseInput, PurchaseReport,
 } from "./types"
 
@@ -99,6 +99,8 @@ export const api = {
     fetchJSON<PriceCatalogResponse>("/api/prices/catalog", params),
   getCatalogProduct: (key: string) => fetchJSON<PriceGroup>("/api/prices/catalog/product", { key }),
   getPriceTrends: (days: 7 | 30) => fetchJSON<PriceTrendsResponse>("/api/prices/trends", { days }),
+  getPriceIndex: (period: "year" | "3m" | "6m" | "1y" | "all", currency: "ars" | "usd_official" | "usd_blue") =>
+    fetchJSON<PriceIndexResponse>("/api/prices/index", { period, currency }),
   createPriceAlert: (body: { query: string; key?: string; category?: string; target_price?: number }, token: string) =>
     fetchMutation<PriceAlertCreated>("POST", "/api/prices/alerts", body, token),
   listPriceAlerts: (token: string) =>

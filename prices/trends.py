@@ -10,6 +10,7 @@ from datetime import date, timedelta
 
 from .catalog import CATALOG_FRESH_DAYS
 from .history import HEARTBEAT_DAYS, STALE_DAYS, PriceHistory
+from .inflation import latest_comparison
 from .models import category_path
 
 MIN_PRODUCTS = 5
@@ -33,24 +34,38 @@ def trends(history: PriceHistory, days=30, today=None):
     bases = {(r["product_key"], r["store"]): dict(r) for r in rows}
     now = {(r["product_key"], r["store"]): r["price"] for r in current}
     expected, changes = defaultdict(set), defaultdict(lambda: defaultdict(list))
+    all_expected: set[str] = set()
+    all_changes: dict[str, list[float]] = defaultdict(list)
     for pair, row in bases.items():
         path = category_path(row["category"] or "")
         category = path[0] if path else "Otros"
         expected[category].add(row["product_key"])
+        all_expected.add(row["product_key"])
         if pair in now:
-            changes[category][row["product_key"]].append((now[pair]/row["price"] - 1)*100)
+            change = (now[pair]/row["price"] - 1)*100
+            changes[category][row["product_key"]].append(change)
+            all_changes[row["product_key"]].append(change)
+
+    ipc = latest_comparison(history, days, today=today)
+
+    def summarize(category, keys, products):
+        coverage = len(products)/len(keys) if keys else 0
+        sufficient = len(products) >= MIN_PRODUCTS and coverage >= MIN_COVERAGE
+        change = sum(sum(values)/len(values) for values in products.values())/len(products) if products else None
+        change = round(change, 2) if sufficient else None
+        return {"category": category, "baseline_products": len(keys),
+                "compared_products": len(products), "coverage_pct": round(coverage*100, 1),
+                "change_pct": change,
+                "vs_inflation_pp": round(change - ipc["comparison_pct"], 2) if change is not None and ipc else None,
+                "status": "ready" if sufficient else "insufficient_data"}
+
     result = []
     for category, keys in sorted(expected.items()):
-        products = changes[category]
-        coverage = len(products)/len(keys)
-        sufficient = len(products) >= MIN_PRODUCTS and coverage >= MIN_COVERAGE
-        change = sum(sum(v)/len(v) for v in products.values())/len(products) if products else None
-        result.append({"category": category, "baseline_products": len(keys),
-                       "compared_products": len(products), "coverage_pct": round(coverage*100, 1),
-                       "change_pct": round(change, 2) if sufficient else None,
-                       "status": "ready" if sufficient else "insufficient_data"})
+        result.append(summarize(category, keys, changes[category]))
+    basket = summarize("Canasta relevada", all_expected, all_changes)
     return {"days": days, "baseline": baseline.isoformat(), "as_of": today.isoformat(),
-            "categories": result, "experimental": True, "min_products": MIN_PRODUCTS,
+            "categories": result, "basket": basket, "ipc": ipc,
+            "experimental": True, "min_products": MIN_PRODUCTS,
             "min_coverage_pct": MIN_COVERAGE*100,
             "baseline_max_age_days": STALE_DAYS, "current_max_age_days": CATALOG_FRESH_DAYS,
             "heartbeat_days": HEARTBEAT_DAYS}

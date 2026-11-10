@@ -1186,6 +1186,16 @@ def price_category_trends(request: Request, days: int = Query(30, ge=7, le=30)):
         raise HTTPException(503, "La evolución de precios no está disponible temporalmente.") from exc
 
 
+@app.get("/api/prices/index")
+def price_index_history(request: Request, period: Literal["year", "3m", "6m", "1y", "all"] = Query("1y"),
+                        currency: Literal["ars", "usd_official", "usd_blue"] = Query("ars")):
+    from prices.index import price_index
+    try:
+        return price_index(_catalog_history(request), period=period, currency=currency)
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "El índice histórico no está disponible temporalmente.") from exc
+
+
 def _optional_user(credentials: Optional[HTTPAuthorizationCredentials]) -> Optional[dict]:
     """Usuario de la sesión si hay token válido; anónimo si no (sin error)."""
     if not credentials or not _auth_is_ready():
@@ -1291,7 +1301,9 @@ def product_price_history(key: str = Query(..., max_length=120), days: int = Que
     if not product:
         # Productos fuera de la canasta todavía no tienen historial.
         return {"key": key, "days": days, "tracked": False, "points": [], "current": [], "summary": None}
-    return {**history.series(key, days), "tracked": True, "name": product["name"]}
+    from prices.inflation import latest_comparison
+    return {**history.series(key, days), "tracked": True, "name": product["name"],
+            "ipc": latest_comparison(history, 30)}
 
 
 @app.post("/api/prices/alerts")
