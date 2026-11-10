@@ -55,10 +55,12 @@ def model_code(text: str) -> str:
     return ""
 
 
-def group_key(title: str, brand: str, ean: str) -> str:
+def group_key(title: str, brand: str, ean: str, store: str = "", source_id: str = "") -> str:
     digits = re.sub(r"\D", "", ean or "")
-    if len(digits) >= 8:
+    if len(digits) >= 8 and digits.lstrip("0"):
         return f"ean:{digits.lstrip('0')}"
+    if store and source_id and re.fullmatch(r"[a-z0-9_-]+", store) and re.fullmatch(r"[A-Za-z0-9_-]{1,80}", source_id):
+        return f"store:{store}:{source_id}"
     code = model_code(title)
     sizes = "".join(m.group(0) for m in _SIZE_RE.finditer(norm(title)))
     if code:

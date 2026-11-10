@@ -5,6 +5,7 @@ Usa la API pública de catálogo que consumen los propios sitios:
 """
 from __future__ import annotations
 
+import re
 from typing import Optional
 from urllib.parse import quote
 
@@ -55,6 +56,43 @@ def search_ean(store: Store, ean: str, timeout: float = 8.0) -> list[Offer]:
     return [offer] if offer else []
 
 
+def catalog_page(store: Store, offset: int, low_cents: int, high_cents: int,
+                 limit: int = 50, timeout: float = 15.0) -> dict:
+    """Página de un intervalo de precios. Los límites se superponen para no perder centavos."""
+    low, high = f"{low_cents // 100}.{low_cents % 100:02d}", f"{high_cents // 100}.{high_cents % 100:02d}"
+    size = max(1, min(limit, 50))
+    # El WAF rechaza '+' en el filtro; el espacio debe ir codificado como %20.
+    url = (f"https://{store.host}/api/catalog_system/pub/products/search"
+           f"?fq=P:[{low}%20TO%20{high}]&_from={offset}&_to={offset + size - 1}")
+    response = requests.get(url, headers=_HEADERS, timeout=timeout)
+    response.raise_for_status()
+    products = response.json()
+    if not isinstance(products, list):
+        raise ValueError("La tienda no devolvió una lista de productos")
+    resources = response.headers.get("resources", "")
+    info = re.fullmatch(r"\s*(\d+)-(\d+)/(\d+)\s*", resources)
+    if not info or (products and (int(info.group(1)) != offset or int(info.group(2)) - offset + 1 != len(products))):
+        raise ValueError("La tienda no informó la página solicitada y su total")
+    total = int(info.group(3))
+    offers = []
+    for product in products:
+        if not isinstance(product, dict):
+            continue
+        items = product.get("items") or []
+        for item in items:
+            if isinstance(item, dict):
+                variant = {**product, "items": [item]}
+                if len(items) > 1 and item.get("nameComplete"):
+                    variant["productName"] = item["nameComplete"]
+                try:
+                    offer = parse_product(store, variant)
+                except (TypeError, ValueError, AttributeError, OverflowError):
+                    offer = None
+                if offer:
+                    offers.append(offer)
+    return {"offers": offers, "count": len(products), "total": total}
+
+
 def parse_product(store: Store, product: dict, ean: str = "") -> Optional[Offer]:
     items = product.get("items") or []
     if ean:
@@ -94,6 +132,7 @@ def parse_product(store: Store, product: dict, ean: str = "") -> Optional[Offer]
         multibuy=_multibuy(product, offer),
         # categories[0] es la ruta más específica ("/Almacén/Aceites/Girasol/")
         category=categories[0] if categories and isinstance(categories[0], str) else "",
+        source_id=str(item.get("itemId") or "") if store.category == "supermarket" else "",
     )
 
 

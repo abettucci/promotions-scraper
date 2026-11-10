@@ -56,7 +56,7 @@ def run_basket(
         if not groups:
             stats["empty"] += 1
         stats["rows"] += history.record_groups(groups, query, today)
-        seen_keys.update(g["key"] for g in groups if g["key"].startswith(("ean:", "model:")))
+        seen_keys.update(g["key"] for g in groups if g["key"].startswith(("ean:", "model:", "store:")))
         time.sleep(pause)
     for ean in history.scanned_eans(limit=100):
         key = "ean:" + ean.lstrip("0")

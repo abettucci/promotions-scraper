@@ -3,7 +3,7 @@ import type {
   User, AuthResponse, PaymentMethod, PaymentMethodsCatalog, MyPromotionsResponse, AssistantResponse,
   PriceSearchResponse, PriceHistoryResponse, PriceAlert, PriceAlertCreated, PriceSuggestResponse,
   Watchlist, BasketComparisonResponse,
-  PriceCatalogResponse, PriceGroup, PriceTrendsResponse, PriceIndexResponse, BarcodePriceResponse,
+  PriceCatalogResponse, SupermarketCatalogStatus, PriceGroup, PriceTrendsResponse, PriceIndexResponse, BarcodePriceResponse,
   PurchaseInput, PurchaseReport,
 } from "./types"
 
@@ -97,6 +97,7 @@ export const api = {
     fetchJSON<BarcodePriceResponse>("/api/prices/scan", { ean }, null, signal),
   getPriceCatalog: (params: { q?: string; rubric?: string; sort?: string; page?: number; ean?: string }) =>
     fetchJSON<PriceCatalogResponse>("/api/prices/catalog", params),
+  getSupermarketCatalogStatus: () => fetchJSON<SupermarketCatalogStatus>("/api/prices/catalog/status"),
   getCatalogProduct: (key: string) => fetchJSON<PriceGroup>("/api/prices/catalog/product", { key }),
   getPriceTrends: (days: 7 | 30) => fetchJSON<PriceTrendsResponse>("/api/prices/trends", { days }),
   getPriceIndex: (period: "year" | "3m" | "6m" | "1y" | "all", currency: "ars" | "usd_official" | "usd_blue") =>

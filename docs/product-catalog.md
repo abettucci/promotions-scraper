@@ -2,13 +2,30 @@
 
 ## Comportamiento
 
-`/precios` permite explorar los productos identificados por EAN/modelo que ya
+`/precios` permite explorar los productos identificados por EAN, modelo o SKU de tienda que ya
 relevó el proceso de precios, ordenar y filtrar por rubro sin consultar comercios.
 Cada oferta guarda su última fecha de confirmación aunque el precio no cambie.
 Sólo se listan ofertas en stock confirmadas en los últimos 3 días. La ficha
 muestra los precios publicados, sin reintegros bancarios, personalización ni envío.
 “Actualizar en vivo” abre la búsqueda existente con promociones del día.
 No se importa información de Pricely ni de los otros comparadores.
+
+Además de la canasta fija, un proceso independiente recorre los catálogos de
+Carrefour, Día, Jumbo, Disco, Vea, ChangoMás y Coto. Guarda el cursor de cada
+comercio en `prices.db`, procesa páginas de hasta 50 publicaciones y reanuda
+después de un reinicio. VTEX limita la paginación, por lo que se subdividen
+intervalos de precios hasta que cada consulta sea paginable; las fronteras se
+superponen y la escritura es idempotente. Coto usa el cursor `No` de Endeca.
+
+Se guardan ofertas con precio positivo, enlace e identidad estable (EAN o SKU
+propio del comercio); un SKU sin EAN no se fusiona con otra tienda. Los
+comercios pueden cambiar su catálogo, omitir productos, limitar consultas o no
+publicar precio/identificador. Si una página falla, se reintenta sin avanzar;
+un intervalo con más de 2400 productos al mismo precio queda pendiente y no se
+marca el recorrido como completo. `GET /api/prices/catalog/status` muestra
+avance, errores y particiones pendientes. La primera pasada y las actualizaciones
+llevan tiempo; sólo se muestran ofertas confirmadas dentro de la ventana de
+frescura indicada.
 
 El escáner carga ZXing bajo demanda y decodifica la cámara en el dispositivo.
 Admite GTIN-8, UPC-A, EAN-13 y GTIN-14 con verificador válido; sólo se envía el
@@ -29,6 +46,11 @@ después de cerrar. Un código desconocido no se reemplaza por un producto simil
   la cantidad de requests por búsqueda ni el límite de 8 ofertas del adaptador.
 - `PRICES_CATALOG_RATE_LIMIT_MAX=300` limita las lecturas por ventana/IP (HMAC,
   sin guardar IP cruda); usa `PRICES_RATE_LIMIT_WINDOW_SECONDS` (3600 s).
+- `ENABLE_SUPERMARKET_CATALOG_JOB=true` habilita el recorrido paginado mientras
+  `ENABLE_PRICES_JOB` esté activo, en un hilo separado de las alertas. Ajustes:
+  `CATALOG_CRAWL_PAGE_SIZE=50`, `CATALOG_CRAWL_DELAY_SECONDS=1.5`,
+  `CATALOG_CRAWL_EVERY_HOURS=20` y `CATALOG_CRAWL_RETRY_SECONDS=300`.
+  El volumen necesita espacio para ofertas e historial del catálogo ampliado.
 - La migración SQLite es aditiva e idempotente. El catálogo arranca vacío hasta
   la primera recolección: no se presenta como recién confirmado un dato viejo.
 - Prueba manual sin enviar alertas: `python scripts/collect_prices_catalog.py
@@ -37,8 +59,8 @@ después de cerrar. Un código desconocido no se reemplaza por un producto simil
   recolector programado recorre la canasta completa.
 
 No requiere nuevas claves, servicios pagos ni proveedores de IA. Aumenta el
-almacenamiento de ofertas y resultados guardados. No garantiza todavía una
-cobertura exhaustiva de catálogos completos por localidad o sucursal.
+almacenamiento de ofertas y resultados guardados. La cobertura depende de lo
+publicado para la ubicación por defecto de cada tienda, no de cada sucursal.
 
 ## API pública
 

@@ -59,7 +59,7 @@ export function PriceHistoryChart({ productKey }: { productKey: string }) {
   if (isLoading) return <p className="flex items-center gap-2 px-4 py-4 text-xs text-[#52657d] sm:px-5"><Loader2 className="h-3.5 w-3.5 animate-spin" /> Cargando historial…</p>
   if (error) return <p className="px-4 py-4 text-xs text-[#9c4138] sm:px-5">No pudimos cargar el historial.</p>
   if (!data || !data.tracked) {
-    return <p className="px-4 py-4 text-xs text-[#52657d] sm:px-5">Todavía no hay historial para este producto. La canasta diaria sigue una selección de productos y no incluye automáticamente todas las búsquedas.</p>
+    return <p className="px-4 py-4 text-xs text-[#52657d] sm:px-5">Todavía no hay historial para este producto. El seguimiento se completa a medida que se relevan los catálogos y depende de los datos que publica cada comercio.</p>
   }
   if (data.points.length === 0) {
     return <p className="px-4 py-4 text-xs text-[#52657d] sm:px-5">No hay precios recientes registrados para este producto en el período consultado.</p>

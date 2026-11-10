@@ -88,7 +88,7 @@ class WatchlistQuotes:
             return cached["group"].get("offers", [])
         # El catálogo público es un respaldo para identidades estables, no para
         # coincidencias difusas por título. Ninguna lectura dispara scraping.
-        if key.startswith(("ean:", "model:")):
+        if key.startswith(("ean:", "model:", "store:")):
             group = Catalog(self.history).product(key, today=now.date())
             if group:
                 stores = {store.key: store for store in STORES}

@@ -36,6 +36,7 @@ class Offer:
     total: Optional[float] = None
     deal: Optional[str] = None      # "multibuy" | "bank" | None
     category: str = ""              # "/Almacén/Aceites/" tal como lo publica la tienda
+    source_id: str = ""             # identificador estable del SKU en el comercio
 
     @property
     def percentage_off(self) -> Optional[int]:

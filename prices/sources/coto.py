@@ -67,6 +67,32 @@ def search_ean(store: Store, ean: str, timeout: float = 8.0) -> list[Offer]:
     return [offer for offer in parse_search(store, response.json()) if _normalized_ean(offer.ean) == wanted]
 
 
+def catalog_page(store: Store, offset: int, limit: int = 50, timeout: float = 15.0) -> dict:
+    """Página del catálogo completo Endeca, sin término de búsqueda."""
+    response = requests.get(f"https://{store.host or 'www.coto.com.ar'}/sitios/cdigi/categoria",
+                            params={"Nrpp": max(1, min(limit, 50)), "No": offset, "format": "json"},
+                            headers=_HEADERS, timeout=timeout)
+    response.raise_for_status()
+    payload = response.json()
+    results = _find_results_list(payload)
+    if not results or "totalNumRecs" not in results:
+        raise ValueError("Coto no devolvió el listado ni su total")
+    records = results.get("records") or []
+    total = int(results["totalNumRecs"])
+    if records and int(results.get("firstRecNum", 0)) != offset + 1:
+        raise ValueError("Coto devolvió otra página distinta de la solicitada")
+    offers = []
+    for record in records:
+        for item in record.get("records") or [record]:
+            try:
+                offer = parse_record(store, {**record, "records": [item]})
+            except (TypeError, ValueError, KeyError, IndexError):
+                offer = None
+            if offer:
+                offers.append(offer)
+    return {"offers": offers, "count": len(records), "total": total}
+
+
 def _normalized_ean(value: object) -> str:
     return "".join(char for char in str(value or "") if char.isdigit()).lstrip("0")
 
@@ -119,6 +145,7 @@ def parse_record(store: Store, record: dict) -> Optional[Offer]:
         image=image.strip(),
         installments=_installments(attrs),
         multibuy=_multibuy(attrs),
+        source_id=(_first(attrs, "record.id") or ""),
     )
 
 

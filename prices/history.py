@@ -16,7 +16,7 @@ from typing import Iterable, Optional
 
 HEARTBEAT_DAYS = 7
 STALE_DAYS = 8
-_TRACKED_PREFIXES = ("ean:", "model:")
+_TRACKED_PREFIXES = ("ean:", "model:", "store:")
 
 
 class PriceHistory:

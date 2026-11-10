@@ -19,11 +19,21 @@ export function PriceCatalog({ ean, onClearBarcode, onChoose }: {
     queryFn: () => api.getPriceCatalog({ ean, rubric: ean ? "" : rubric, sort, page: ean ? 1 : page, q: ean ? "" : q }),
     staleTime: 60_000,
   })
+  const { data: crawl } = useQuery({ queryKey: ["supermarket-catalog-status"],
+    queryFn: api.getSupermarketCatalogStatus, staleTime: 120_000 })
   return <section id="catalogo" className="space-y-5 rounded-2xl border border-border bg-card p-4 text-card-foreground sm:p-6" aria-labelledby="catalog-title">
     <div className="flex flex-wrap items-start justify-between gap-3">
       <div><p className="text-xs font-semibold uppercase tracking-widest text-muted-foreground">Catálogo relevado</p><h2 id="catalog-title" className="display mt-1 text-2xl font-semibold tracking-tight">Explorá antes de comprar.</h2><p className="mt-2 max-w-xl text-sm text-muted-foreground">Precios online confirmados en los últimos {data?.fresh_days ?? 3} días. No incluyen envío ni promociones bancarias.</p></div>
       <label className="text-xs text-muted-foreground">Ordenar por<select value={sort} onChange={(event) => { setSort(event.target.value); setPage(1) }} className="mt-1 block rounded-lg border border-border bg-background px-3 py-2 text-sm text-foreground"><option value="recent">Más recientes</option><option value="price_asc">Menor precio</option><option value="price_desc">Mayor precio</option><option value="name">Nombre</option></select></label>
     </div>
+    {crawl && <details className="rounded-xl bg-secondary px-4 py-3 text-sm text-secondary-foreground">
+      <summary className="cursor-pointer font-semibold">Estado del relevamiento de supermercados</summary>
+      <p className="mt-2 text-xs">El catálogo se actualiza por partes. Las publicaciones sin precio válido o identificación estable pueden quedar afuera.</p>
+      <ul className="mt-3 grid gap-2 sm:grid-cols-2">{crawl.stores.map((store) => <li key={store.store} className="text-xs">
+        <b>{store.name}:</b> {!store.started_at ? "pendiente" : store.last_error_at ? "reintentando" : store.completed_at ? "recorrido terminado" : "en curso"}
+        {store.started_at && <> · {store.records.toLocaleString("es-AR")} publicaciones revisadas</>}
+      </li>)}</ul>
+    </details>}
     {ean ? <div className="flex flex-wrap items-center gap-3 rounded-xl bg-secondary px-4 py-3 text-sm text-secondary-foreground"><span>Código leído: <b>{ean}</b></span><button type="button" onClick={onClearBarcode} className="font-semibold underline">Ver todo el catálogo</button></div> : <>
       <form onSubmit={(event) => { event.preventDefault(); setQ(input.trim()); setPage(1) }} className="flex gap-2"><label className="sr-only" htmlFor="catalog-search">Buscar en el catálogo relevado</label><input id="catalog-search" value={input} onChange={(event) => setInput(event.target.value)} maxLength={120} placeholder="Filtrar productos ya relevados…" className="min-w-0 flex-1 rounded-xl border border-border bg-background px-3 py-2 text-sm" /><button type="submit" className="rounded-xl bg-secondary px-4 text-sm font-semibold text-secondary-foreground">Filtrar</button></form>
       <div className="flex flex-wrap gap-2" aria-label="Rubros del catálogo"><button type="button" aria-pressed={!rubric} onClick={() => { setRubric(""); setPage(1) }} className={`rounded-full border px-3 py-2 text-xs font-semibold ${!rubric ? "border-primary bg-primary text-primary-foreground" : "border-border"}`}>Todos</button>{data?.facets.map((facet) => <button key={facet.name} type="button" aria-pressed={rubric === facet.name} onClick={() => { setRubric(facet.name); setPage(1) }} className={`rounded-full border px-3 py-2 text-xs font-semibold ${rubric === facet.name ? "border-primary bg-primary text-primary-foreground" : "border-border hover:bg-secondary"}`}>{facet.name} ({facet.count})</button>)}</div>

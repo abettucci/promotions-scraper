@@ -236,6 +236,10 @@ export interface PriceCatalogResponse {
   products: CatalogProduct[]; total: number; page: number; page_size: number
   facets: { name: string; count: number }[]; fresh_days: number; source: "catalog"
 }
+export interface SupermarketCatalogStatus {
+  stores: { store: string; name: string; started_at: string | null; completed_at: string | null
+    pages: number; records: number; saved_offers: number; unidentified_offers: number; blocked_partitions: number; last_error_at: string | null }[]
+}
 export interface PriceTrendsResponse {
   days: number; baseline: string; as_of: string; experimental: boolean
   min_products: number; min_coverage_pct: number

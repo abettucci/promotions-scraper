@@ -140,7 +140,7 @@ function ProductImage({ src }: { src: string }) {
 function GroupCard({ group, query, snapshot = false }: { group: PriceGroup; query: string; snapshot?: boolean }) {
   const [showHistory, setShowHistory] = useState(false)
   // El historial exige una identidad estable; los productos sin EAN sí pueden guardarse por título.
-  const trackable = group.key.startsWith("ean:") || group.key.startsWith("model:")
+  const trackable = group.key.startsWith("ean:") || group.key.startsWith("model:") || group.key.startsWith("store:")
   const canSave = trackable || group.key.startsWith("title:")
   const offers = group.offers
   const cheapest = offers[0]

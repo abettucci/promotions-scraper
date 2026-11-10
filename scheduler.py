@@ -93,6 +93,10 @@ def start_external_sources():
 PRICES_TICK_SECONDS = int(os.getenv("PRICES_TICK_SECONDS", "1800"))
 PRICES_BASKET_EVERY_HOURS = float(os.getenv("PRICES_BASKET_EVERY_HOURS", "20"))
 PRICE_ALERTS_EVERY_HOURS = float(os.getenv("PRICE_ALERTS_EVERY_HOURS", "6"))
+CATALOG_CRAWL_DELAY_SECONDS = max(0.5, float(os.getenv("CATALOG_CRAWL_DELAY_SECONDS", "1.5")))
+CATALOG_CRAWL_EVERY_HOURS = max(1.0, float(os.getenv("CATALOG_CRAWL_EVERY_HOURS", "20")))
+CATALOG_CRAWL_PAGE_SIZE = max(1, min(50, int(os.getenv("CATALOG_CRAWL_PAGE_SIZE", "50"))))
+CATALOG_CRAWL_RETRY_SECONDS = max(30, int(os.getenv("CATALOG_CRAWL_RETRY_SECONDS", "300")))
 
 
 def _prices_tick(history, user_db, notifier, whatsapp=None):
@@ -144,3 +148,57 @@ def start_prices():
 
     threading.Thread(target=loop, daemon=True, name="prices-scheduler").start()
     print(f"[prices] Canasta cada {PRICES_BASKET_EVERY_HOURS}h y alertas cada {PRICE_ALERTS_EVERY_HOURS}h")
+    if os.getenv("ENABLE_SUPERMARKET_CATALOG_JOB", "true").lower() in ("1", "true", "yes"):
+        start_supermarket_catalog()
+
+
+def start_supermarket_catalog():
+    """Recolector separado para no demorar la canasta ni las alertas."""
+    from prices.catalog_crawl import crawl_step, mark_error
+    from prices.history import PriceHistory
+    from prices.registry import stores_for
+
+    def loop():
+        time.sleep(150)
+        history = None
+        retry_at = {}
+        while True:
+            if history is None:
+                try:
+                    history = PriceHistory()
+                except Exception as error:
+                    print(f"[catalog] No se pudo abrir la base: {type(error).__name__}: {error}")
+                    time.sleep(60)
+                    continue
+            active = False
+            for store in stores_for("supermarket"):
+                if time.monotonic() < retry_at.get(store.key, 0):
+                    continue
+                try:
+                    result = crawl_step(history, store, every_hours=CATALOG_CRAWL_EVERY_HOURS,
+                                        page_size=CATALOG_CRAWL_PAGE_SIZE)
+                    status, state = result["status"], result["state"]
+                    if status != "waiting":
+                        active = True
+                        if status in {"deferred", "blocked"}:
+                            print(f"[catalog] {store.name}: intervalo con demasiados productos de igual precio; "
+                                  "queda pendiente para reintento")
+                        if status == "blocked":
+                            retry_at[store.key] = time.monotonic() + CATALOG_CRAWL_RETRY_SECONDS
+                        if status == "complete" or (status == "page" and state["pages"] % 100 == 0):
+                            print(f"[catalog] {store.name}: {status}; {state['pages']} páginas, "
+                                  f"{state['records']} registros, {state['saved_offers']} ofertas guardadas, "
+                                  f"{state['unidentified_offers']} sin identidad estable")
+                        time.sleep(CATALOG_CRAWL_DELAY_SECONDS)
+                except Exception as error:
+                    print(f"[catalog] {store.name}: {type(error).__name__}: {error}")
+                    try:
+                        mark_error(history, store)
+                    except Exception as state_error:
+                        print(f"[catalog] No se pudo guardar el estado: {type(state_error).__name__}")
+                    retry_at[store.key] = time.monotonic() + CATALOG_CRAWL_RETRY_SECONDS
+            if not active:
+                time.sleep(60)
+
+    threading.Thread(target=loop, daemon=True, name="supermarket-catalog-scheduler").start()
+    print("[catalog] Relevamiento paginado de supermercados habilitado")

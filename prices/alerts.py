@@ -92,7 +92,7 @@ def create_alert(user_db, user_id: int, query: str, *, key: Optional[str] = None
         search_args.update(promotions=promotions if methods else [], methods=methods or [])
     result = search(query, **search_args)
     groups = result.get("groups", [])
-    stable_groups = [g for g in groups if g["key"].startswith(("ean:", "model:"))]
+    stable_groups = [g for g in groups if g["key"].startswith(("ean:", "model:", "store:"))]
     # El sitio puede guardar resultados sin EAN/modelo si el frontend manda la
     # clave exacta del grupo. El bot, que no selecciona un resultado concreto,
     # mantiene el criterio conservador y elige sólo identidades estables.
@@ -112,7 +112,7 @@ def create_alert(user_db, user_id: int, query: str, *, key: Optional[str] = None
             pass  # La alerta ya está guardada; no informarla como fallida por el caché de precios.
     return {"id": alert_id, "key": group["key"], "name": group["name"], "price": current,
             "store_name": best["store_name"], "target": target, "promo": best.get("promo"), "category": category,
-            "stable_key": group["key"].startswith(("ean:", "model:"))}
+            "stable_key": group["key"].startswith(("ean:", "model:", "store:"))}
 
 
 def _ars(value: float) -> str:

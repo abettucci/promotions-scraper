@@ -395,7 +395,7 @@ class PriceAlertBody(BaseModel):
     @field_validator("key")
     @classmethod
     def validate_key(cls, value: Optional[str]) -> Optional[str]:
-        if value is not None and (len(value) > 320 or not value.startswith(("ean:", "model:", "title:"))):
+        if value is not None and (len(value) > 320 or not value.startswith(("ean:", "model:", "store:", "title:"))):
             raise ValueError("Clave de producto inválida")
         return value
 
@@ -1164,7 +1164,7 @@ def browse_price_catalog(
 
 
 @app.get("/api/prices/catalog/product")
-def price_catalog_product(request: Request, key: str = Query(..., max_length=120, pattern=r"^(ean:|model:).+$")):
+def price_catalog_product(request: Request, key: str = Query(..., max_length=120, pattern=r"^(ean:|model:|store:).+$")):
     from prices.catalog import Catalog
     try:
         result = Catalog(_catalog_history(request)).product(key)
@@ -1173,6 +1173,16 @@ def price_catalog_product(request: Request, key: str = Query(..., max_length=120
     if result is None:
         raise HTTPException(404, "Este producto todavía no tiene precios recientes en el catálogo.")
     return result
+
+
+@app.get("/api/prices/catalog/status")
+def price_catalog_status(request: Request):
+    """Avance del último recorrido de cada supermercado, sin disparar scraping."""
+    from prices.catalog_crawl import catalog_status
+    try:
+        return {"stores": catalog_status(_catalog_history(request))}
+    except sqlite3.Error as exc:
+        raise HTTPException(503, "El estado del catálogo no está disponible temporalmente.") from exc
 
 
 @app.get("/api/prices/trends")
@@ -1294,7 +1304,7 @@ def product_price_history(key: str = Query(..., max_length=120), days: int = Que
     """Serie diaria (mín/prom/máx entre tiendas) de un producto de la canasta."""
     from prices.history import PriceHistory
 
-    if not key.startswith(("ean:", "model:")):
+    if not key.startswith(("ean:", "model:", "store:")):
         raise HTTPException(422, "Clave de producto inválida")
     history = PriceHistory()
     product = history.product(key)

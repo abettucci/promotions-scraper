@@ -173,7 +173,7 @@ def search_prices(query: str, *, category: Optional[str] = None, promotions: Opt
     groups: dict[str, ProductGroup] = {}
     scores: dict[str, float] = {}
     for offer in relevant:
-        key = group_key(offer.title, offer.brand, offer.ean)
+        key = group_key(offer.title, offer.brand, offer.ean, offer.store, offer.source_id)
         group = groups.setdefault(key, ProductGroup(key=key, name=offer.title, brand=offer.brand,
                                                     ean=offer.ean, image=offer.image))
         # Una sola oferta por tienda en cada grupo (la más barata).
