@@ -11,6 +11,7 @@ const percent = (value: number) => `${value > 0 ? "+" : ""}${value.toLocaleStrin
 function PriceIndexChart({ data }: { data: PriceIndexResponse }) {
   const width = 900, height = 310, pad = { top: 14, right: 14, bottom: 22, left: 46 }
   const values = data.series.flatMap((series) => series.points.map((point) => point.index).filter((value): value is number => value !== null))
+  const hasComparison = data.series.some((series) => series.points.some((point) => point.weekly_change_pct !== null))
   const low = Math.min(0, ...values), high = Math.max(0, ...values)
   const span = high - low || 1
   const pointCount = Math.max(2, ...data.series.map((item) => item.points.length))
@@ -18,7 +19,7 @@ function PriceIndexChart({ data }: { data: PriceIndexResponse }) {
   const y = (value: number) => pad.top + ((high - value) / span) * (height - pad.top - pad.bottom)
   const ticks = [high, high / 2, 0, low / 2, low].filter((value, index, items) => items.findIndex((v) => Math.abs(v - value) < 0.01) === index)
 
-  if (!values.length) return <div className="grid h-64 place-items-center rounded-xl bg-background px-5 text-center text-sm text-muted-foreground">Todavía no hay suficientes semanas comparables para dibujar el índice. El historial se va a completar con las corridas periódicas.</div>
+  if (!hasComparison) return <div className="grid h-64 place-items-center rounded-xl bg-background px-5 text-center text-sm text-muted-foreground">Todavía no hay suficientes semanas comparables para dibujar el índice. El historial se va a completar con las corridas periódicas.</div>
 
   return <div className="overflow-hidden rounded-xl bg-background p-2 sm:p-4">
     <svg viewBox={`0 0 ${width} ${height}`} className="h-64 w-full" role="img" aria-label="Índice histórico semanal de precios por rubro">
@@ -30,7 +31,9 @@ function PriceIndexChart({ data }: { data: PriceIndexResponse }) {
           if (!segments.length || line.points[index - 1]?.index === null) segments.push([])
           segments[segments.length - 1].push(`${x(index)},${y(point.index)}`)
         }
-        return segments.filter((segment) => segment.length > 1).map((points, segmentIndex) => <polyline key={`${line.category}-${segmentIndex}`} points={points.join(" ")} fill="none" stroke={COLORS[seriesIndex % COLORS.length]} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />)
+        return segments.map((points, segmentIndex) => points.length > 1
+          ? <polyline key={`${line.category}-${segmentIndex}`} points={points.join(" ")} fill="none" stroke={COLORS[seriesIndex % COLORS.length]} strokeWidth="2.5" strokeLinejoin="round" strokeLinecap="round" vectorEffect="non-scaling-stroke" />
+          : <circle key={`${line.category}-${segmentIndex}`} cx={Number(points[0].split(",")[0])} cy={Number(points[0].split(",")[1])} r="3" fill={COLORS[seriesIndex % COLORS.length]} />)
       })}
       <text x={pad.left} y={height-2} fontSize="11" fill="#64748b">{new Date(data.from + "T12:00:00").toLocaleDateString("es-AR", { month: "short", year: "2-digit" })}</text>
       <text x={width-pad.right} y={height-2} textAnchor="end" fontSize="11" fill="#64748b">{new Date(data.to + "T12:00:00").toLocaleDateString("es-AR", { month: "short", year: "2-digit" })}</text>
@@ -68,6 +71,7 @@ export function PriceTrends() {
       {isFetching && <p role="status" className="text-sm text-muted-foreground">Actualizando comparación…</p>}
       {error && <p role="alert" className="text-sm text-red-600">No pudimos cargar la evolución de precios.</p>}
       {data && <>
+        {data.basket.baseline_products === 0 && <p className="rounded-xl bg-background p-4 text-sm text-muted-foreground">Todavía no hay precios registrados para comparar con hace {days} días. La comparación aparecerá cuando haya suficiente historial de los mismos productos y comercios.</p>}
         <div className="grid gap-3 sm:grid-cols-2 lg:grid-cols-3">
           <article className="rounded-xl border border-border p-4"><p className="text-sm font-semibold">Canasta relevada</p><p className={`my-2 text-3xl font-bold ${(data.basket.change_pct ?? 0) < 0 ? "text-emerald-600" : "text-rose-600"}`}>{data.basket.change_pct === null ? "—" : percent(data.basket.change_pct)}</p><p className="text-xs text-muted-foreground">{data.basket.compared_products} de {data.basket.baseline_products} productos · cobertura {data.basket.coverage_pct}%</p></article>
           {data.categories.map((row, index) => <article key={row.category} className="rounded-xl border border-border p-4"><h3 className="flex items-center gap-2 text-sm font-semibold"><i className="h-2.5 w-2.5 rounded-full" style={{ backgroundColor: COLORS[index % COLORS.length] }} />{row.category}</h3><p className={`my-2 text-3xl font-bold ${(row.change_pct ?? 0) < 0 ? "text-emerald-600" : "text-rose-600"}`}>{row.change_pct === null ? "Sin datos suficientes" : percent(row.change_pct)}</p><p className="text-xs text-muted-foreground">{row.compared_products}/{row.baseline_products} productos base · cobertura {row.coverage_pct}%</p>{row.vs_inflation_pp !== null && <p className="mt-2 text-xs font-semibold">{row.vs_inflation_pp > 0 ? "+" : ""}{row.vs_inflation_pp.toLocaleString("es-AR")} p.p. vs IPC</p>}</article>)}
