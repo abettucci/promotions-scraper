@@ -484,7 +484,7 @@ def cmd_ayuda(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dict
         "Las recomendaciones usan tus medios vinculados si tenés cuenta y aclaran "
         "cuando los T&amp;C no permiten confirmar un producto.\n\n"
         "<b>Alertas de precio</b> (requieren cuenta)\n\n"
-        "<code>/alerta leche la serenisima 1l</code> — te aviso ante cualquier baja.\n"
+        "<code>/alerta leche la serenisima 1l</code> — te aviso ante una baja de $1000 y 10 %.\n"
         "<code>/alerta heladera samsung rt29k577j a $1000000</code> — te aviso al llegar a ese precio.\n"
         "<code>/alertas</code> — ver tus alertas. <code>/quitar 3</code> — borrar la #3.\n\n"
         "<code>/lista</code> — ver tus productos y supermercados habituales.\n"
@@ -1162,7 +1162,7 @@ def cmd_alerta(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dic
     if len(query) < 2:
         return (
             "🔔 <b>Alertas de precio</b>\n\n"
-            "<code>/alerta leche la serenisima 1l</code> — te aviso ante cualquier baja\n"
+            "<code>/alerta leche la serenisima 1l</code> — te aviso ante una baja de $1000 y 10 %\n"
             "<code>/alerta heladera samsung rt29k577j a $1000000</code> — te aviso al llegar a ese precio\n\n"
             "<code>/alertas</code> — ver las tuyas · <code>/quitar &lt;n&gt;</code> — borrar una",
             {},
@@ -1180,7 +1180,7 @@ def cmd_alerta(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, dic
         return f"🔎 No encontré <b>{_esc(query)}</b> en las tiendas. Probá con marca y tamaño.", {}
     if alert.get("error") == "limit":
         return f"⚠️ Llegaste al máximo de {user_db.MAX_PRICE_ALERTS_PER_USER} alertas. Borrá alguna con /quitar.", {}
-    when = (f"cuando llegue a <b>{_ars(target)}</b> o menos" if target else "ante cualquier baja")
+    when = (f"cuando llegue a <b>{_ars(target)}</b> o menos" if target else "ante una baja de $1000 y 10 %")
     return (
         f"🔔 Alerta #{alert['id']} creada: <b>{_esc(alert['name'])}</b>\n"
         f"Hoy el más barato es {_ars(alert['price'])} en {_esc(alert['store_name'])}. Te aviso {when}.",
@@ -1197,7 +1197,7 @@ def cmd_alertas(chat_id: str, args: str, user_db: UserDatabase) -> tuple[str, di
         return "No tenés alertas. Creá una con <code>/alerta leche la serenisima 1l</code>", {}
     lines = ["🔔 <b>Tus alertas de precio</b>"]
     for alert in alerts:
-        goal = f"≤ {_ars(alert['target_price'])}" if alert["target_price"] else "cualquier baja"
+        goal = f"≤ {_ars(alert['target_price'])}" if alert["target_price"] else "baja de $1000 y 10 %"
         lines.append(f"#{alert['id']} · {_esc(alert['product_name'])} — {goal} (último: {_ars(alert['baseline_price'])})")
     lines.append("\nBorrar: <code>/quitar &lt;n&gt;</code>")
     return "\n".join(lines), {}

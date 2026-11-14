@@ -124,18 +124,26 @@ class AlertTests(unittest.TestCase):
         })["notified"], 1)
         self.assertIn("nombre publicado", self.sent[0][1])
 
-    def test_any_drop_notifies_once_then_tracks_the_new_price(self):
-        create_alert(self.db, self.user, "leche", search=self.search_for(100))
-        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(100))["notified"], 0)
-        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(90))["notified"], 1)
-        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(90))["notified"], 0)
+    def test_significant_drop_notifies_once_then_tracks_the_new_price(self):
+        create_alert(self.db, self.user, "leche", search=self.search_for(5000))
+        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(5000))["notified"], 0)
+        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(4000))["notified"], 1)
+        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(4000))["notified"], 0)
         self.assertIn("Bajó el precio", self.sent[0][1])
-        self.assertIn("$90", self.sent[0][1])
-        self.assertIn("antes $100", self.sent[0][1])
+        self.assertIn("$4.000", self.sent[0][1])
+        self.assertIn("antes $5.000", self.sent[0][1])
 
-    def test_ignores_drops_under_one_percent(self):
-        create_alert(self.db, self.user, "leche", search=self.search_for(1000))
-        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(995))["notified"], 0)
+    def test_ignores_small_drops_in_pesos_or_percent(self):
+        create_alert(self.db, self.user, "leche", search=self.search_for(1449))
+        # $52 y 3,6 %: ni $1000 ni 10 %
+        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(1397))["notified"], 0)
+        self.assertEqual(self.sent, [])
+
+    def test_ignores_drop_of_1000_pesos_when_below_ten_percent(self):
+        create_alert(self.db, self.user, "arroz", search=self.search_for(20000))
+        # $1500 pero sólo 7,5 %
+        self.assertEqual(check_alerts(self.db, self.send, search=self.search_for(18500))["notified"], 0)
+        self.assertEqual(self.sent, [])
 
     def test_target_price_notifies_on_reaching_it_and_rearms(self):
         create_alert(self.db, self.user, "leche", target=80, search=self.search_for(100))
