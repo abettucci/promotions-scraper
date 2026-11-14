@@ -13,7 +13,9 @@ from .search import search_prices
 _TARGET_RE = re.compile(
     r"(?:\s+(?:a|por|en|menos\s+de|menor\s+a|hasta|<=?)\s*)?\$\s*([\d.]+(?:,\d+)?)\s*$", re.I,
 )
-_MIN_DROP = 0.01   # sólo avisamos bajas de al menos 1 %
+_MIN_DROP = 0.01   # alertas con precio objetivo: sólo avisamos bajas de al menos 1 %
+_MIN_BAJA_PCT = 0.10   # alertas sin objetivo: la baja debe ser de al menos 10 %...
+_MIN_BAJA_ARS = 1000   # ...y de al menos $1000
 _SEARCH_GROUPS = 24  # igual que la página: el producto elegido tiene que reaparecer
 _CHECK_GROUPS = 30   # el ranking varía de un día a otro; margen para no perder el producto
 
@@ -115,6 +117,12 @@ def create_alert(user_db, user_id: int, query: str, *, key: Optional[str] = None
             "stable_key": group["key"].startswith(("ean:", "model:", "store:"))}
 
 
+def _is_significant_drop(previous: float, current: float) -> bool:
+    """Baja que cumple ambos mínimos: $1000 y 10 % del precio anterior."""
+    drop = previous - current
+    return drop >= _MIN_BAJA_ARS and drop >= previous * _MIN_BAJA_PCT
+
+
 def _ars(value: float) -> str:
     return "$" + f"{round(value):,}".replace(",", ".")
 
@@ -152,8 +160,8 @@ def check_alerts(user_db, send: Callable[[str, str], bool], *, send_whatsapp: Op
 
     - Con precio objetivo: avisa cuando el más barato llega a ese precio (y
       vuelve a avisar sólo si baja más; si sube por encima, se rearma).
-    - Sin objetivo: avisa ante cualquier baja de al menos 1 % respecto de la
-      última revisión.
+    - Sin objetivo: avisa ante una baja de al menos $1000 y al menos 10 %
+      respecto de la última revisión.
     """
     stats = {"checked": 0, "notified": 0, "missing": 0}
     by_query: dict[tuple, dict] = {}
@@ -192,7 +200,7 @@ def check_alerts(user_db, send: Callable[[str, str], bool], *, send_whatsapp: Op
                 notified = current
             elif current > target:
                 notified = None          # se rearma para la próxima vez que baje
-        elif current < baseline * (1 - _MIN_DROP):
+        elif _is_significant_drop(baseline, current):
             message = _message(alert, best, baseline, False)
         user_db.update_price_alert_state(alert["id"], current, notified)
         if message:
