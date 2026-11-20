@@ -3,6 +3,7 @@ import "./globals.css"
 import { Providers } from "./providers"
 import { AuthProvider } from "@/components/AuthProvider"
 import { ThemeToggle } from "@/components/ThemeToggle"
+import { FeedbackWidget } from "@/components/FeedbackWidget"
 
 export const metadata: Metadata = {
   title: "PromoAR — Promociones que valen la pena",
@@ -26,6 +27,7 @@ export default function RootLayout({ children }: { children: React.ReactNode }) 
           </AuthProvider>
         </Providers>
         <ThemeToggle />
+        <FeedbackWidget />
       </body>
     </html>
   )
