@@ -17,7 +17,7 @@ import { PromoAssistant } from "@/components/PromoAssistant"
 import { SupportProject } from "@/components/SupportProject"
 
 const DEFAULT_FILTERS: FilterState = {
-  supermarket: [], bank: [], province: "", days: [], search: "", discount_type: "",
+  supermarket: [], chain_tier: "", bank: [], province: "", days: [], search: "", discount_type: "",
   state: "activa", modality: [], mobility_kind: "", page: 1,
 }
 
@@ -50,7 +50,7 @@ export default function Home() {
 
   const { data: stats, isLoading: statsLoading } = useQuery({ queryKey: ["stats"], queryFn: api.getStats })
   const { data: banks = [] } = useQuery({
-    queryKey: ["banks", category, filters.supermarket, filters.province, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
+    queryKey: ["banks", category, filters.supermarket, filters.chain_tier, filters.province, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
     queryFn: () => api.getBanks({
       category, supermarket: filters.supermarket.join(",") || undefined, province: filters.province || undefined,
       day: filters.days.length ? filters.days.join(",") : undefined,
@@ -58,10 +58,11 @@ export default function Home() {
       modality: filters.modality.length ? filters.modality.join(",") : undefined,
       mobility_kind: filters.mobility_kind || undefined,
       search: filters.search || undefined,
+      chain_tier: category === "supermarket" ? filters.chain_tier || undefined : undefined,
     }),
   })
   const { data: supermarkets = [] } = useQuery({
-    queryKey: ["supermarkets", category, filters.bank, filters.province, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
+    queryKey: ["supermarkets", category, filters.bank, filters.chain_tier, filters.province, filters.days, filters.discount_type, filters.state, filters.modality, filters.mobility_kind, filters.search],
     queryFn: () => api.getSupermarkets(category, {
       bank: filters.bank.join(",") || undefined, province: filters.province || undefined,
       day: filters.days.length ? filters.days.join(",") : undefined,
@@ -70,6 +71,7 @@ export default function Home() {
       modality: filters.modality.length ? filters.modality.join(",") : undefined,
       mobility_kind: filters.mobility_kind || undefined,
       search: filters.search || undefined,
+      chain_tier: category === "supermarket" ? filters.chain_tier || undefined : undefined,
     }),
   })
   const { data: promos, isLoading: promosLoading, isFetching, error } = useQuery({
@@ -85,6 +87,7 @@ export default function Home() {
         discount_type: filters.discount_type || undefined, state: filters.state || undefined,
         modality: filters.modality.length ? filters.modality.join(",") : undefined,
         category, mobility_kind: filters.mobility_kind || undefined, page: filters.page, page_size: 24,
+        chain_tier: category === "supermarket" ? filters.chain_tier || undefined : undefined,
       })
     },
   })

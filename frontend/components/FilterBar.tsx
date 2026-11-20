@@ -107,6 +107,7 @@ export function FilterBar({
 
   const hasActiveFilters =
     filters.supermarket.length > 0 ||
+    (!isFuel && !isMobility && filters.chain_tier !== "") ||
     filters.bank.length > 0 ||
     filters.province ||
     filters.days.length > 0 ||
@@ -258,6 +259,29 @@ export function FilterBar({
       <section className="space-y-2">
         <h4 className="eyebrow">Filtros adicionales</h4>
         <div className="flex flex-wrap gap-2">
+          {!isFuel && !isMobility && (
+            <div role="group" aria-label="Tipo de comercio" className="flex flex-wrap gap-1.5">
+              {([
+                { value: "", label: "Todos" },
+                { value: "grandes", label: "Cadenas grandes" },
+                { value: "chicos", label: "Comercios chicos" },
+              ] as const).map((option) => (
+                <button
+                  key={option.value || "todos"}
+                  type="button"
+                  aria-pressed={filters.chain_tier === option.value}
+                  onClick={() => onChange({ chain_tier: option.value, page: 1 })}
+                  className={`inline-flex min-h-11 items-center rounded-xl border px-3 text-sm transition-colors ${
+                    filters.chain_tier === option.value
+                      ? "border-[#102a4c] bg-[#efffdc] font-semibold text-[#102a4c]"
+                      : "border-[#cbd8e6] bg-[#f8fafd] text-[#52657d] hover:border-[#102a4c]"
+                  }`}
+                >
+                  {option.label}
+                </button>
+              ))}
+            </div>
+          )}
           <MultiChoice label={merchantLabel} allLabel={merchantAllLabel} selected={filters.supermarket}
             options={supermarkets.map((s) => ({ value: s.name, label: `${s.name} (${s.active_promotions})` }))}
             onChange={(supermarket) => onChange({ supermarket, page: 1 })} />

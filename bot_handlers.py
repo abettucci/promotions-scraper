@@ -29,6 +29,7 @@ import config
 from database import UserDatabase
 from notifier import TelegramNotifier, _strip_accents, _today_name, DAY_NAMES_ES
 from payment_preferences import promotion_matches_payment_methods
+from supermarket_tiers import TIER_BIG, TIER_SMALL, big_chain_ids, tier_sql
 
 PAGE_SIZE = 8  # promos por página (Telegram tiene 4096 chars/msg)
 
@@ -73,6 +74,7 @@ def _query_promotions(
     category: Optional[str] = None,
     bank_filter: Optional[str] = None,
     supermarket_filter: Optional[str] = None,
+    chain_tier: Optional[str] = None,
     search: Optional[str] = None,
     payment_methods: Optional[list[dict]] = None,
     modality_filter: Optional[str] = None,
@@ -111,6 +113,11 @@ def _query_promotions(
     if supermarket_filter:
         where.append("LOWER(s.name) LIKE ?")
         params.append(f"%{supermarket_filter.lower()}%")
+
+    if chain_tier:
+        tier_clause, tier_params = tier_sql(chain_tier, "p.supermarket_id", big_chain_ids(conn))
+        where.append(tier_clause)
+        params.extend(tier_params)
 
     if search:
         where.append("(LOWER(p.title) LIKE ? OR LOWER(p.terms_raw) LIKE ?)")
@@ -339,6 +346,10 @@ def _category_markup(scope: str) -> dict:
             {"text": "🛒 Supermercados", "callback_data": f"{scope}cat:supermarket"},
             {"text": "⛽ Combustible", "callback_data": f"{scope}cat:fuel"},
         ], [{"text": "🚇 Movilidad", "callback_data": f"{scope}cat:mobility"}]]
+        + ([[
+            {"text": "🏬 Cadenas grandes", "callback_data": "hoycat:grandes"},
+            {"text": "🏪 Comercios chicos", "callback_data": "hoycat:chicos"},
+        ]] if scope == "hoy" else [])
     }
 
 
@@ -524,6 +535,27 @@ def cmd_hoy_supermarkets(chat_id: str, args: str, user_db: UserDatabase,
                          page: int = 1) -> tuple[str, dict]:
     return _cmd_hoy_category(
         "supermarket", "🛒 <b>Promos de supermercados — hoy</b>", "hoysuper", page,
+    )
+
+
+def _cmd_hoy_tier(tier: str, header: str, callback_prefix: str, page: int) -> tuple[str, dict]:
+    promos = _query_promotions(today_only=True, category="supermarket", chain_tier=tier)
+    text, _ = _render_promos(promos, header, page)
+    _, total_pages = _paginate(promos, page)
+    return text, _results_markup(promos, callback_prefix, page, total_pages, "h", "s")
+
+
+def cmd_hoy_grandes(chat_id: str, args: str, user_db: UserDatabase,
+                    page: int = 1) -> tuple[str, dict]:
+    return _cmd_hoy_tier(
+        TIER_BIG, "🏬 <b>Promos de cadenas grandes — hoy</b>", "hoygrandes", page,
+    )
+
+
+def cmd_hoy_chicos(chat_id: str, args: str, user_db: UserDatabase,
+                   page: int = 1) -> tuple[str, dict]:
+    return _cmd_hoy_tier(
+        TIER_SMALL, "🏪 <b>Promos de comercios chicos — hoy</b>", "hoychicos", page,
     )
 
 
@@ -1333,6 +1365,8 @@ CALLBACK_COMMANDS = {
     **COMMANDS,
     "quick": cmd_quick,
     "hoysuper": cmd_hoy_supermarkets,
+    "hoygrandes": cmd_hoy_grandes,
+    "hoychicos": cmd_hoy_chicos,
     "hoyfuel": cmd_hoy_fuel,
     "hoymobility": cmd_hoy_mobility,
     "missuper": cmd_mis_supermarkets,
@@ -1342,6 +1376,8 @@ CALLBACK_COMMANDS = {
 
 _CATEGORY_CALLBACKS = {
     "hoycat:supermarket": cmd_hoy_supermarkets,
+    "hoycat:grandes": cmd_hoy_grandes,
+    "hoycat:chicos": cmd_hoy_chicos,
     "hoycat:fuel": cmd_hoy_fuel,
     "hoycat:mobility": cmd_hoy_mobility,
     "miscat:supermarket": cmd_mis_supermarkets,
