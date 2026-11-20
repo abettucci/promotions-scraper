@@ -1043,6 +1043,14 @@ class UserDatabase:
                 window_started_at INTEGER NOT NULL,
                 request_count INTEGER NOT NULL DEFAULT 0
             );
+            CREATE TABLE IF NOT EXISTS feedback (
+                id INTEGER PRIMARY KEY AUTOINCREMENT,
+                user_id INTEGER REFERENCES users(id) ON DELETE SET NULL,
+                rating TEXT NOT NULL,
+                comment TEXT NOT NULL DEFAULT '',
+                page TEXT NOT NULL DEFAULT '',
+                created_at TEXT NOT NULL DEFAULT CURRENT_TIMESTAMP
+            );
             CREATE TABLE IF NOT EXISTS price_alerts (
                 id INTEGER PRIMARY KEY AUTOINCREMENT,
                 user_id INTEGER NOT NULL REFERENCES users(id) ON DELETE CASCADE,
@@ -1239,6 +1247,17 @@ class UserDatabase:
 
     # ── Alertas de precio ─────────────────────────────────────────────────────
     MAX_PRICE_ALERTS_PER_USER = 100
+
+    def add_feedback(self, user_id: Optional[int], rating: str, comment: str, page: str) -> None:
+        conn = self._conn()
+        try:
+            conn.execute(
+                "INSERT INTO feedback (user_id, rating, comment, page) VALUES (?, ?, ?, ?)",
+                (user_id, rating, comment[:500], page[:200]),
+            )
+            conn.commit()
+        finally:
+            conn.close()
 
     def add_price_alert(self, user_id: int, product_key: str, product_name: str, query: str,
                         baseline_price: float, target_price: Optional[float] = None,

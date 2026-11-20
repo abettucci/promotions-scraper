@@ -102,6 +102,8 @@ export const api = {
   getPriceTrends: (days: 7 | 30) => fetchJSON<PriceTrendsResponse>("/api/prices/trends", { days }),
   getPriceIndex: (period: "year" | "3m" | "6m" | "1y" | "all", currency: "ars" | "usd_official" | "usd_blue") =>
     fetchJSON<PriceIndexResponse>("/api/prices/index", { period, currency }),
+  sendFeedback: (body: { rating: "love" | "like" | "neutral" | "improve"; comment: string; page: string }) =>
+    fetchMutation<{ ok: boolean }>("POST", "/api/feedback", body),
   createPriceAlert: (body: { query: string; key?: string; category?: string; target_price?: number }, token: string) =>
     fetchMutation<PriceAlertCreated>("POST", "/api/prices/alerts", body, token),
   listPriceAlerts: (token: string) =>

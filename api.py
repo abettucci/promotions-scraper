@@ -1316,6 +1316,25 @@ def product_price_history(key: str = Query(..., max_length=120), days: int = Que
             "ipc": latest_comparison(history, 30)}
 
 
+class FeedbackBody(BaseModel):
+    """Calificación rápida de la experiencia, con comentario opcional."""
+    model_config = ConfigDict(extra="forbid", str_strip_whitespace=True)
+    rating: Literal["love", "like", "neutral", "improve"]
+    comment: str = Field(default="", max_length=500)
+    page: str = Field(default="", max_length=200)
+
+@app.post("/api/feedback", status_code=201)
+def send_feedback(body: FeedbackBody, credentials: Optional[HTTPAuthorizationCredentials] = Depends(security)):
+    """Acepta feedback anónimo; si hay sesión, lo asocia al usuario."""
+    user_id = None
+    if credentials:
+        try:
+            user_id = get_current_user(credentials)["id"]
+        except HTTPException:
+            user_id = None
+    _db.add_feedback(user_id, body.rating, body.comment, body.page)
+    return {"ok": True}
+
 @app.post("/api/prices/alerts")
 def create_price_alert(body: PriceAlertBody, current_user=Depends(get_current_user)):
     """Avisa por Telegram cuando baje el precio (o llegue al objetivo)."""
