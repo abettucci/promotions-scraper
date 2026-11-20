@@ -80,6 +80,7 @@ export type DayCode = "lunes" | "martes" | "miércoles" | "jueves" | "viernes" |
 
 export interface FilterState {
   supermarket: string[]
+  chain_tier: "" | "grandes" | "chicos"
   bank: string[]
   province: string
   days: DayCode[]

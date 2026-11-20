@@ -70,7 +70,7 @@ export const api = {
   getPromotions: (params: {
     supermarket?: string; bank?: string; day?: string; search?: string
     province?: string; discount_type?: string; active_today?: boolean; category?: string
-    state?: string; modality?: string; mobility_kind?: string
+    state?: string; modality?: string; mobility_kind?: string; chain_tier?: string
     page?: number; page_size?: number
   }) => fetchJSON<PromotionsResponse>("/api/promotions", params as Record<string, string | number | boolean | undefined>),
 
@@ -79,10 +79,11 @@ export const api = {
   getBanks: (filters?: {
     supermarket?: string; province?: string; day?: string; category?: string
     discount_type?: string; state?: string; modality?: string; mobility_kind?: string; search?: string
+    chain_tier?: string
   }) => fetchJSON<Bank[]>("/api/banks", filters as Record<string, string | undefined>),
   getSupermarkets: (category?: string, filters?: {
     bank?: string; province?: string; day?: string; search?: string; discount_type?: string
-    state?: string; modality?: string; mobility_kind?: string
+    state?: string; modality?: string; mobility_kind?: string; chain_tier?: string
   }) => fetchJSON<Supermarket[]>("/api/supermarkets", {
     ...(category ? { category } : {}), ...filters,
   }),

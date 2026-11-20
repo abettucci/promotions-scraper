@@ -153,6 +153,22 @@ def _append_supermarket_filter(conditions: list[str], params: list, value: Optio
         params.extend(names)
 
 
+def _append_chain_tier_filter(conditions: list[str], params: list, tier: Optional[str]):
+    """Filtra por cadenas grandes ('grandes') o comercios chicos ('chicos')."""
+    from supermarket_tiers import big_chain_ids, normalize_tier, tier_sql
+
+    normalized = normalize_tier(tier)
+    if normalized:
+        conn = get_conn()
+        try:
+            ids = big_chain_ids(conn)
+        finally:
+            conn.close()
+        clause, clause_params = tier_sql(normalized, "p.supermarket_id", ids)
+        conditions.append(clause)
+        params.extend(clause_params)
+
+
 def _append_bank_filter(conditions: list[str], params: list, value: Optional[str]):
     banks = [bank.lower() for bank in _filter_values(value)]
     if banks:
@@ -1370,6 +1386,7 @@ def get_payment_methods_catalog():
 @app.get("/api/promotions")
 def get_promotions(
     supermarket: Optional[str] = Query(None),
+    chain_tier: Optional[str] = Query(None, description="grandes | chicos"),
     bank: Optional[str] = Query(None),
     province: Optional[str] = Query(None, max_length=80),
     day: Optional[str] = Query(None, description="Días separados por coma (ej: lunes,martes)"),
@@ -1406,6 +1423,7 @@ def get_promotions(
     _append_category_filter(conditions, params, category)
 
     _append_supermarket_filter(conditions, params, supermarket)
+    _append_chain_tier_filter(conditions, params, chain_tier)
     _append_bank_filter(conditions, params, bank)
     _append_province_filter(conditions, params, province)
 
@@ -1617,6 +1635,7 @@ def get_promotion(promotion_id: int):
 @app.get("/api/banks")
 def get_banks(
     supermarket: Optional[str] = Query(None),
+    chain_tier: Optional[str] = Query(None, description="grandes | chicos"),
     province: Optional[str] = Query(None, max_length=80),
     day: Optional[str] = Query(None),
     category: Optional[str] = Query(None),
@@ -1646,6 +1665,7 @@ def get_banks(
     _append_category_filter(conditions, params, category)
 
     _append_supermarket_filter(conditions, params, supermarket)
+    _append_chain_tier_filter(conditions, params, chain_tier)
     _append_province_filter(conditions, params, province)
 
     if day:
@@ -1744,6 +1764,7 @@ def get_supermarkets(
     state: Optional[str] = Query("activa"),
     modality: Optional[str] = Query(None),
     mobility_kind: Optional[str] = Query(None),
+    chain_tier: Optional[str] = Query(None, description="grandes | chicos"),
 ):
     conn = get_conn()
     today_iso = date.today().isoformat()
@@ -1767,6 +1788,7 @@ def get_supermarkets(
     _append_category_filter(promo_conditions, promo_params, category)
 
     _append_bank_filter(promo_conditions, promo_params, bank)
+    _append_chain_tier_filter(promo_conditions, promo_params, chain_tier)
     _append_province_filter(promo_conditions, promo_params, province)
 
     if day:
